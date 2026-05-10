@@ -1093,22 +1093,43 @@ async function syncFromCloud(){
       }
     }
 
-    // Depo verilerini çek - local'deki veriyi koru
+    // Depo verilerini çek - ID bazlı akıllı birleştirme
     const cloudShift = await cloudGetShift();
+    const localDepolar = (depoData&&depoData.depolar)||[];
+
     if(cloudShift && cloudShift.depolar && cloudShift.depolar.length > 0){
-      // Bulutta daha fazla depo varsa birleştir
-      if(!depoData || !depoData.depolar || depoData.depolar.length === 0){
+      const cloudDepolar = cloudShift.depolar;
+
+      if(localDepolar.length === 0){
+        // Local boş - cloud'dan al
         depoData = cloudShift;
         localStorage.setItem(SKEY, JSON.stringify(depoData));
-      } else if(cloudShift.depolar.length > depoData.depolar.length){
-        // Bulutta daha fazla depo var, birleştir
-        const localIds = new Set(depoData.depolar.map(d=>d.id));
-        cloudShift.depolar.forEach(d=>{ if(!localIds.has(d.id)) depoData.depolar.push(d); });
-        localStorage.setItem(SKEY, JSON.stringify(depoData));
+      } else {
+        // İkisinde de veri var - ID bazlı birleştir, local öncelikli
+        const localIds = new Set(localDepolar.map(d=>d.id));
+        const cloudIds = new Set(cloudDepolar.map(d=>d.id));
+        let degisti = false;
+
+        // Cloud'da olup local'de olmayan depoları ekle
+        cloudDepolar.forEach(cd=>{
+          if(!localIds.has(cd.id)){
+            depoData.depolar.push(cd);
+            degisti = true;
+          }
+        });
+
+        if(degisti){
+          localStorage.setItem(SKEY, JSON.stringify(depoData));
+        }
+
+        // Local'i her zaman cloud'a yaz (local kazanır)
+        await cloudSaveShift(depoData);
       }
-    } else if(depoData && depoData.depolar && depoData.depolar.length > 0){
-      // Local'de var, buluta yükle
-      await cloudSaveShift(depoData);
+    } else {
+      // Cloud boş - local'i cloud'a yükle
+      if(localDepolar.length > 0){
+        await cloudSaveShift(depoData);
+      }
     }
 
     // Mola durumları çek
