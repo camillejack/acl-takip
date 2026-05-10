@@ -941,36 +941,28 @@ function init(){
 
   // Kayıtlı giriş bilgilerini doldur
   const remembered = JSON.parse(localStorage.getItem('acl_remembered')||'null');
-  if(remembered){
+  if(remembered && remembered.tel){
     const telEl = document.getElementById('l-tel');
-    const sifreEl = document.getElementById('l-sifre');
-    if(telEl) telEl.value = remembered.tel||'';
-    if(sifreEl) sifreEl.value = remembered.sifre||'';
-    // Checkbox işaretli kalsın
+    if(telEl) telEl.value = remembered.tel;
+    // Şifreyi DOLDURMA - güvenlik için
     const cb = document.getElementById('beni-hatirla');
     if(cb) cb.checked = true;
   }
 
-  if(user){
-    // Oturum versiyonu kontrolü — eski format ise temizle
+  // Session kontrolü
+  const _session = sessionKontrol();
+  if(_session){
+    // Geçerli session var - kullanıcıyı session'dan al
+    user = {ad:_session.ad, tel:_session.tel, rol:_session.rol, telNorm:_session.telNorm};
+    localStorage.setItem(UKEY, JSON.stringify(user));
+  } else if(user){
+    // Eski format kontrolü
     if(!user.telNorm || !user.rol){
       user = null;
       localStorage.removeItem(UKEY);
-      localStorage.removeItem('acl_remembered');
-    }
-  }
-
-  if(user){
-    // Shift verisindeki kullanıcıyla eşleştir - şifre sistemi aktif mi kontrol et
-    const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
-    if(_sd && _sd.persons && _sd.persons.length){
-      const _p = _sd.persons.find(pp => normTel(pp.tel||'') === normTel(user.tel||''));
-      if(!_p){
-        // Shift'te bu kullanıcı yok - oturumu kapat
-        user = null;
-        localStorage.removeItem(UKEY);
-        localStorage.removeItem('acl_remembered');
-      }
+    } else {
+      // Session yok ama user var - yeni session oluştur
+      sessionOlustur(user);
     }
   }
 
@@ -1832,6 +1824,8 @@ function renderPersonEntries(){
             oninput="shiftData.persons[${i}].tel=this.value"
             type="tel" inputmode="tel"
             style="font-size:12px;padding:7px 10px;font-family:var(--mono)">
+        ${(p.name&&p.tel)?('<div style="display:flex;align-items:center;gap:6px;background:var(--blue-dim);border:1px solid var(--blue-b);border-radius:6px;padding:6px 10px;margin-top:4px"><span style="font-size:10px;color:var(--text3)">Sifre:</span><span id="sifre-'+i+'" style="font-family:var(--mono);font-size:11px;color:var(--accent);flex:1">'+normTel(p.tel)+'.'+(p.name.trim().split(' ').pop().toLowerCase().replace(/[ğ]/g,'g').replace(/[ü]/g,'u').replace(/[ş]/g,'s').replace(/[ı]/g,'i').replace(/[ö]/g,'o').replace(/[ç]/g,'c'))+'0134</span><button onclick="navigator.clipboard.writeText(document.getElementById(\'sifre-'+i+'\').textContent).then(()=>toast(\'Kopyalandi\',\'ok\'))" style="background:none;border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:10px;padding:2px 8px;cursor:pointer">Kopyala</button></div>'):''}
+
         </div>
         <button class="person-del" onclick="removePerson(${i})" title="Sil">×</button>
       </div>
@@ -3529,6 +3523,71 @@ async function sifreDogrula(girilen, p){
   return false;
 }
 
+
+// ─── SESSION TOKEN SİSTEMİ ────────────────────────────────────
+const SESSION_KEY = 'acl_session_v1';
+const SESSION_SURE = 12 * 60 * 60 * 1000; // 12 saat
+
+function sessionOlustur(user){
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b=>b.toString(16).padStart(2,'0')).join('');
+  const session = {
+    token, 
+    tel: user.tel,
+    ad: user.ad,
+    rol: user.rol,
+    telNorm: user.telNorm,
+    olusturma: Date.now(),
+    bitis: Date.now() + SESSION_SURE
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  // Şifreyi localStorage'dan temizle
+  localStorage.removeItem('acl_remembered_sifre');
+  return session;
+}
+
+function sessionKontrol(){
+  const s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+  if(!s) return null;
+  if(Date.now() > s.bitis){
+    localStorage.removeItem(SESSION_KEY);
+    return null;
+  }
+  // Süreyi yenile (aktif kullanım)
+  s.bitis = Date.now() + SESSION_SURE;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  return s;
+}
+
+function sessionSil(){
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// Hash karşılaştırma
+async function hashKarsilastir(girilen, hedef){
+  const gHash = await sha256(girilen + 'acl_salt_2024');
+  const hHash = await sha256(hedef + 'acl_salt_2024');
+  return gHash === hHash;
+}
+
+// Firebase'e hash'lenmiş şifre kaydet
+async function sifreHashKaydet(tel, sifre){
+  if(!window._fbReady) return;
+  const hash = await sha256(sifre + 'acl_salt_2024');
+  await fbSet('kullanici_sifre', normTel(tel), {hash, guncelleme: new Date().toISOString()});
+}
+
+// Firebase'den hash'i çek ve doğrula
+async function sifreFirebaseDogrula(tel, girilen){
+  if(!window._fbReady) return false;
+  try{
+    const kayit = await fbGet('kullanici_sifre', normTel(tel));
+    if(!kayit || !kayit.hash) return false;
+    const gHash = await sha256(girilen + 'acl_salt_2024');
+    return gHash === kayit.hash;
+  }catch(e){ return false; }
+}
+
 // ─── KİMLİK DOĞRULAMA & ROL SİSTEMİ ─────────────────────────
 const ROLLER = {
   mudur:   { label:'Depo Müdürü',    cls:'rol-mudur',   seviye:4 },
@@ -3604,10 +3663,18 @@ function doLogin(){
   }
 
   user = {ad:p.name, tel:p.tel, rol:p.rol||'personel', telNorm:telNorm};
-  // Şifre user objesinde saklanmıyor
   localStorage.setItem(UKEY, JSON.stringify(user));
+  // Session token oluştur
+  sessionOlustur(user);
+  // Beni hatırla - sadece tel sakla, şifre değil
   var cb2 = document.getElementById('beni-hatirla');
-  if(cb2 && cb2.checked) localStorage.setItem('acl_remembered', JSON.stringify({tel:tel, sifre:sifre}));
+  if(cb2 && cb2.checked){
+    localStorage.setItem('acl_remembered', JSON.stringify({tel:tel}));
+  } else {
+    localStorage.removeItem('acl_remembered');
+  }
+  // Şifreyi Firebase'e hash'le kaydet (ilk girişte)
+  if(window._fbReady) sifreHashKaydet(tel, sifre).catch(()=>{});
   loginBasarili();
 }
 
@@ -3639,12 +3706,13 @@ function doLogout(){
   if(!confirm('Çıkış yapılacak. Emin misin?')) return;
   user = null;
   localStorage.removeItem(UKEY);
+  sessionSil(); // Session token sil
 
-  // Beni hatırla aktifse alanları doldur, değilse temizle
+  // Beni hatırla - sadece tel doldur
   const remembered = JSON.parse(localStorage.getItem('acl_remembered')||'null');
-  if(remembered){
-    document.getElementById('l-tel').value = remembered.tel||'';
-    document.getElementById('l-sifre').value = remembered.sifre||'';
+  if(remembered && remembered.tel){
+    document.getElementById('l-tel').value = remembered.tel;
+    document.getElementById('l-sifre').value = '';
     const cb = document.getElementById('beni-hatirla');
     if(cb) cb.checked = true;
   } else {
