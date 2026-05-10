@@ -3503,6 +3503,32 @@ function depoManuelKonum(i){
 
 
 
+
+// ─── ŞİFRE GÜVENLİĞİ ─────────────────────────────────────────
+async function sha256(text){
+  const buf = await crypto.subtle.digest('SHA-256',
+    new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf))
+    .map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Şifre hash'i üret ve karşılaştır
+async function sifreDogrula(girilen, p){
+  const dogruSifre = sifreUret(p);
+  const ozelSifre = p.sifre || null;
+  // Direkt eşleşme (geriye uyumluluk)
+  if(girilen === dogruSifre || girilen === ozelSifre || girilen === MGRPWD) return true;
+  // Hash eşleşme
+  const girilenHash = await sha256(girilen);
+  const dogruHash = await sha256(dogruSifre);
+  if(girilenHash === dogruHash) return true;
+  if(ozelSifre){
+    const ozelHash = await sha256(ozelSifre);
+    if(girilenHash === ozelHash) return true;
+  }
+  return false;
+}
+
 // ─── KİMLİK DOĞRULAMA & ROL SİSTEMİ ─────────────────────────
 const ROLLER = {
   mudur:   { label:'Depo Müdürü',    cls:'rol-mudur',   seviye:4 },
@@ -3578,6 +3604,7 @@ function doLogin(){
   }
 
   user = {ad:p.name, tel:p.tel, rol:p.rol||'personel', telNorm:telNorm};
+  // Şifre user objesinde saklanmıyor
   localStorage.setItem(UKEY, JSON.stringify(user));
   var cb2 = document.getElementById('beni-hatirla');
   if(cb2 && cb2.checked) localStorage.setItem('acl_remembered', JSON.stringify({tel:tel, sifre:sifre}));
