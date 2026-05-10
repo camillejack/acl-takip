@@ -1045,11 +1045,22 @@ async function syncFromCloud(){
       }
     }
 
-    // Depo verilerini çek
+    // Depo verilerini çek - local'deki veriyi koru
     const cloudShift = await cloudGetShift();
-    if(cloudShift){
-      depoData = cloudShift;
-      localStorage.setItem(SKEY, JSON.stringify(depoData));
+    if(cloudShift && cloudShift.depolar && cloudShift.depolar.length > 0){
+      // Bulutta daha fazla depo varsa birleştir
+      if(!depoData || !depoData.depolar || depoData.depolar.length === 0){
+        depoData = cloudShift;
+        localStorage.setItem(SKEY, JSON.stringify(depoData));
+      } else if(cloudShift.depolar.length > depoData.depolar.length){
+        // Bulutta daha fazla depo var, birleştir
+        const localIds = new Set(depoData.depolar.map(d=>d.id));
+        cloudShift.depolar.forEach(d=>{ if(!localIds.has(d.id)) depoData.depolar.push(d); });
+        localStorage.setItem(SKEY, JSON.stringify(depoData));
+      }
+    } else if(depoData && depoData.depolar && depoData.depolar.length > 0){
+      // Local'de var, buluta yükle
+      await cloudSaveShift(depoData);
     }
 
     // Mola durumları çek
@@ -3657,6 +3668,23 @@ function doLogin(){
   }
 
   var dogruSifre = sifreUret(p);
+  console.log('Girilen:', sifre, 'Dogru:', dogruSifre, 'p.name:', p.name, 'p.tel:', p.tel);
+  // Ayrıca shift persons'dan da ara (personeller array'i name yerine başka alan kullanabilir)
+  var depoShiftP = null;
+  if(dd && dd.depolar){
+    for(var di=0; di<dd.depolar.length; di++){
+      var sp = (dd.depolar[di].shift && dd.depolar[di].shift.persons)||[];
+      for(var si=0; si<sp.length; si++){
+        if(normTel(sp[si].tel||'')=== telNorm){ depoShiftP=sp[si]; break; }
+      }
+      if(depoShiftP) break;
+    }
+  }
+  if(depoShiftP){
+    var dogruSifre2 = sifreUret(depoShiftP);
+    console.log('Shift persons sifre:', dogruSifre2, 'name:', depoShiftP.name);
+    if(sifre === dogruSifre2) { p = depoShiftP; dogruSifre = dogruSifre2; }
+  }
   if(sifre !== dogruSifre && sifre !== (p.sifre||'')){
     showLoginHata('Şifre hatalı. Yöneticinize başvurun.');
     return;
