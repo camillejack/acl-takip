@@ -689,28 +689,56 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
         </div>
         <div id="mgr-edit-area" style="display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:12px;color:var(--green)">✓ Yönetici girişi yapıldı</div>
+            <div style="font-size:12px;color:var(--green)">✓ Yönetici — <span id="mgr-rol-label2"></span></div>
             <button class="mgr-btn danger" onclick="lockMgr()">Kilitle</button>
           </div>
           <hr class="mgr-sep">
-          <div class="mgr-label" style="margin-bottom:6px">Hafta Başlangıç Tarihi</div>
-          <div class="mgr-row">
-            <input class="mgr-input" id="week-start" type="date" style="flex:1">
-            <button class="mgr-btn" onclick="setWeekStart()">Uygula</button>
+
+          <div class="mgr-label" style="margin-bottom:6px">Aktif Depo / Şube</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <select class="mgr-input" id="mgr-depo-sec" style="flex:1" onchange="mgr_depoSec(this.value)">
+              <option value="">-- Depo Seçin veya Yeni Ekle --</option>
+            </select>
+            <button class="mgr-btn" onclick="yeniDepoEkle()" style="white-space:nowrap">+ Yeni Depo</button>
           </div>
-          <hr class="mgr-sep">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="mgr-label" style="margin-bottom:0">Personel Listesi</div>
-            <button class="mgr-btn" onclick="addPerson()" style="font-size:11px;padding:6px 10px">+ Personel Ekle</button>
+
+          <div id="mgr-depo-detay" style="display:none">
+            <div class="mgr-label" style="margin-bottom:5px">Depo Adı</div>
+            <div class="mgr-row">
+              <input class="mgr-input" id="mgr-depo-ad" placeholder="Depo/Şube adı..." style="flex:1" oninput="mgr_depoAdGuncelle(this.value)">
+            </div>
+            <div class="mgr-label" style="margin-bottom:5px;margin-top:8px">Konum</div>
+            <div style="display:flex;gap:6px;margin-bottom:4px">
+              <button class="depo-konum-btn" onclick="mgr_depoGpsAl()" style="flex:1">📍 GPS ile Konum Al</button>
+              <button class="depo-konum-btn" onclick="mgr_depoManuelKonum()" style="flex:1;background:var(--bg4);border:1px solid var(--border2);color:var(--text2)">✏️ Manuel Gir</button>
+            </div>
+            <div class="depo-konum-val" id="mgr-depo-konum-val">⚠️ Konum girilmedi</div>
+            <hr class="mgr-sep">
+
+            <div class="mgr-label" style="margin-bottom:6px">Hafta Başlangıç Tarihi</div>
+            <div class="mgr-row">
+              <input class="mgr-input" id="week-start" type="date" style="flex:1">
+              <button class="mgr-btn" onclick="setWeekStart()">Uygula</button>
+            </div>
+            <hr class="mgr-sep">
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div class="mgr-label" style="margin-bottom:0">Personel Listesi</div>
+              <button class="mgr-btn" onclick="addPerson()" style="font-size:11px;padding:6px 10px">+ Personel Ekle</button>
+            </div>
+            <div id="person-entries"></div>
+            <hr class="mgr-sep">
+
+            <div class="mgr-label" style="margin-bottom:4px">Yoğun Saatler (Algoritma için)</div>
+            <div class="mgr-info" style="margin-bottom:8px">Bu saatlerde mola verilmemeli.</div>
+            <div id="yogun-saatler-area"></div>
+            <hr class="mgr-sep">
+
+            <div style="display:flex;gap:8px">
+              <button class="mgr-btn" style="flex:1;padding:11px" onclick="saveShift()">💾 Depoyu Kaydet</button>
+              <button class="mgr-btn danger" onclick="mgr_depoSil()" style="padding:11px">🗑 Sil</button>
+            </div>
           </div>
-          <div id="person-entries"></div>
-          <hr class="mgr-sep">
-          <hr class="mgr-sep">
-          <div class="mgr-label" style="margin-bottom:4px">Yogun Saatler (Algoritma icin)</div>
-          <div class="mgr-info" style="margin-bottom:8px">Bu saatlerde mola verilmemeli. Algoritma bu saatlerin disina mola onerisi yapar.</div>
-          <div id="yogun-saatler-area"></div>
-          <hr class="mgr-sep">
-          <button class="mgr-btn" style="width:100%;padding:11px" onclick="saveShift()">Vardiya Tablosunu Kaydet</button>
         </div>
       </div>
 
