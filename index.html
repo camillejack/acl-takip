@@ -1736,7 +1736,8 @@ function gorulebilirDepolar(){
 }
 
 // ─── SHIFT / VARDİYA ─────────────────────────────────────────
-const SKEY   = 'acl_depolar_v1'; // Yeni çok depolu yapı
+const SKEY   = 'acl_depolar_v1';
+let depoData  = JSON.parse(localStorage.getItem('acl_depolar_v1')||'null') || {depolar:[]}; // Yeni çok depolu yapı
 const MGRPWD = 'acl2024';
 let shiftData  = JSON.parse(localStorage.getItem(SKEY) || 'null');
 let mgrUnlocked = false;
