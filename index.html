@@ -2608,7 +2608,7 @@ function molaBit(tel){
   const gecenMs=Date.now()-d.baslangic;
   const gecenDk=gecenMs/60000;
   const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
-  const p=sd&&sd.persons?sd.persons.find(pp=>normTel(pp.tel)===n):null;
+  const p=(sd&&sd.depolar?(sd.depolar.reduce((acc,d)=>[...acc,...(d.shift&&d.shift.persons||d.personeller||[])],[]).find(pp=>normTel(pp.tel)===n)):null;
   const hakDk=60; // her personel 60dk hak
   const kalanOnce=hakDk-d.kullanilanDk;
   const asiriDk=Math.max(0,gecenDk-kalanOnce);
@@ -2643,7 +2643,7 @@ function startMolaTimer(){
       if(d.aktif&&d.baslangic){
         const gecenDk=(Date.now()-d.baslangic)/60000;
         const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
-        const p=sd&&sd.persons?sd.persons.find(pp=>normTel(pp.tel)===n):null;
+        const p=(sd&&sd.depolar?(sd.depolar.reduce((acc,d)=>[...acc,...(d.shift&&d.shift.persons||d.personeller||[])],[]).find(pp=>normTel(pp.tel)===n)):null;
         const hakDk=60;
         const kalanDk=hakDk-d.kullanilanDk;
         if(gecenDk>=kalanDk+0.1 && gecenDk<kalanDk+0.2){
@@ -2722,8 +2722,10 @@ function buildMolaKart(p,isMe){
   const progColor=asiriKullanim?'var(--red)':kalanDk<15?'#ffb74d':'var(--green)';
 
   // Personelin bugünkü mola saatleri
-  const sd2=JSON.parse(localStorage.getItem(SKEY)||'null');
-  const pData=sd2&&sd2.persons?sd2.persons.find(pp=>normTel(pp.tel)===n):null;
+  const _dd2=JSON.parse(localStorage.getItem(SKEY)||'null');
+  const _depolar2=(_dd2&&_dd2.depolar)||[];
+  let pData=null;
+  for(const _d2 of _depolar2){ pData=(_d2.shift&&_d2.shift.persons||_d2.personeller||[]).find(pp=>normTel(pp.tel)===n); if(pData) break; }
   const bugunMolalar=pData?kisiMolaSaatleri(pData):[];
   let planlananHtml='';
   if(bugunMolalar.length){
@@ -3300,7 +3302,9 @@ function renderIsbasiEkrani(){
   const _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
   const depolar = (_dd&&_dd.depolar)||[];
   const myTelNorm = user ? normTel(user.tel) : '';
-  const myP = sd&&sd.persons ? sd.persons.find(p=>normTel(p.tel)===myTelNorm) : null;
+  // Aktif depodaki personel bilgisini al
+  const aktifD = depolar.find(d=>(d.personeller||[]).some(p=>normTel(p.tel)===myTelNorm));
+  const myP = aktifD ? (aktifD.shift&&aktifD.shift.persons||aktifD.personeller||[]).find(p=>normTel(p.tel)===myTelNorm) : null;
   const bugunKayit = isBasiData[todayStr];
 
   // Konum durumu
@@ -3400,7 +3404,7 @@ function buildDepolerKartiHtml(depolar){
 function isBasiYap(){
   if(!yakinDepo){ toast('Depoya yakın değilsiniz','err'); return; }
   const sd = JSON.parse(localStorage.getItem(SKEY)||'null');
-  const myP = sd&&sd.persons ? sd.persons.find(p=>normTel(p.tel)===normTel(user.tel)) : null;
+  const myP = (() => { const _allP = (depoData&&depoData.depolar||[]).reduce((a,d)=>[...a,...(d.shift&&d.shift.persons||d.personeller||[])],[]); return _allP.find(p=>normTel(p.tel)===normTel(user.tel)); })();
   const now = new Date();
   const saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
   const simdiDkVal = now.getHours()*60+now.getMinutes();
