@@ -1029,6 +1029,22 @@ async function syncFromCloud(){
         updateStats();
       }
     }
+    // 90 günden eski kayıtları temizle
+    const sinir = new Date();
+    sinir.setDate(sinir.getDate() - 90);
+    const eskiSayisi = recs.length;
+    recs = recs.filter(r=>{
+      if(!r.tarih) return true;
+      const p = r.tarih.split('.');
+      if(p.length < 3) return true;
+      const rDate = new Date(p[2], p[1]-1, p[0]);
+      return rDate >= sinir;
+    });
+    if(recs.length < eskiSayisi){
+      localStorage.setItem(DB, JSON.stringify(recs));
+      console.log((eskiSayisi-recs.length)+' eski kayıt temizlendi');
+    }
+
     // Local kayıtları buluta yükle (sadece bulutta olmayanları)
     const cloudIds = new Set(cloudRecs.map(r=>String(r.id)));
     for(const r of recs){
@@ -1957,7 +1973,30 @@ function renderShift(){
 
   if(!sd || !sd.persons || !sd.persons.length){
     labelEl.textContent='';
-    areaEl.innerHTML='<div class="shift-empty"><div class="shift-empty-ico">📅</div><div class="shift-empty-txt">Henüz vardiya tablosu eklenmedi.<br>Yönetici panelinden girilmesi gerekiyor.</div></div>';
+    // Vardiya geçmişi
+  let gecmisHTML = '';
+  const depoLocal = depoData ? getAktifDepo() : null;
+  if(depoLocal && depoLocal.shiftGecmisi && depoLocal.shiftGecmisi.length > 1){
+    const gecmisler = depoLocal.shiftGecmisi
+      .filter(g=>g.weekStart !== sd.weekStart) // Mevcut haftayı hariç tut
+      .sort((a,b)=>new Date(b.weekStart)-new Date(a.weekStart))
+      .slice(0,5);
+    if(gecmisler.length){
+      gecmisHTML = '<div style="margin-top:16px"><div class="slabel">Geçmiş Vardiyalar</div>'+
+        gecmisler.map(g=>{
+          const ws=new Date(g.weekStart);
+          const we=new Date(ws); we.setDate(we.getDate()+6);
+          const label=ws.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit"})+" – "+we.toLocaleDateString("tr-TR",{day:"2-digit",month:"2-digit",year:"numeric"});
+          return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'+
+            '<span style="font-size:11px;color:var(--text2);font-family:var(--mono)">'+label+'</span>'+
+            '<span style="font-size:11px;color:var(--text3);margin-left:auto">'+(g.persons||[]).length+' personel</span>'+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }
+  }
+
+  areaEl.innerHTML='<div class="shift-empty"><div class="shift-empty-ico">📅</div><div class="shift-empty-txt">Henüz vardiya tablosu eklenmedi.<br>Yönetici panelinden girilmesi gerekiyor.</div></div>';
     return;
   }
 
@@ -2486,7 +2525,13 @@ function molaKaydet(tel){
 
 function getMolaDurum(tel){
   const n = normTel(tel);
-  if(!molaDurumlar[n]) molaDurumlar[n]={aktif:false,baslangic:null,kullanilanDk:0,kayitlar:[]};
+  // Günlük sıfırlama - dün ise sıfırla
+  if(molaDurumlar[n] && molaDurumlar[n].tarih && molaDurumlar[n].tarih !== todayStr){
+    molaDurumlar[n] = {aktif:false, baslangic:null, kullanilanDk:0, kayitlar:[], tarih:todayStr};
+    molaKaydet(tel);
+  }
+  if(!molaDurumlar[n]) molaDurumlar[n]={aktif:false,baslangic:null,kullanilanDk:0,kayitlar:[],tarih:todayStr};
+  if(!molaDurumlar[n].tarih) molaDurumlar[n].tarih = todayStr;
   return molaDurumlar[n];
 }
 
@@ -2522,6 +2567,7 @@ function molaBit(tel){
     sure:Math.round(gecenDk),
     asiri:asiriDk>0.5
   });
+  d.tarih = todayStr;
   d.aktif=false;
   d.baslangic=null;
   molaDurumlar[n]=d;
