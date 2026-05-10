@@ -1045,13 +1045,7 @@ function showSyncIndicator(show){
 
 // LOGIN
 // doLogin yeni auth sistemiyle değiştirildi
-function doLogout(){
-  if(!confirm('Çıkış yapılacak. Emin misin?'))return;
-  user=null; localStorage.removeItem(UKEY);
-  document.getElementById('l-ad').value='';
-  document.getElementById('l-tel').value='';
-  document.getElementById('login').classList.remove('gone');
-}
+
 
 // NAV
 function showScreen(name){
