@@ -949,6 +949,54 @@ function init(){
     if(cb) cb.checked = true;
   }
 
+  // Eski format dönüştürücü
+  // Eğer acl_depolar_v1 eski shift formatındaysa (persons, weekStart root'ta) yeni formata çevir
+  try{
+    const _raw = JSON.parse(localStorage.getItem(SKEY)||'null');
+    if(_raw && _raw.persons && !_raw.depolar){
+      // Eski format - depolar array yok, direkt shift verisi var
+      console.log('Eski format tespit edildi, yeni formata çeviriliyor...');
+      const yeniFormat = {
+        depolar: [{
+          id: 'depo_legacy',
+          ad: 'Ana Depo',
+          lat: null, lng: null, acc: null,
+          personeller: (_raw.persons||[]).map(p=>({name:p.name,tel:p.tel,rol:p.rol||'personel'})),
+          shift: {
+            weekStart: _raw.weekStart||'',
+            persons: _raw.persons||[],
+            yogunSaatler: _raw.yogunSaatler||{gunduz:[],ara:[],aksam:[]}
+          },
+          shiftGecmisi: []
+        }]
+      };
+      depoData = yeniFormat;
+      localStorage.setItem(SKEY, JSON.stringify(depoData));
+      console.log('Format dönüşümü tamamlandı:', depoData.depolar[0].personeller.length, 'personel');
+    } else if(_raw && _raw.depolar){
+      // Yeni format - depolar var ama shift.persons boş olabilir
+      // Her depoda shift.persons'ı personeller'den doldur
+      let guncellendi = false;
+      (_raw.depolar||[]).forEach(d=>{
+        if((!d.shift || !d.shift.persons || d.shift.persons.length===0) && d.personeller && d.personeller.length>0){
+          if(!d.shift) d.shift = {weekStart:'',persons:[],yogunSaatler:{gunduz:[],ara:[],aksam:[]}};
+          d.shift.persons = d.personeller;
+          guncellendi = true;
+        }
+        // personeller boşsa shift.persons'dan doldur
+        if((!d.personeller || d.personeller.length===0) && d.shift && d.shift.persons && d.shift.persons.length>0){
+          d.personeller = d.shift.persons.map(p=>({name:p.name,tel:p.tel,rol:p.rol||'personel'}));
+          guncellendi = true;
+        }
+      });
+      if(guncellendi){
+        depoData = _raw;
+        localStorage.setItem(SKEY, JSON.stringify(depoData));
+        console.log('Depo verisi güncellendi');
+      }
+    }
+  }catch(e){ console.warn('Format dönüşüm hatası:', e); }
+
   // Session kontrolü
   const _session = sessionKontrol();
   if(_session){
