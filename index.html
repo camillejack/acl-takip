@@ -2608,7 +2608,7 @@ function molaBit(tel){
   const gecenMs=Date.now()-d.baslangic;
   const gecenDk=gecenMs/60000;
   const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
-  const p=(sd&&sd.depolar?(sd.depolar.reduce((acc,d)=>[...acc,...(d.shift&&d.shift.persons||d.personeller||[])],[]).find(pp=>normTel(pp.tel)===n)):null;
+  const p = (function(){ var _all=(sd&&sd.depolar?sd.depolar:[]).reduce(function(a,d){return a.concat(d.shift&&d.shift.persons||d.personeller||[]);},[]); return _all.find(function(pp){return normTel(pp.tel||'')===n;}); })();
   const hakDk=60; // her personel 60dk hak
   const kalanOnce=hakDk-d.kullanilanDk;
   const asiriDk=Math.max(0,gecenDk-kalanOnce);
@@ -2643,7 +2643,7 @@ function startMolaTimer(){
       if(d.aktif&&d.baslangic){
         const gecenDk=(Date.now()-d.baslangic)/60000;
         const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
-        const p=(sd&&sd.depolar?(sd.depolar.reduce((acc,d)=>[...acc,...(d.shift&&d.shift.persons||d.personeller||[])],[]).find(pp=>normTel(pp.tel)===n)):null;
+  const p = (function(){ var _all=(sd&&sd.depolar?sd.depolar:[]).reduce(function(a,d){return a.concat(d.shift&&d.shift.persons||d.personeller||[]);},[]); return _all.find(function(pp){return normTel(pp.tel||'')===n;}); })();
         const hakDk=60;
         const kalanDk=hakDk-d.kullanilanDk;
         if(gecenDk>=kalanDk+0.1 && gecenDk<kalanDk+0.2){
