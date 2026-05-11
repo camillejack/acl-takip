@@ -1981,19 +1981,45 @@ function molaToplamDk(molalar){
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function saveShift(){
-  if(!shiftData){ toast('Veri yok','err'); return; }
-  shiftData.weekStart = document.getElementById('week-start').value;
-  // Depolar zaten shiftData.depolar içinde
-  // Boş personelleri uyar ama kaydet
-  const emptyTel = shiftData.persons.filter(p=>!p.tel.trim());
-  if(emptyTel.length){
-    toast(`${emptyTel.length} personelin telefonu eksik!`,'err');
-    return;
+  if(!aktifDepoId){ toast('Once depo secin','err'); return; }
+  var _depo = getDepo(aktifDepoId);
+  if(!_depo){ toast('Depo bulunamadi','err'); return; }
+
+  // shiftData kontrolü
+  if(!shiftData) shiftData = {weekStart:'', persons:[], yogunSaatler:{gunduz:[],ara:[],aksam:[]}};
+  shiftData.weekStart = document.getElementById('week-start') ? document.getElementById('week-start').value : '';
+
+  // Boş telefon kontrolü
+  var _emptyTel = (shiftData.persons||[]).filter(function(p){ return !(p.tel||'').trim(); });
+  if(_emptyTel.length){ toast(_emptyTel.length+' personelin telefonu eksik!','err'); return; }
+
+  // Depo shift verisini güncelle
+  _depo.shift = {
+    weekStart: shiftData.weekStart,
+    persons: shiftData.persons||[],
+    yogunSaatler: shiftData.yogunSaatler||{gunduz:[],ara:[],aksam:[]}
+  };
+
+  // personeller dizisini de güncelle (login için gerekli)
+  _depo.personeller = (shiftData.persons||[]).map(function(p){
+    return {name:p.name, tel:p.tel, rol:p.rol||'personel'};
+  });
+
+  // Vardiya geçmişi
+  if(!_depo.shiftGecmisi) _depo.shiftGecmisi = [];
+  if(shiftData.weekStart){
+    var _gIdx = _depo.shiftGecmisi.findIndex(function(g){ return g.weekStart===shiftData.weekStart; });
+    if(_gIdx >= 0){
+      _depo.shiftGecmisi[_gIdx] = {weekStart:shiftData.weekStart, persons:shiftData.persons, kaydTarihi:todayStr};
+    } else {
+      _depo.shiftGecmisi.push({weekStart:shiftData.weekStart, persons:shiftData.persons, kaydTarihi:todayStr});
+      if(_depo.shiftGecmisi.length > 12) _depo.shiftGecmisi = _depo.shiftGecmisi.slice(-12);
+    }
   }
-  localStorage.setItem(SKEY, JSON.stringify(shiftData));
-  // Buluta kaydet
-  if(window._fbReady) cloudSaveShift(shiftData).then(()=>toast('Vardiya tablosu kaydedildi ✓','ok')).catch(()=>toast('Vardiya kaydedildi (çevrimdışı)','ok'));
-  else toast('Vardiya tablosu kaydedildi ✓','ok');
+
+  // Kaydet
+  saveDepoData();
+  toast('Depo kaydedildi','ok');
   renderShift();
 }
 
