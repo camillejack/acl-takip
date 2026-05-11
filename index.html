@@ -1026,6 +1026,11 @@ function init(){
     yoneticiUIGuncelle();
     syncFromCloud();
     setTimeout(()=>duyuruKontrol(), 3000);
+    // Giriş açıksa ekranları yenile
+    setTimeout(function(){
+      renderMolaEkrani();
+      renderIsbasiEkrani();
+    }, 800);
   }
   updateStats();
   // Service Worker - tüm eski SW'leri kaldır, cache temizle
