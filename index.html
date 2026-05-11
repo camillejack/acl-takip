@@ -2032,20 +2032,31 @@ function molaEndSaat(saat, sure){
 
 function renderShift(){
   const depoDataLocal = JSON.parse(localStorage.getItem(SKEY)||'null');
-  // Kullanıcının deposunu bul
   let sd = null;
+  let aktifDepoObj = null;
+
   if(depoDataLocal && depoDataLocal.depolar){
-    const aktif = depoDataLocal.depolar.find(d=>
-      (d.personeller||[]).some(p=>user && normTel(p.tel)===normTel(user.tel))
-    );
-    if(aktif) sd = aktif.shift;
-    // Müdür tüm depoları görebilir - seçili depoyu göster
-    if(!sd && rolSeviye(user?.rol)>=3 && depoDataLocal.depolar.length){
-      sd = depoDataLocal.depolar[0].shift;
+    // Personelin kendi deposunu bul
+    aktifDepoObj = depoDataLocal.depolar.find(function(d){
+      return (d.personeller||[]).some(function(p){
+        return user && normTel(p.tel||'')===normTel(user.tel||'');
+      }) || (d.shift&&d.shift.persons||[]).some(function(p){
+        return user && normTel(p.tel||'')===normTel(user.tel||'');
+      });
+    });
+
+    if(aktifDepoObj){
+      sd = aktifDepoObj.shift;
+    } else if(rolSeviye(user&&user.rol)>=3){
+      // Yönetici - seçili depoyu göster (aktifDepoId varsa)
+      if(aktifDepoId){
+        aktifDepoObj = depoDataLocal.depolar.find(function(d){ return d.id===aktifDepoId; });
+      }
+      if(!aktifDepoObj) aktifDepoObj = depoDataLocal.depolar[0];
+      if(aktifDepoObj) sd = aktifDepoObj.shift;
     }
   }
-  // Geriye uyumluluk
-  if(!sd) sd = JSON.parse(localStorage.getItem('acl_shift_v2')||'null');
+  if(!sd) sd = null;
   const labelEl = document.getElementById('shift-week-label');
   const areaEl  = document.getElementById('shift-table-area');
 
@@ -2086,7 +2097,7 @@ function renderShift(){
     weekLabel=ws.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'})+' – '+we.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'});
     for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(d.getDate()+i);colDates.push(d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}));}
   } else { colDates=DAYS_FULL; }
-  const aktifDepoObj = depoData ? getAktifDepo() : null;
+  const _aktifDepoObj2 = depoData ? getAktifDepo() : null;
   const depoAdiStr = aktifDepoObj ? ' · '+aktifDepoObj.ad : '';
   labelEl.textContent='Vardiya Tablosu'+depoAdiStr+' — '+weekLabel;
 
@@ -2684,7 +2695,19 @@ function startMolaTimer(){
 function renderMolaEkrani(){
   const el=document.getElementById('mola-ekrani-content');
   if(!el) return;
-  const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
+  const _ddM=JSON.parse(localStorage.getItem(SKEY)||'null');
+  const _depolarM=(_ddM&&_ddM.depolar)||[];
+  let _molaDepo=null;
+  if(user){
+    _molaDepo=_depolarM.find(function(d){
+      return (d.personeller||[]).some(function(p){return normTel(p.tel||'')===normTel(user.tel||'');})
+          ||((d.shift&&d.shift.persons)||[]).some(function(p){return normTel(p.tel||'')===normTel(user.tel||'');});
+    });
+    if(!_molaDepo && rolSeviye(user.rol)>=3 && _depolarM.length){
+      _molaDepo = aktifDepoId ? _depolarM.find(function(d){return d.id===aktifDepoId;}) : _depolarM[0];
+    }
+  }
+  const sd=_molaDepo?_molaDepo.shift:null;
   const myTelNorm=user?normTel(user.tel):'';
   const hakDk=60;
 
