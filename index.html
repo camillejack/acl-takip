@@ -1093,43 +1093,19 @@ async function syncFromCloud(){
       }
     }
 
-    // Depo verilerini çek - ID bazlı akıllı birleştirme
-    const cloudShift = await cloudGetShift();
-    const localDepolar = (depoData&&depoData.depolar)||[];
-
-    if(cloudShift && cloudShift.depolar && cloudShift.depolar.length > 0){
-      const cloudDepolar = cloudShift.depolar;
-
-      if(localDepolar.length === 0){
-        // Local boş - cloud'dan al
-        depoData = cloudShift;
+    // Depo sync - local her zaman kazanir
+    var _localRaw2 = localStorage.getItem(SKEY);
+    var _localD2 = _localRaw2 ? JSON.parse(_localRaw2) : null;
+    var _localList2 = (_localD2 && _localD2.depolar) ? _localD2.depolar : [];
+    if(_localList2.length === 0){
+      var _fbD = await cloudGetShift();
+      if(_fbD && _fbD.depolar && _fbD.depolar.length > 0){
+        depoData = _fbD;
         localStorage.setItem(SKEY, JSON.stringify(depoData));
-      } else {
-        // İkisinde de veri var - ID bazlı birleştir, local öncelikli
-        const localIds = new Set(localDepolar.map(d=>d.id));
-        const cloudIds = new Set(cloudDepolar.map(d=>d.id));
-        let degisti = false;
-
-        // Cloud'da olup local'de olmayan depoları ekle
-        cloudDepolar.forEach(cd=>{
-          if(!localIds.has(cd.id)){
-            depoData.depolar.push(cd);
-            degisti = true;
-          }
-        });
-
-        if(degisti){
-          localStorage.setItem(SKEY, JSON.stringify(depoData));
-        }
-
-        // Local'i her zaman cloud'a yaz (local kazanır)
-        await cloudSaveShift(depoData);
       }
     } else {
-      // Cloud boş - local'i cloud'a yükle
-      if(localDepolar.length > 0){
-        await cloudSaveShift(depoData);
-      }
+      depoData = _localD2;
+      cloudSaveShift(depoData).catch(function(){});
     }
 
     // Mola durumları çek
@@ -1799,7 +1775,9 @@ function getDepo(depoId){
 
 function saveDepoData(){
   localStorage.setItem(SKEY, JSON.stringify(depoData));
-  if(window._fbReady) fbSet('ayarlar','depolar',depoData).catch(()=>{});
+  if(window._fbReady){
+    fbSet('ayarlar','depolar',depoData).catch(function(e){ console.warn('FB err:', e); });
+  }
 }
 
 // shiftData uyumluluk - aktif depoya yönlendir
@@ -3704,81 +3682,58 @@ function toggleSifreBak(){
 function doLogin(){
   var tel   = (document.getElementById('l-tel').value||'').trim();
   var sifre = (document.getElementById('l-sifre').value||'').trim();
-
   document.getElementById('l-hata').style.display='none';
-
-  if(!tel){ showLoginHata('Telefon numarası giriniz'); return; }
-  if(!sifre){ showLoginHata('Şifre giriniz'); return; }
-
+  if(!tel){ showLoginHata('Telefon numarasi giriniz'); return; }
+  if(!sifre){ showLoginHata('Sifre giriniz'); return; }
   var telNorm = normTel(tel);
 
-  // Admin şifresi
-  if(sifre === MGRPWD || sifre === 'acl2024'){
-    user = {ad:'Yönetici', tel:tel, rol:'mudur', telNorm:telNorm};
+  // Admin girisi
+  if(sifre === MGRPWD){
+    user = {ad:'Yonetici', tel:tel, rol:'mudur', telNorm:telNorm};
     localStorage.setItem(UKEY, JSON.stringify(user));
-    var cb = document.getElementById('beni-hatirla');
-    if(cb && cb.checked) localStorage.setItem('acl_remembered', JSON.stringify({tel:tel, sifre:sifre}));
-    loginBasarili();
+    sessionOlustur(user);
+    var _cb0 = document.getElementById('beni-hatirla');
+    if(_cb0 && _cb0.checked) localStorage.setItem('acl_remembered', JSON.stringify({tel:tel}));
+    document.getElementById('login').classList.add('gone');
+    document.getElementById('brand-user').textContent = 'Yonetici';
+    var _rb0 = document.getElementById('rol-badge');
+    if(_rb0){ _rb0.textContent='Depo Muduru'; _rb0.className='rol-badge rol-mudur'; _rb0.style.display='inline-block'; }
+    yoneticiUIGuncelle();
+    startMolaTimer(); startUyariSistemi(); konumTakibiniBaslat(); syncFromCloud();
+    setTimeout(function(){ duyuruKontrol(); }, 2000);
+    toast('Hos geldiniz','ok');
     return;
   }
 
-  // Personel girişi - local'den ara
-  var dd = JSON.parse(localStorage.getItem(SKEY)||'null');
-  var p = null;
-  if(dd && dd.depolar){
-    for(var i=0; i<dd.depolar.length; i++){
-      var pers = dd.depolar[i].personeller||[];
-      for(var j=0; j<pers.length; j++){
-        if(normTel(pers[j].tel||'')=== telNorm){ p=pers[j]; break; }
+  // Personel girisi
+  var _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  var _depolar = (_dd && _dd.depolar) ? _dd.depolar : [];
+  var _tumP = [];
+  _depolar.forEach(function(_d){
+    (_d.personeller||[]).forEach(function(_pp){ _tumP.push(_pp); });
+    ((_d.shift && _d.shift.persons)||[]).forEach(function(_pp){
+      if(!_tumP.some(function(_x){ return normTel(_x.tel||'')=== normTel(_pp.tel||''); })){
+        _tumP.push(_pp);
       }
-      if(p) break;
-    }
-  }
+    });
+  });
 
-  if(!p){
-    showLoginHata('Bu telefon sistemde kayıtlı değil. Yöneticinize başvurun.');
+  var _p = _tumP.find(function(_pp){ return normTel(_pp.tel||'')=== telNorm; });
+  if(!_p){ showLoginHata('Bu telefon sistemde kayitli degil.'); return; }
+
+  var _dogru = sifreUret(_p);
+  if(sifre !== _dogru && sifre !== (_p.sifre||'')){
+    showLoginHata('Sifre hatali.');
     return;
   }
 
-  var dogruSifre = sifreUret(p);
-  console.log('Girilen:', sifre, 'Dogru:', dogruSifre, 'p.name:', p.name, 'p.tel:', p.tel);
-  // Ayrıca shift persons'dan da ara (personeller array'i name yerine başka alan kullanabilir)
-  var depoShiftP = null;
-  if(dd && dd.depolar){
-    for(var di=0; di<dd.depolar.length; di++){
-      var sp = (dd.depolar[di].shift && dd.depolar[di].shift.persons)||[];
-      for(var si=0; si<sp.length; si++){
-        if(normTel(sp[si].tel||'')=== telNorm){ depoShiftP=sp[si]; break; }
-      }
-      if(depoShiftP) break;
-    }
-  }
-  if(depoShiftP){
-    var dogruSifre2 = sifreUret(depoShiftP);
-    console.log('Shift persons sifre:', dogruSifre2, 'name:', depoShiftP.name);
-    if(sifre === dogruSifre2) { p = depoShiftP; dogruSifre = dogruSifre2; }
-  }
-  if(sifre !== dogruSifre && sifre !== (p.sifre||'')){
-    showLoginHata('Şifre hatalı. Yöneticinize başvurun.');
-    return;
-  }
-
-  user = {ad:p.name, tel:p.tel, rol:p.rol||'personel', telNorm:telNorm};
+  user = {ad:_p.name, tel:_p.tel, rol:_p.rol||'personel', telNorm:telNorm};
   localStorage.setItem(UKEY, JSON.stringify(user));
-  // Session token oluştur
   sessionOlustur(user);
-  // Beni hatırla - sadece tel sakla, şifre değil
-  var cb2 = document.getElementById('beni-hatirla');
-  if(cb2 && cb2.checked){
-    localStorage.setItem('acl_remembered', JSON.stringify({tel:tel}));
-  } else {
-    localStorage.removeItem('acl_remembered');
-  }
-  // Şifreyi Firebase'e hash'le kaydet (ilk girişte)
-  if(window._fbReady) sifreHashKaydet(tel, sifre).catch(()=>{});
+  var _cb2 = document.getElementById('beni-hatirla');
+  if(_cb2 && _cb2.checked) localStorage.setItem('acl_remembered', JSON.stringify({tel:tel}));
   loginBasarili();
 }
-
 function loginBasarili(){
   document.getElementById('login').classList.add('gone');
   document.getElementById('brand-user').textContent = user.ad;
