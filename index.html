@@ -3616,10 +3616,23 @@ function depoManuelKonum(i){
 
 // ─── ŞİFRE GÜVENLİĞİ ─────────────────────────────────────────
 async function sha256(text){
-  const buf = await crypto.subtle.digest('SHA-256',
-    new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf))
-    .map(b=>b.toString(16).padStart(2,'0')).join('');
+  // crypto.subtle sadece HTTPS'de çalışır
+  if(window.crypto && window.crypto.subtle){
+    try{
+      const buf = await crypto.subtle.digest('SHA-256',
+        new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf))
+        .map(b=>b.toString(16).padStart(2,'0')).join('');
+    }catch(e){}
+  }
+  // Fallback: basit hash (HTTP ortamı için)
+  var hash = 0;
+  for(var i=0; i<text.length; i++){
+    var chr = text.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return 'fallback_' + Math.abs(hash).toString(16);
 }
 
 // Şifre hash'i üret ve karşılaştır
