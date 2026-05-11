@@ -3878,9 +3878,32 @@ async function duyuruKontrol(){
     duyurular = JSON.parse(localStorage.getItem(DUYURU_KEY)||'[]');
   }
 
-  // Okunmamış duyuru var mı?
+  // Kullanıcının deposunu bul
+  var _kulDepolar = [];
+  if(user){
+    var _ddK = JSON.parse(localStorage.getItem(SKEY)||'null');
+    if(_ddK && _ddK.depolar){
+      _ddK.depolar.forEach(function(d){
+        var iceride = (d.personeller||[]).some(function(p){ return normTel(p.tel||'')===normTel(user.tel||''); })
+                   || ((d.shift&&d.shift.persons)||[]).some(function(p){ return normTel(p.tel||'')===normTel(user.tel||''); });
+        if(iceride) _kulDepolar.push(d.id);
+      });
+    }
+  }
+
+  // Okunmamış ve kişiye uygun duyuru var mı?
   const okunanlar = JSON.parse(localStorage.getItem('acl_okunan_duyuru')||'[]');
-  const okunmamis = duyurular.find(d=>!okunanlar.includes(d.id));
+  var _kulTelNorm = user ? normTel(user.tel||'') : '';
+  const okunmamis = duyurular.find(function(d){
+    if(okunanlar.includes(d.id)) return false;
+    if(!d.hedef || d.hedef === 'genel') return true;
+    // Kişiye özel
+    if(d.hedef && d.hedef.startsWith('kisi_')){
+      return d.hedef === 'kisi_'+_kulTelNorm;
+    }
+    // Depo bazlı
+    return _kulDepolar.includes(d.hedef);
+  });
   if(okunmamis) duyuruGoster(okunmamis);
 }
 
@@ -3927,6 +3950,33 @@ function renderDuyuruEkrani(){
       '<div class="slabel" style="margin-top:0">Duyuru Yayınla</div>'+
       '<button class="duyuru-yeni-btn" onclick="duyuruFormAc()">📢 Yeni Duyuru Yayınla</button>'+
       '<div class="duyuru-form" id="duyuru-form">'+
+        '<div class="mgr-label" style="margin-bottom:5px">Hedef Kitle</div>'+
+        '<select id="duyuru-hedef" class="mgr-input" style="width:100%;margin-bottom:10px;font-size:13px;padding:8px 10px" onchange="duyuruHedefDegisti(this.value)">'+
+          '<option value="genel">🌐 Tüm Personel (Genel)</option>'+
+          (getDepolar().map(function(d){ return '<option value="depo_'+d.id+'">🏢 '+escHtml(d.ad||'Depo')+'</option>'; }).join(''))+
+          '<option value="kisi">👤 Belirli Bir Kişi...</option>'+
+        '</select>'+
+        '<div id="duyuru-kisi-sec" style="display:none;margin-bottom:10px">'+
+          '<select id="duyuru-kisi-id" class="mgr-input" style="width:100%;font-size:13px;padding:8px 10px">'+
+            (function(){
+              var opts = '<option value="">-- Kişi Seçin --</option>';
+              getDepolar().forEach(function(d){
+                opts += '<optgroup label="'+escHtml(d.ad||'Depo')+'">';
+                var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+                var gorulen = {};
+                pers.forEach(function(p){
+                  var tn = normTel(p.tel||'');
+                  if(!gorulen[tn]){
+                    gorulen[tn]=true;
+                    opts += '<option value="'+tn+'">'+escHtml(p.name||'')+'</option>';
+                  }
+                });
+                opts += '</optgroup>';
+              });
+              return opts;
+            })()+
+          '</select>'+
+        '</div>'+
         '<div class="mgr-label" style="margin-bottom:5px">Duyuru İçeriği</div>'+
         '<textarea id="duyuru-icerik-input" class="note-ta" rows="4" placeholder="Duyuru metni..." style="margin-bottom:10px;width:100%"></textarea>'+
         '<button class="mgr-btn" style="width:100%;padding:11px" onclick="duyuruYayinla()">📢 Yayınla</button>'+
@@ -3953,11 +4003,15 @@ function renderDuyuruEkrani(){
   const listHTML = duyurular.length
     ? duyurular.slice().reverse().map(d=>{
         const okundu = okunanlar.includes(d.id);
+        const _het = (!d.hedef||d.hedef==='genel') ? '🌐 Genel'
+          : d.hedef.startsWith('kisi_') ? ('👤 '+escHtml(d.hedefAd||'Kişi'))
+          : ('🏢 '+escHtml(d.hedefAd||'Depo'));
         return '<div class="duyuru-kart" style="'+(okundu?'':'border-color:var(--accent2)')+'">'+
           '<div class="duyuru-kart-top">'+
             '<div class="duyuru-kart-baslik">'+(okundu?'':'🔵 ')+escHtml(d.gonderen||'Yönetim')+'</div>'+
             '<div class="duyuru-kart-tarih">'+(d.tarih||'')+'</div>'+
           '</div>'+
+          '<div style="font-size:11px;color:var(--accent);margin-bottom:6px">'+_het+'</div>'+
           '<div class="duyuru-kart-icerik">'+escHtml(d.icerik||'')+'</div>'+
           '<div class="duyuru-kart-stats">'+(okundu?'✓ Okundu':'⏳ Okunmadı')+'</div>'+
         '</div>';
@@ -3965,6 +4019,12 @@ function renderDuyuruEkrani(){
     : '<div class="empty-state" style="padding:30px 0"><div class="empty-ico">📢</div><div class="empty-txt">Henüz duyuru yok</div></div>';
 
   listeEl.innerHTML = baslik + listHTML;
+}
+
+
+function duyuruHedefDegisti(val){
+  var kisiDiv = document.getElementById('duyuru-kisi-sec');
+  if(kisiDiv) kisiDiv.style.display = (val==='kisi') ? 'block' : 'none';
 }
 
 function duyuruFormAc(){
