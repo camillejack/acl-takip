@@ -792,8 +792,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
       <div class="slabel">Kayıtlar</div>
       <div id="rapor-ozet"></div>
-      <div class="slabel">İş Başı Kayıtları</div>
+      <div class="slabel">İş Başı & Çalışma Kayıtları</div>
       <div id="rapor-isbasi-ozet"></div>
+      <div class="slabel">Aylık Çalışma Özeti</div>
+      <div id="rapor-aylik-ozet"></div>
       <div class="slabel">Mola Kullanım Özeti</div>
       <div id="rapor-mola-ozet"></div>
     </div>
@@ -1509,6 +1511,39 @@ function renderRapor(){
     }
   }
 
+  // Aylık çalışma özeti
+  var aylikEl = document.getElementById('rapor-aylik-ozet');
+  if(aylikEl){
+    var aylikHtml = '';
+    var simdi2 = new Date();
+    var buAyStr = ('0'+( simdi2.getMonth()+1)).slice(-2)+'.'+simdi2.getFullYear();
+    var aylikToplam = 0;
+    var gunSayisi = 0;
+    Object.keys(calismaData).forEach(function(tarih){
+      if(tarih.indexOf('.'+buAyStr.split('.')[0]+'.'+buAyStr.split('.')[1]) > -1 ||
+         tarih.endsWith('.'+simdi2.getFullYear())){
+        var g = calismaData[tarih];
+        if(g && g.toplamDk > 0){
+          aylikToplam += g.toplamDk;
+          gunSayisi++;
+        }
+      }
+    });
+    var aySaat = Math.floor(aylikToplam/60);
+    var ayDk = aylikToplam%60;
+    aylikHtml = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
+        '<span style="font-size:13px;color:var(--text2)">Bu Ay Toplam Çalışma</span>' +
+        '<span style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green)">'+aySaat+'sa '+ayDk+'dk</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between">' +
+        '<span style="font-size:13px;color:var(--text2)">Çalışılan Gün</span>' +
+        '<span style="font-family:var(--mono);font-size:14px;font-weight:600">'+gunSayisi+' gün</span>' +
+      '</div>' +
+    '</div>';
+    aylikEl.innerHTML = aylikHtml;
+  }
+
   // Mola ozeti
   const molaOzetEl=document.getElementById('rapor-mola-ozet');
   if(molaOzetEl){
@@ -1618,6 +1653,26 @@ function doExport(){
     tr.forEach(r=>rows.push([r.tarih,r.saat,r.ad||'',r.tel||'',r.ori,r.mua,r.adet,r.not||'']));
   } else {
     rows.push(['Bugün kayıt yok']);
+  }
+
+  // Çalışma kayıtları
+  if(Object.keys(calismaData).length > 0){
+    rows.push([]);
+    rows.push(['=== ÇALIŞMA KAYITLARI ===']);
+    rows.push(['Tarih','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Depo','Mesafe(m)']);
+    Object.keys(calismaData).sort().forEach(function(tarih){
+      var g = calismaData[tarih];
+      var girisler = g.girisler||[];
+      var cikislar = g.cikislar||[];
+      for(var i=0; i<Math.max(girisler.length,1); i++){
+        var girisSat = girisler[i] ? girisler[i].saat : '—';
+        var cikisSat = cikislar[i] ? cikislar[i].saat : '—';
+        var calDk = cikislar[i] ? cikislar[i].calisilanDk : '—';
+        var depoAdi = girisler[i] ? girisler[i].depo : '—';
+        var mes = girisler[i] ? girisler[i].mesafe : '—';
+        rows.push([tarih, girisSat, cikisSat, calDk, depoAdi, mes]);
+      }
+    });
   }
 
   const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -3287,7 +3342,25 @@ function sinaviKapat(){
 
 // ─── KONUM & İŞ BAŞI SİSTEMİ ─────────────────────────────────
 const ISBASI_KEY = 'acl_isbasi_v1';
+const CALISMA_KEY = 'acl_calisma_v1';
 let isBasiData = JSON.parse(localStorage.getItem(ISBASI_KEY)||'{}');
+let calismaData = JSON.parse(localStorage.getItem(CALISMA_KEY)||'{}');
+// calismaData yapısı: {tarih: {girisler:[{saat,depo,mesafe,ts}], cikislar:[{saat,depo,mesafe,ts}], toplamDk:0}}
+
+// Günlük temizleme - sadece bu ayın verisini tut (aylık rapor için)
+(function(){
+  var simdi = new Date();
+  var buAy = simdi.getFullYear()+'-'+(simdi.getMonth()+1);
+  Object.keys(calismaData).forEach(function(k){
+    // tarih formatı: GG.AA.YYYY
+    var parca = k.split('.');
+    if(parca.length === 3){
+      var kayitAy = parca[2]+'-'+parseInt(parca[1]);
+      if(kayitAy !== buAy) delete calismaData[k];
+    }
+  });
+  localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+})();
 
 // İş başı günlük temizleme - sadece bugünkü kaydı tut
 (function(){
@@ -3345,26 +3418,125 @@ function konumTakibiniBaslat(){
   );
 }
 
+var _depoIcindeydim = false; // Önceki konum depo içinde miydi?
+var _sonCikisKaydedildi = false; // Bugün çıkış kaydedildi mi?
+
 function konumGuncelle(){
-  const _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
-  const depolar = (_dd&&_dd.depolar)||[];
+  var _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  var depolar = (_dd&&_dd.depolar)||[];
   yakinDepo = null;
+  var enYakin = null, enYakinMesafe = Infinity;
 
   if(sonKonum && depolar.length){
-    let enYakin = null, enYakinMesafe = Infinity;
-    depolar.forEach(d=>{
+    depolar.forEach(function(d){
       if(!d.lat||!d.lng) return;
-      const m = mesafeHesapla(sonKonum.lat, sonKonum.lng, d.lat, d.lng);
+      var m = mesafeHesapla(sonKonum.lat, sonKonum.lng, d.lat, d.lng);
       if(m < enYakinMesafe){ enYakinMesafe=m; enYakin=d; }
     });
-    if(enYakinMesafe <= 50){ // 50m tolerans
-      yakinDepo = {...enYakin, mesafe: Math.round(enYakinMesafe)};
+
+    // 50m → depoda (giriş bölgesi)
+    if(enYakinMesafe <= 50){
+      yakinDepo = {id:enYakin.id, ad:enYakin.ad, lat:enYakin.lat, lng:enYakin.lng, mesafe:Math.round(enYakinMesafe)};
+
+      // Depo girişi tespit et - dışarıdan içeri geldi
+      if(!_depoIcindeydim && user){
+        _depoIcindeydim = true;
+        _sonCikisKaydedildi = false;
+        calismaGirisKaydet(enYakin, Math.round(enYakinMesafe));
+      }
     }
+    // 150m üzeri → depodan çıktı
+    else if(enYakinMesafe > 150){
+      // Mola kontrolü
+      var molaDurum = user ? getMolaDurum(user.tel) : null;
+      var moladaMi = molaDurum && molaDurum.aktif;
+
+      if(_depoIcindeydim && !moladaMi && user && !_sonCikisKaydedildi){
+        _depoIcindeydim = false;
+        _sonCikisKaydedildi = true;
+        calismaCikisKaydet(enYakin || {ad:'Bilinmiyor'}, Math.round(enYakinMesafe));
+      } else if(!moladaMi){
+        _depoIcindeydim = false;
+      }
+      yakinDepo = null;
+    }
+    // 50-150m arası → geçiş bölgesi, bekle
   }
 
   // İş başı ekranını güncelle
-  const el = document.getElementById('screen-isbasi');
+  var el = document.getElementById('screen-isbasi');
   if(el && !el.classList.contains('hidden')) renderIsbasiEkrani();
+}
+
+function calismaGirisKaydet(depo, mesafe){
+  if(!user) return;
+  var simdi = new Date();
+  var saatStr = simdi.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  if(!calismaData[todayStr]) calismaData[todayStr] = {girisler:[], cikislar:[], toplamDk:0, tarih:todayStr};
+
+  calismaData[todayStr].girisler.push({
+    saat: saatStr,
+    depo: depo ? depo.ad : 'Bilinmiyor',
+    depoId: depo ? depo.id : '',
+    mesafe: mesafe,
+    ts: simdi.getTime()
+  });
+
+  localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+
+  // Firebase'e kaydet
+  if(window._fbReady){
+    fbSet('calisma_kayitlar',
+      normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'),
+      {tel:user.tel, ad:user.ad, tarih:todayStr, ...calismaData[todayStr]}
+    ).catch(function(){});
+  }
+
+  console.log('Depo girisi:', saatStr, depo ? depo.ad : '');
+}
+
+function calismaCikisKaydet(depo, mesafe){
+  if(!user) return;
+  var simdi = new Date();
+  var saatStr = simdi.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  if(!calismaData[todayStr]) calismaData[todayStr] = {girisler:[], cikislar:[], toplamDk:0, tarih:todayStr};
+
+  // Son girişten bu yana geçen süreyi hesapla
+  var girisler = calismaData[todayStr].girisler;
+  var sonGiris = girisler.length > 0 ? girisler[girisler.length-1] : null;
+  var calisilanDk = 0;
+  if(sonGiris && sonGiris.ts){
+    calisilanDk = Math.round((simdi.getTime() - sonGiris.ts) / 60000);
+  }
+
+  calismaData[todayStr].cikislar.push({
+    saat: saatStr,
+    depo: depo ? depo.ad : 'Bilinmiyor',
+    mesafe: mesafe,
+    ts: simdi.getTime(),
+    calisilanDk: calisilanDk
+  });
+
+  calismaData[todayStr].toplamDk = (calismaData[todayStr].toplamDk||0) + calisilanDk;
+
+  localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+
+  // Firebase'e kaydet
+  if(window._fbReady){
+    fbSet('calisma_kayitlar',
+      normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'),
+      Object.assign({tel:user.tel, ad:user.ad, tarih:todayStr}, calismaData[todayStr])
+    ).catch(function(){});
+  }
+
+  console.log('Depo cikisi:', saatStr, calisilanDk+'dk');
+
+  // Bildirim göster
+  if(calisilanDk > 0){
+    toast(saatStr+' depodan cikis — '+calisilanDk+'dk calisma', '');
+  }
 }
 
 function renderIsbasiEkrani(){
@@ -3389,10 +3561,31 @@ function renderIsbasiEkrani(){
     konumDurumHtml = '<div class="konum-durum"><div class="konum-dot aktif"></div><span>Konum aktif · Hassasiyet: ±'+Math.round(sonKonum.acc||0)+'m</span></div>';
   }
 
+  // Bugünkü çalışma verisi
+  var bugunCalisma = calismaData[todayStr];
+  var calismaOzetHtml = '';
+  if(bugunCalisma && (bugunCalisma.girisler||[]).length > 0){
+    var toplamDk = bugunCalisma.toplamDk || 0;
+    var saat = Math.floor(toplamDk/60);
+    var dk = toplamDk % 60;
+    calismaOzetHtml = '<div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px 14px;margin-top:10px">' +
+      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Bugünkü Çalışma</div>' +
+      (bugunCalisma.girisler||[]).map(function(g,i){
+        var c = (bugunCalisma.cikislar||[])[i];
+        return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">' +
+          '<span style="color:var(--green)">▶ Giriş: '+g.saat+'</span>' +
+          '<span style="color:var(--text3);font-size:10px">'+g.depo+'</span>' +
+          (c ? '<span style="color:var(--red)">◼ Çıkış: '+c.saat+'</span>' : '<span style="color:var(--text3)">— devam ediyor</span>') +
+        '</div>';
+      }).join('') +
+      '<div style="margin-top:8px;font-size:13px;font-weight:600;color:var(--accent)">Toplam: '+saat+'sa '+dk+'dk</div>' +
+    '</div>';
+  }
+
   // İş başı yapıldıysa
   if(bugunKayit){
-    const gecDk = bugunKayit.gecDk||0;
-    el.innerHTML = konumDurumHtml + `
+    var gecDk = bugunKayit.gecDk||0;
+    el.innerHTML = konumDurumHtml + calismaOzetHtml + `
       <div class="isbasi-kart aktif-depo">
         <div class="isbasi-lokasyon">
           <div class="isbasi-lokasyon-ico">✅</div>
