@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ACL">
 <link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-startup-image" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>ACL Muadil Takip</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1197,7 +1199,7 @@ async function toggleCam(s){
     btn.classList.add('on'); btn.disabled=false;
     // Küçük barkodlar için video constraints - yüksek çözünürlük
     const videoConstraints = {
-      deviceId: cam?.deviceId ? {exact: cam.deviceId} : undefined,
+      deviceId: cam ? cam.deviceId : undefined ? {exact: cam.deviceId} : undefined,
       width: {ideal: 1920, min: 1280},
       height: {ideal: 1080, min: 720},
       focusMode: 'continuous',
@@ -1208,11 +1210,11 @@ async function toggleCam(s){
     vid.srcObject = stream;
     // Zoom destekliyorsa uygula
     const track = stream.getVideoTracks()[0];
-    const caps = track.getCapabilities?.();
-    if(caps?.zoom){
+    const caps = track.getCapabilities ? track.getCapabilities() : null;
+    if(caps ? caps.zoom : null){
       await track.applyConstraints({advanced:[{zoom: Math.min(2, caps.zoom.max)}]});
     }
-    await rdrs[s].decodeFromVideoDevice(cam?.deviceId||undefined,'vid-'+s,(result)=>{
+    await rdrs[s].decodeFromVideoDevice(cam ? cam.deviceId : undefined||undefined,'vid-'+s,(result)=>{
       if(result){setBc(s,result.getText());stopCam(s);}
     });
   }catch(e){
@@ -3658,8 +3660,13 @@ const SESSION_KEY = 'acl_session_v1';
 const SESSION_SURE = 12 * 60 * 60 * 1000; // 12 saat
 
 function sessionOlustur(user){
-  const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-    .map(b=>b.toString(16).padStart(2,'0')).join('');
+  var _arr = new Uint8Array(32);
+  if(window.crypto && window.crypto.getRandomValues){
+    window.crypto.getRandomValues(_arr);
+  } else {
+    for(var _i=0; _i<32; _i++) _arr[_i] = Math.floor(Math.random()*256);
+  }
+  const token = Array.from(_arr).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
   const session = {
     token, 
     tel: user.tel,
@@ -3701,9 +3708,11 @@ async function hashKarsilastir(girilen, hedef){
 
 // Firebase'e hash'lenmiş şifre kaydet
 async function sifreHashKaydet(tel, sifre){
-  if(!window._fbReady) return;
-  const hash = await sha256(sifre + 'acl_salt_2024');
-  await fbSet('kullanici_sifre', normTel(tel), {hash, guncelleme: new Date().toISOString()});
+  try{
+    if(!window._fbReady) return;
+    const hash = await sha256(sifre + 'acl_salt_2024');
+    await fbSet('kullanici_sifre', normTel(tel), {hash, guncelleme: new Date().toISOString()});
+  }catch(e){ console.warn('Hash kayit hatasi:', e); }
 }
 
 // Firebase'den hash'i çek ve doğrula
@@ -3725,8 +3734,8 @@ const ROLLER = {
   personel:{ label:'Personel',       cls:'rol-personel',seviye:1 }
 };
 
-function rolLabel(rol){ return ROLLER[rol]?.label || 'Personel'; }
-function rolSeviye(rol){ return ROLLER[rol]?.seviye || 1; }
+function rolLabel(rol){ return (ROLLER[rol] && ROLLER[rol].label) ? ROLLER[rol].label : 'Personel'; }
+function rolSeviye(rol){ return (ROLLER[rol] && ROLLER[rol].seviye) ? ROLLER[rol].seviye : 1; }
 function isYonetici(){ return user && rolSeviye(user.rol) >= 2; }
 function isMudur(){ return user && rolSeviye(user.rol) >= 3; }
 
