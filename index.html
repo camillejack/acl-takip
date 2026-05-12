@@ -3760,6 +3760,126 @@ function toggleSifreBak(){
 }
 
 
+
+// ─── PWA BİLDİRİM SİSTEMİ ─────────────────────────────────────
+var _swReg = null;
+
+// Bildirim izni iste ve SW kaydet
+function bildirimIzniIste(){
+  if(!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if(Notification.permission === 'granted'){
+    bildirimTokenKaydet();
+    return;
+  }
+  if(Notification.permission === 'denied') return;
+  Notification.requestPermission().then(function(perm){
+    if(perm === 'granted') bildirimTokenKaydet();
+  });
+}
+
+function bildirimTokenKaydet(){
+  if(!navigator.serviceWorker) return;
+  navigator.serviceWorker.ready.then(function(reg){
+    _swReg = reg;
+    // Basit token: cihaz+user kimliği
+    if(user && window._fbReady){
+      var token = 'web_' + normTel(user.tel) + '_' + Date.now();
+      var existing = localStorage.getItem('acl_push_token');
+      if(!existing){
+        localStorage.setItem('acl_push_token', token);
+        fbSet('push_tokens', normTel(user.tel), {
+          token: token,
+          tel: user.tel,
+          ad: user.ad,
+          platform: navigator.userAgent,
+          kayit: new Date().toISOString()
+        }).catch(function(){});
+      }
+    }
+  }).catch(function(){});
+}
+
+// Yerel bildirim göster (uygulama açıkken)
+function yerelBildirimGoster(baslik, icerik){
+  if(!('Notification' in window)) return;
+  if(Notification.permission !== 'granted') return;
+  
+  navigator.serviceWorker.ready.then(function(reg){
+    reg.showNotification(baslik, {
+      body: icerik,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      vibrate: [200, 100, 200],
+      tag: 'acl-duyuru-' + Date.now()
+    });
+  }).catch(function(){
+    // SW yoksa normal Notification kullan
+    new Notification(baslik, {body: icerik, icon: '/icon-192.png'});
+  });
+}
+
+// Duyuru yayınlanınca bildirim gönder
+function duyuruBildirimGonder(icerik, hedef, hedefAd){
+  if(!window._fbReady) return;
+  
+  // Firestore'a bildirim kuyruğu yaz
+  var bildirim = {
+    baslik: 'ACL Depo - Yeni Duyuru',
+    icerik: icerik.substring(0, 100),
+    hedef: hedef || 'genel',
+    hedefAd: hedefAd || 'Genel',
+    gonderen: user ? user.ad : 'Yonetim',
+    zaman: new Date().toISOString(),
+    okundu: false,
+    ts: Date.now()
+  };
+  
+  fbSet('bildirim_kuyrugu', 'son_' + Date.now(), bildirim).catch(function(){});
+  
+  // Yerel bildirim göster (gönderen kişinin cihazında)
+  yerelBildirimGoster('📢 Duyuru Gönderildi', icerik.substring(0, 80));
+}
+
+// Bildirim kuyruğunu dinle - kullanıcıya uygun bildirimleri göster
+function bildirimDinle(){
+  if(!user || !window._fbReady) return;
+  
+  var _kulTelNorm = normTel(user.tel || '');
+  var _sonKontrol = parseInt(localStorage.getItem('acl_son_bildirim') || '0');
+  
+  // Son 5 dakikadaki bildirimleri kontrol et
+  fbCollection('bildirim_kuyrugu').then(function(liste){
+    liste.forEach(function(b){
+      if(!b.ts || b.ts <= _sonKontrol) return;
+      
+      // Bana uygun mu?
+      var banaUygun = false;
+      if(!b.hedef || b.hedef === 'genel') banaUygun = true;
+      else if(b.hedef === 'kisi_' + _kulTelNorm) banaUygun = true;
+      else {
+        // Depo kontrolü
+        var _dd = JSON.parse(localStorage.getItem(SKEY) || 'null');
+        if(_dd && _dd.depolar){
+          _dd.depolar.forEach(function(d){
+            if(d.id === b.hedef){
+              var iceride = (d.personeller||[]).some(function(p){ return normTel(p.tel||'')===_kulTelNorm; })
+                         || ((d.shift&&d.shift.persons)||[]).some(function(p){ return normTel(p.tel||'')===_kulTelNorm; });
+              if(iceride) banaUygun = true;
+            }
+          });
+        }
+      }
+      
+      if(banaUygun && b.gonderen !== (user ? user.ad : '')){
+        yerelBildirimGoster(b.baslik || 'ACL Duyuru', b.icerik || '');
+      }
+    });
+    
+    // Son kontrol zamanını güncelle
+    localStorage.setItem('acl_son_bildirim', Date.now().toString());
+  }).catch(function(){});
+}
+
 function veriYukle(){
   var btn = document.getElementById('veri-yukle-btn');
   var dur = document.getElementById('veri-yukle-durum');
@@ -3854,6 +3974,11 @@ function doLogin(){
 }
 function loginBasarili(){
   document.getElementById('login').classList.add('gone');
+  // Bildirim izni iste
+  setTimeout(function(){ bildirimIzniIste(); }, 3000);
+  // Bildirim dinlemeye başla
+  setTimeout(function(){ bildirimDinle(); }, 5000);
+  setInterval(function(){ bildirimDinle(); }, 3 * 60 * 1000); // Her 3 dakikada bir
   document.getElementById('brand-user').textContent = user.ad;
   var rolBadge = document.getElementById('rol-badge');
   if(rolBadge && ROLLER[user.rol]){
@@ -4125,6 +4250,8 @@ function duyuruYayinla(){
   if(ta) ta.value = '';
   const form = document.getElementById('duyuru-form');
   if(form) form.classList.remove('acik');
+  // Bildirim gönder
+  duyuruBildirimGonder(icerik, duyuru.hedef, duyuru.hedefAd);
 
   // Sadece listeyi güncelle, formu yıkma
   const duyurular2 = JSON.parse(localStorage.getItem(DUYURU_KEY)||'[]');
