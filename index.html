@@ -3288,6 +3288,19 @@ function sinaviKapat(){
 // ─── KONUM & İŞ BAŞI SİSTEMİ ─────────────────────────────────
 const ISBASI_KEY = 'acl_isbasi_v1';
 let isBasiData = JSON.parse(localStorage.getItem(ISBASI_KEY)||'{}');
+
+// İş başı günlük temizleme - sadece bugünkü kaydı tut
+(function(){
+  var bugunVar = isBasiData[todayStr];
+  var temizlendi = false;
+  Object.keys(isBasiData).forEach(function(k){
+    if(k !== todayStr){
+      delete isBasiData[k];
+      temizlendi = true;
+    }
+  });
+  if(temizlendi) localStorage.setItem(ISBASI_KEY, JSON.stringify(isBasiData));
+})();
 // {tarih: {saat, depo, lat, lng, vardiyaBas, gecDk}}
 
 let konumWatcher = null;
