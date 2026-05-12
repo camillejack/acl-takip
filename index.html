@@ -517,6 +517,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </div>
     <button class="l-btn" onclick="doLogin()" type="button" style="background:#6a1fc2;color:#ffd600;font-size:18px;padding:16px;border:3px solid #ffd600">Giriş Yap →</button>
     <div style="margin-top:16px;font-size:11px;color:var(--text3);text-align:center">Şifrenizi bilmiyorsanız yöneticinize başvurun</div>
+    <button onclick="veriYukle()" id="veri-yukle-btn" style="margin-top:12px;width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:rgba(255,255,255,0.5);font-family:var(--sans);font-size:12px;cursor:pointer">
+      🔄 Sistemi Yenile
+    </button>
+    <div id="veri-yukle-durum" style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px"></div>
   </div>
 
   <!-- DUYURU POPUP -->
@@ -3753,6 +3757,44 @@ function toggleSifreBak(){
   const btn = document.getElementById('sifre-goz');
   if(inp.type==='password'){ inp.type='text'; btn.textContent='🙈'; }
   else { inp.type='password'; btn.textContent='👁'; }
+}
+
+
+function veriYukle(){
+  var btn = document.getElementById('veri-yukle-btn');
+  var dur = document.getElementById('veri-yukle-durum');
+  if(btn) btn.textContent = '⏳ Yükleniyor...';
+  if(dur) dur.textContent = '';
+
+  function yukle(){
+    cloudGetShift().then(function(fbD){
+      if(fbD && fbD.depolar && fbD.depolar.length > 0){
+        depoData = fbD;
+        localStorage.setItem(SKEY, JSON.stringify(fbD));
+        if(btn) btn.textContent = '✅ ' + fbD.depolar.length + ' depo yüklendi';
+        if(dur) dur.textContent = 'Artık şifrenizle giriş yapabilirsiniz';
+        if(dur) dur.style.color = 'var(--green)';
+      } else {
+        if(btn) btn.textContent = '⚠️ Veri bulunamadı';
+        if(dur) dur.textContent = 'Yöneticinize başvurun';
+      }
+    }).catch(function(e){
+      if(btn) btn.textContent = '❌ Bağlantı hatası';
+      if(dur) dur.textContent = 'İnternet bağlantınızı kontrol edin';
+    });
+  }
+
+  if(window._fbReady){
+    yukle();
+  } else {
+    document.addEventListener('fb-ready', function(){ yukle(); }, {once:true});
+    setTimeout(function(){
+      if(!window._fbReady){
+        if(btn) btn.textContent = '❌ Firebase bağlanamadı';
+        if(dur) dur.textContent = 'Sayfayı kapatıp tekrar açın';
+      }
+    }, 8000);
+  }
 }
 
 function doLogin(){
