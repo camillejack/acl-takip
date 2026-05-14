@@ -487,6 +487,190 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .toast.ok{background:var(--green-dim);border-color:var(--green-b);color:var(--green)}
 .toast.err{background:var(--red-dim);border-color:var(--red-b);color:var(--red)}
+
+/* Terminal Rehberi */
+
+:root {
+  --mor: #5C3CBB;
+  --mor2: #7B5DD6;
+  --mor-ac: #EDE8FF;
+  --sari: #FDD835;
+  --sari2: #F9A825;
+  --yesil: #4CAF50;
+  --kirmizi: #F44336;
+  --turuncu: #F5820A;
+  --beyaz: #fff;
+  --gri: #F5F5F5;
+  --gri2: #E0E0E0;
+  --metin: #1A1A2E;
+  --metin2: #555;
+  --metin3: #999;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:#F0EEF8; color:var(--metin); min-height:100vh; }
+
+/* HEADER */
+.header {
+  background:var(--mor);
+  padding:24px 0 0;
+  text-align:center;
+}
+.header-logo {
+  font-size:32px; font-weight:900; color:#fff;
+  letter-spacing:-.5px; margin-bottom:4px;
+}
+.header-logo em { color:var(--sari); font-style:normal; }
+.header-sub { font-size:13px; color:rgba(255,255,255,.6); letter-spacing:.08em; text-transform:uppercase; }
+.header-tabs {
+  display:flex; margin-top:20px; overflow-x:auto;
+  scrollbar-width:none;
+}
+.header-tabs::-webkit-scrollbar { display:none; }
+.htab {
+  flex-shrink:0; padding:12px 20px; font-size:12px; font-weight:600;
+  color:rgba(255,255,255,.55); cursor:pointer; border-bottom:3px solid transparent;
+  transition:all .2s; white-space:nowrap;
+}
+.htab.aktif { color:#fff; border-bottom-color:var(--sari); }
+
+/* SAYFA */
+.sayfa { display:none; max-width:780px; margin:0 auto; padding:32px 16px; }
+.sayfa.aktif { display:block; }
+
+/* EKRAN KARTI */
+.ekran-kart {
+  background:#fff; border-radius:20px;
+  padding:24px; margin-bottom:24px;
+  border:1px solid var(--gri2);
+}
+.ekran-no-row {
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.ekran-no {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--mor); color:#fff;
+  font-size:16px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.ekran-baslik { font-size:17px; font-weight:700; color:var(--metin); }
+.ekran-ust { font-size:12px; color:var(--metin3); font-weight:500; margin-top:2px; }
+
+.ekran-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:580px){ .ekran-grid { grid-template-columns:1fr; } }
+
+/* TERMINAL */
+.terminal {
+  border-radius:14px; overflow:hidden;
+  border:2.5px solid #1a1a1a;
+  background:#fff; flex-shrink:0;
+}
+.t-sb { background:var(--mor); color:#fff; font-size:9px; padding:4px 10px; display:flex; justify-content:space-between; }
+.t-header { background:var(--mor); color:#fff; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; }
+.t-logo { font-size:15px; font-weight:800; letter-spacing:-.3px; }
+.t-logo em { color:var(--sari); font-style:normal; }
+.t-uyari { background:var(--turuncu); color:#fff; font-size:9px; padding:4px 10px; text-align:center; font-weight:600; }
+.t-user { background:#fff; margin:7px; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; border:0.5px solid #eee; }
+.t-uname { font-size:11px; font-weight:700; color:#222; }
+.t-udepo { font-size:9px; color:#999; margin-top:1px; }
+.t-musait { background:#E8F5E9; color:#2E7D32; border-radius:12px; padding:3px 8px; font-size:9px; font-weight:700; display:flex; align-items:center; gap:3px; }
+.t-musait-dot { width:6px; height:6px; border-radius:50%; background:#4CAF50; }
+.t-stitle { font-size:9px; color:#999; padding:0 9px; margin-top:7px; margin-bottom:3px; display:flex; justify-content:space-between; }
+.t-tabs { display:flex; border-bottom:1px solid #eee; margin:0 7px; }
+.t-tab { font-size:9px; padding:5px 6px; color:#999; flex:1; text-align:center; }
+.t-tab.a { color:var(--mor); border-bottom:2px solid var(--mor); font-weight:700; margin-bottom:-1px; }
+.t-gorev { display:flex; align-items:center; gap:6px; padding:6px 9px; border-bottom:0.5px solid #f5f5f5; }
+.t-badge { border-radius:4px; font-size:8px; font-weight:700; padding:2px 6px; color:#fff; white-space:nowrap; }
+.t-badge.te { background:#2196F3; }
+.t-badge.tr { background:#9C27B0; }
+.t-badge.sa { background:#FF9800; }
+.t-barkod { font-size:8px; color:#333; font-family:'JetBrains Mono',monospace; flex:1; line-height:1.3; }
+.t-tarih { font-size:7px; color:#bbb; text-align:right; line-height:1.5; }
+.t-ok { font-size:12px; color:var(--mor); font-weight:700; }
+.t-duyuru-baslik { font-size:9px; color:#bbb; padding:6px 9px 2px; font-weight:600; }
+.t-duyuru { padding:7px 9px; border-top:0.5px solid #f5f5f5; display:flex; justify-content:space-between; align-items:center; }
+.t-duyuru-ad { font-size:10px; color:#333; }
+.t-duyuru-tarih { font-size:8px; color:#ccc; }
+.t-dh { background:var(--mor); color:#fff; padding:10px; text-align:center; font-size:12px; font-weight:700; letter-spacing:.5px; }
+.t-di { padding:8px 10px; display:flex; justify-content:space-between; align-items:center; }
+.t-dtarih { font-size:9px; color:var(--mor); font-weight:600; }
+.t-bnk { font-size:9px; color:#E91E63; font-weight:700; margin-top:2px; letter-spacing:.5px; }
+.t-timer { border-radius:8px; padding:3px 9px; font-size:11px; font-weight:800; display:flex; align-items:center; gap:3px; }
+.t-timer.y { background:var(--yesil); color:#fff; }
+.t-timer.k { background:var(--kirmizi); color:#fff; }
+.t-cbr { display:flex; align-items:flex-start; gap:7px; padding:3px 10px 8px; font-size:9px; color:#666; }
+.t-cb { width:12px; height:12px; border:1.5px solid var(--mor); border-radius:2px; flex-shrink:0; margin-top:1px; }
+.t-elle { color:var(--mor); font-size:10px; font-weight:700; text-align:center; padding:5px; }
+.t-ur { display:flex; align-items:center; gap:7px; padding:6px 10px; border-bottom:0.5px solid #f8f8f8; }
+.t-uicon { width:26px; height:26px; border-radius:4px; background:#f5f5f5; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.t-uinfo { flex:1; }
+.t-uad { font-size:9px; color:#333; font-weight:500; line-height:1.3; }
+.t-skt { display:flex; gap:5px; align-items:center; margin-top:2px; flex-wrap:wrap; }
+.t-skt-l { font-size:8px; color:var(--mor); font-weight:600; }
+.t-skt-k { font-size:8px; color:var(--kirmizi); font-weight:600; }
+.t-skt-n { font-size:8px; color:#bbb; }
+.t-adet { background:var(--mor); color:#fff; border-radius:5px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; flex-shrink:0; }
+.t-adet.g { background:#9E9E9E; }
+.t-adet.b { width:26px; height:26px; font-size:12px; }
+.t-altabs { display:flex; border-bottom:1px solid #eee; }
+.t-altab { flex:1; font-size:9px; padding:5px; text-align:center; color:#999; }
+.t-altab.a { color:var(--mor); border-bottom:2px solid var(--mor); font-weight:700; }
+.t-eksik { margin:7px; background:#fff; border:1.5px solid var(--mor); color:var(--mor); border-radius:8px; padding:8px; font-size:10px; font-weight:700; text-align:center; }
+.t-teslim-popup { margin:6px; background:#fff; border-radius:8px; border:0.5px solid #e0e0e0; padding:10px; display:flex; gap:9px; align-items:flex-start; }
+.t-teslim-icon { background:var(--mor); border-radius:7px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--sari); font-size:17px; font-weight:900; }
+.t-teslim-ad { font-size:9px; color:#222; font-weight:700; }
+.t-teslim-alt { font-size:8px; color:#888; margin-top:2px; line-height:1.4; }
+.t-yeni { min-height:170px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; gap:7px; background:#EDE8FF; }
+.t-yeni-sepet { background:var(--mor); border-radius:8px; padding:7px 16px; }
+.t-yeni-logo { color:var(--sari); font-size:16px; font-weight:900; font-family:'JetBrains Mono',monospace; }
+.t-yeni-text { font-size:13px; font-weight:700; color:var(--mor); }
+.t-yeni-sayac { border:1.5px solid var(--mor); border-radius:20px; padding:3px 12px; font-size:10px; color:var(--mor); font-weight:600; }
+.t-yeni-btn { background:var(--mor); color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:11px; font-weight:800; width:100%; margin-top:4px; font-family:'Inter',sans-serif; }
+
+/* AÇIKLAMA */
+.acik { background:var(--mor-ac); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px; }
+.acik h3 { font-size:13px; font-weight:700; color:var(--mor); }
+.acik-madde { display:flex; gap:10px; align-items:flex-start; }
+.acik-ok { width:18px; height:18px; border-radius:50%; background:var(--mor); color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.acik-text { font-size:12px; color:var(--metin2); line-height:1.6; }
+.uw { background:#FFF8E1; border-left:3px solid var(--sari2); border-radius:0 10px 10px 0; padding:10px 14px; margin-top:4px; }
+.uw p { font-size:12px; color:#5D4037; line-height:1.6; font-weight:500; }
+
+/* SINIF GRID */
+.sinif-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+.sinif-kart { border-radius:10px; padding:10px 6px; text-align:center; border:1px solid var(--gri2); background:#fff; }
+.sinif-no { font-size:17px; font-weight:800; margin-bottom:3px; }
+.sinif-ac { font-size:10px; color:var(--metin3); line-height:1.3; }
+
+/* ADET KUTU */
+.adet-kutu { background:#fff; border:2px solid var(--mor); border-radius:12px; padding:14px; display:flex; align-items:center; gap:12px; margin-top:10px; }
+.adet-no { background:var(--mor); color:#fff; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; flex-shrink:0; font-family:'JetBrains Mono',monospace; }
+.adet-text { font-size:12px; color:var(--metin); line-height:1.6; }
+
+/* SEPET AKIŞ */
+.akis { display:flex; gap:8px; margin-bottom:24px; overflow-x:auto; padding-bottom:4px; }
+.akis::-webkit-scrollbar { display:none; }
+.akis-adim { display:flex; flex-direction:column; align-items:center; min-width:130px; flex:1; }
+.akis-no { width:30px; height:30px; border-radius:50%; background:var(--mor); color:#fff; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:8px; flex-shrink:0; }
+.akis-kart { background:#fff; border:1px solid var(--gri2); border-radius:12px; padding:12px 10px; text-align:center; font-size:11px; color:var(--metin2); line-height:1.6; width:100%; flex:1; }
+.akis-kart strong { color:var(--mor); }
+.akis-ok { font-size:20px; color:var(--gri2); margin-top:14px; flex-shrink:0; }
+
+/* EŞLEŞME */
+.eslesme { display:flex; align-items:center; justify-content:center; gap:16px; background:#fff; border-radius:14px; padding:16px; margin-top:12px; border:1px solid var(--gri2); }
+.eslesme-kutu { text-align:center; }
+.eslesme-label { font-size:10px; color:var(--metin3); margin-bottom:6px; }
+.eslesme-no { font-size:22px; font-weight:900; font-family:'JetBrains Mono',monospace; color:var(--mor); background:var(--mor-ac); border-radius:8px; padding:6px 14px; display:inline-block; }
+.eslesme-eq { font-size:28px; font-weight:900; color:var(--yesil); }
+
+/* HIZLI ÖZET */
+.ozet-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px; }
+@media(max-width:400px){ .ozet-grid { grid-template-columns:1fr; } }
+.ozet-kart { background:#fff; border:1px solid var(--gri2); border-radius:14px; padding:16px; display:flex; gap:12px; align-items:flex-start; }
+.ozet-icon { font-size:24px; flex-shrink:0; }
+.ozet-baslik { font-size:13px; font-weight:700; color:var(--metin); margin-bottom:3px; }
+.ozet-ac { font-size:11px; color:var(--metin2); line-height:1.5; }
+
 </style>
 </head>
 <body>
@@ -3227,6 +3411,36 @@ var EGITIM_MODULLERI = [
       {soru:'Soğuk oda önündeki geçiş yolu nasıl olmalıdır?', secenekler:['Kasa veya koli konulabilir','Her zaman açık ve engelsiz','Küçük malzeme konulabilir','Kullanılmıyorsa dolabilir'], dogru:1, aciklama:'Soğuk oda kapısının önü ve içindeki geçiş yolları her zaman açık ve engelsiz tutulur.'},
       {soru:'Soğuk odada zemin ıslaksa ne yapılır?', secenekler:['Uyarı levhası konulur ve bırakılır','Anında temizlenir','Sonraki vardiyaya bırakılır','Sıcaklık yüzünden normaldir'], dogru:1, aciklama:'Sıvı dökülmeleri ve buz birikintisi anında temizlenir; kayma riski oluşturulamaz.'}
     ]
+  },
+  {
+    id: 6,
+    baslik: 'Getir Terminal Kullanımı',
+    ikon: '🖥️',
+    renk: '#5C3CBB',
+    icerik: [
+      'Yeni sipariş geldiğinde terminal zil sesiyle bildirim yapar ve Siparişin var ekranı açılır.',
+      'Siparişi Gördüm butonuna hemen basılmalıdır. Geç kalınması toplayıcı sürelerini uzatır ve depo puanını düşürür.',
+      'Sipariş kabul edildikten sonra boş bir sepet alınır. Sepetin üzerindeki karekod terminale okutulur.',
+      'Karekod okutulunca terminalde sepetin numarası çıkar — örnek: BNK.058 demek 58 numaralı sepet demektir.',
+      'Ürünler raftan toplanırken her ürün barkodla okutulur. Kutucuktaki sayı kaç adet toplanacağını gösterir.',
+      'Yeşil timer normal hızı, kırmızı timer süre aşımını gösterir. Kırmızı timerde hızlanılır.',
+      'Okutulacak sekmesi henüz taranmayan, Kasalanan sekmesi sepete eklenen ürünleri gösterir.',
+      'Tüm ürünler tamamlanınca Teslim bildirimi çıkar. Sepet hemen bankoya bırakılır.',
+      'Terminalde Müsait statüsünden Meşgule geçiş depo sorumlusunun onayı olmadan yapılamaz.',
+      'Başarılı depolar A, A+, AA, AA+ sınıflarına girer. Her personelin hızlı çalışması depo puanını etkiler.'
+    ],
+    sorular: [
+      {soru:'Yeni sipariş geldiğinde ilk yapılması gereken nedir?', secenekler:['Sepeti almak','Siparişi Gördüm butonuna basmak','Ürün toplamaya başlamak','Sorumluya haber vermek'], dogru:1, aciklama:'Terminal zil çalar ve ekran açılır. Hemen Siparişi Gördüm butonuna basılmalıdır; geç kalınması depo puanını olumsuz etkiler.'},
+      {soru:'Terminalde BNK.058 yazıyorsa hangi sepet kullanılır?', secenekler:['5 numaralı sepet','58 numaralı sepet','8 numaralı sepet','Herhangi bir sepet'], dogru:1, aciklama:'BNK.058 = 58 numaralı sepet. Sepet numarası, sepetin karekodunu okutunca terminalde çıkar.'},
+      {soru:'Sepet numarası terminalde ne zaman görünür?', secenekler:['Sipariş kabul edilince otomatik','Sepetin karekodunu okutunca','Ürünler toplandıkça','Sipariş başlamadan önce'], dogru:1, aciklama:'Sepet numarası önceden belirlenmez. Boş sepet alınır, karekodu okutulur, terminalde o sepetin numarası çıkar.'},
+      {soru:'Ürün karşısındaki kutucukta 2 yazıyorsa ne yapılır?', secenekler:['1 adet toplanır','2 adet toplanır ve sepete konur','3 adet toplanır','Fark etmez'], dogru:1, aciklama:'Kutucuktaki sayı sistemin senden toplamanı istediği adettir. 2 yazıyorsa 2 adet okutulur ve sepete konur.'},
+      {soru:'Yeşil timer ne anlama gelir?', secenekler:['Süre doldu acele et','Normal hızda devam et','Sipariş iptal edildi','Mola zamanı'], dogru:1, aciklama:'Yeşil timer sipariş toplama süresinin normal seyrettiğini gösterir. Kırmızıya dönünce süre aşılmış demektir.'},
+      {soru:'Teslim bildirimi çıkınca ne yapılır?', secenekler:['Yeni sipariş beklenir','Sepet hemen bankoya bırakılır','Ürünler kontrol edilir','Sorumluya bildirilir'], dogru:1, aciklama:'Teslim popup çıkınca sipariş tamamdır. Sepet derhal bankoya bırakılır, kurye bekliyor olabilir.'},
+      {soru:'Siparişi Gördüm butonuna geç basmanın sonucu nedir?', secenekler:['Hiçbir şey olmaz','Toplayıcı süreleri uzar ve depo puanı düşer','Sipariş iptal olur','Para kesintisi yapılır'], dogru:1, aciklama:'Geç basılan buton toplayıcı sürelerini uzatır. Bu durum depo puanını düşürür ve üst sınıflara çıkmayı zorlaştırır.'},
+      {soru:'Kasalanan sekmesinde ne gösterilir?', secenekler:['Henüz toplanmayan ürünler','Barkodu okutulan ve sepete eklenen ürünler','İptal edilen ürünler','Eksik ürünler'], dogru:1, aciklama:'Kasalanan sekmesi barkodu okutulan ve sepete eklenen ürünleri gösterir. Okutulacak ile eşitlenince sipariş tamamdır.'},
+      {soru:'AA+ sınıfına girebilmek için ne gerekir?', secenekler:['Sadece çok sipariş almak','Yüksek puan ile hızlı ve doğru sipariş toplamak','Hiç hata yapmamak','Fazla mesai yapmak'], dogru:1, aciklama:'AA+ en yüksek depo sınıfıdır. Ulaşmak için toplayıcı sürelerinin kısa ve hataların minimum olması gerekir.'},
+      {soru:'Terminalde Müsaitten Meşgule geçiş ne zaman yapılabilir?', secenekler:['İstediği zaman','Depo sorumlusunun onayıyla','Vardiya başında','Sipariş yokken'], dogru:1, aciklama:'Müsaitten Meşgule geçiş depo sorumlusunun onayı olmadan yapılamaz. İzinsiz değişiklik disiplin sürecini başlatır.'}
+    ]
   }
 ];
 
@@ -3240,7 +3454,9 @@ var GENEL_SINAV_SORULAR = [
   {soru:'Depo içinde koşmak neden yasaktır?', secenekler:['Görüntü bozar','İş kazası riski','Ürünlere zarar verir','Gürültü yapar'], dogru:1, aciklama:'Koşmak iş kazalarına zemin hazırlar; yürüyerek hızlı hareket edilir.'},
   {soru:'SKT kontrolü ne sıklıkta yapılmalıdır?', secenekler:['Haftada bir','Her ay','Her vardiya başında','Ayda bir'], dogru:2, aciklama:'Her vardiya başında tüm ürünlerin SKT kontrolü yapılmalıdır.'},
   {soru:'İş başı nasıl yapılır?', secenekler:['Sözlü olarak','ACL Takip uygulamasından GPS ile','Terminale giriş yaparak','Mesaj atarak'], dogru:1, aciklama:'İş başı GPS teyitli olarak ACL Takip uygulamasından yapılmalıdır.'},
-  {soru:'Zemine düşen ürün ne zaman kaldırılır?', secenekler:['Vardiya sonunda','Anında kaldırılır','Birikince','Temizlikçi kaldırır'], dogru:1, aciklama:'Zemine düşen ürünler anında kaldırılmalıdır; kayma kazası riski oluşturur.'}
+  {soru:'Zemine düşen ürün ne zaman kaldırılır?', secenekler:['Vardiya sonunda','Anında kaldırılır','Birikince','Temizlikçi kaldırır'], dogru:1, aciklama:'Zemine düşen ürünler anında kaldırılmalıdır; kayma kazası riski oluşturur.'},
+  {soru:'Terminalde sepet numarası ne zaman görünür?', secenekler:['Sipariş kabul edilince','Sepetin karekodunu okutunca','Ürünler toplandıkça','Kendiliğinden çıkar'], dogru:1, aciklama:'Sepet karekodu okutulunca terminalde sepetin numarası görünür. Önceden belirlenmez.'},
+  {soru:'Kırmızı timer ne anlama gelir?', secenekler:['Normal hız','Süre aşıldı hızlan','Sipariş iptal','Mola zamanı'], dogru:1, aciklama:'Kırmızı timer belirlenen sipariş toplama süresinin dolduğunu gösterir. Hızlanmak ve tamamlamak gerekir.'}
 ];
 
 // ─── MODÜL EĞİTİM SİSTEMİ ─────────────────────────────────────────────────────
@@ -3308,6 +3524,48 @@ function renderEgitimModul(){
   el.innerHTML = egitimHtml;
 }
 
+
+function getTerminalEgitimHTML(){
+  var tabsHtml = '<div style="display:flex;overflow-x:auto;border-bottom:2px solid var(--border);margin-bottom:12px;scrollbar-width:none" id="pwa-t-tabs">' +
+    '<div onclick="pwaTerminalSekme(0,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:700;color:#5C3CBB;border-bottom:2px solid #5C3CBB;cursor:pointer;white-space:nowrap;margin-bottom:-2px">Ana Ekran</div>' +
+    '<div onclick="pwaTerminalSekme(1,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Yeni Sipariş</div>' +
+    '<div onclick="pwaTerminalSekme(2,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Sepet Okutma</div>' +
+    '<div onclick="pwaTerminalSekme(3,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Hazırlama</div>' +
+    '<div onclick="pwaTerminalSekme(4,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Süre Aşımı</div>' +
+    '<div onclick="pwaTerminalSekme(5,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Kasalanan</div>' +
+    '<div onclick="pwaTerminalSekme(6,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Teslim</div>' +
+    '<div onclick="pwaTerminalSekme(7,this)" style="flex-shrink:0;padding:7px 12px;font-size:10px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap">Özet</div>' +
+  '</div>';
+
+  return '<div style="padding:4px 0">' +
+    '<button onclick="renderEgitimModul()" style="background:var(--bg3);border:none;border-radius:8px;padding:8px 14px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:12px">← Geri</button>' +
+    '<div class="egitim-kart">' +
+      '<div class="egitim-bolum-header">' +
+        '<div style="font-size:24px;width:40px;height:40px;background:#5C3CBB;border-radius:10px;display:flex;align-items:center;justify-content:center">🖥️</div>' +
+        '<div><div class="egitim-bolum-title">Getir Terminal Kullanım Rehberi</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">Ekranları inceleyin — 10 soruluk sınav</div></div>' +
+      '</div>' +
+    '</div>' +
+    tabsHtml +
+    '<div id="pwa-terminal-icerik"><div style="display:block" id="pts0">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">1</div>\n      <div>\n        <div class="ekran-baslik">Ana Ekran</div>\n        <div class="ekran-ust">Görevler ve duyurular</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:47</span><span>☁ ▣ ▪</span></div>\n        <div class="t-header"><div style="font-size:10px;color:rgba(255,255,255,.5)">☰</div><div class="t-logo">getir<em>terminal</em></div><div style="font-size:9px;color:rgba(255,255,255,.6)">▾ ▣</div></div>\n        <div class="t-uyari">İnternet hızın yavaş</div>\n        <div class="t-user">\n          <div><div class="t-uname">Tarık Özmen</div><div class="t-udepo">ZekeriyaköyBüyük</div></div>\n          <div class="t-musait"><div class="t-musait-dot"></div>Müsait</div>\n        </div>\n        <div class="t-stitle"><span>Görevler</span><span style="color:var(--mor)">20:47 ↺</span></div>\n        <div class="t-tabs">\n          <div class="t-tab a">Öne Çı...</div>\n          <div class="t-tab">Sayım</div>\n          <div class="t-tab">Tedarik</div>\n          <div class="t-tab">Transfer</div>\n        </div>\n        <div class="t-gorev"><span class="t-badge te">Tedarik</span><div class="t-barkod">6a042e7dd47fa<br>cdbf22614f0</div><div class="t-tarih">13/05/2026<br>10:55</div><span class="t-ok">›</span></div>\n        <div class="t-gorev"><span class="t-badge tr">Transfer</span><div class="t-barkod">6a0435dbceacd<br>38f44c33a0f<br><span style="background:var(--mor-ac);color:var(--mor);font-size:7px;padding:1px 5px;border-radius:8px">1 Palet</span></div><div class="t-tarih">13/05/2026<br>15:34</div><span class="t-ok">›</span></div>\n        <div class="t-gorev"><span class="t-badge sa">Sayım</span><div class="t-barkod">6a0496bf3b2db<br>d07010eb3f8</div><div class="t-tarih">13/05/2026<br>18:20</div><span class="t-ok">›</span></div>\n        <div class="t-duyuru-baslik">Duyurular</div>\n        <div class="t-duyuru"><span class="t-duyuru-ad">Şikayet Oranı Yüksek Ürün Uyarısı</span><span class="t-duyuru-tarih">31/03</span></div>\n        <div class="t-duyuru"><span class="t-duyuru-ad">Müşteri Memnuniyeti Hakkında</span><span class="t-duyuru-tarih">31/03</span></div>\n      </div>\n      <div class="acik">\n        <h3>Ana ekranı anlamak</h3>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Üstte adın ve depon görünür — <strong>"Müsait"</strong> yeşil yanıyorsa görev alabilirsin</div></div>\n        <div class="uw" style="margin-top:10px"><p>⚠️ <strong>Önemli:</strong> Müsait statüsünden meşgule geçiş yapılmamalıdır. Bu tür bir statü değişikliği depo sorumlusundan onay alınmadan yapılamaz.</p></div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 2: YENİ SİPARİŞ ─────────────────────────────────── -->\n<div style="display:none" id="pts1">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">2</div>\n      <div>\n        <div class="ekran-baslik">Yeni Sipariş Bildirimi</div>\n        <div class="ekran-ust">Terminal zil çalar, bu ekran açılır</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:41</span><span>▾ ▣ ▪</span></div>\n        <div class="t-header"><div class="t-logo">getir<em>terminal</em></div></div>\n        <div class="t-yeni">\n          <div style="font-size:26px;letter-spacing:6px">🥤🍌🍎</div>\n          <div class="t-yeni-sepet"><div class="t-yeni-logo">getir</div></div>\n          <div class="t-yeni-text">Yeni siparişin var!</div>\n          <div class="t-yeni-sayac">⏱ 00:08</div>\n          <button class="t-yeni-btn">Siparişi Gördüm</button>\n        </div>\n      </div>\n      <div style="display:flex;flex-direction:column;gap:12px">\n        <div class="acik">\n          <h3>Yeni sipariş geldiğinde</h3>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Terminal zil sesiyle siparişinin geldiğini bildirir ve bu ekran çıkar</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Mutlaka <strong>"Siparişi Gördüm"</strong> butonuna bas — geç kalma!</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Butona basmazsan gün sonu toplayıcı sürelerinin uzamasına neden olur</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Toplayıcı sürelerinin kötü olması depoya verilen puanların eksik verilmesine neden olur</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Başarılı depolar yüksek puanlarla A, A+, AA, AA+ sınıflarına girer — bu standartları korumak hepimizin sorumluluğu</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Butona bastıktan sonra sipariş detay ekranı açılır</div></div>\n        </div>\n        <div class="sinif-grid">\n          <div class="sinif-kart"><div class="sinif-no" style="color:#9E9E9E">A</div><div class="sinif-ac">temel</div></div>\n          <div class="sinif-kart"><div class="sinif-no" style="color:#2196F3">A+</div><div class="sinif-ac">iyi</div></div>\n          <div class="sinif-kart"><div class="sinif-no" style="color:#F9A825">AA</div><div class="sinif-ac">yüksek</div></div>\n          <div class="sinif-kart" style="border-color:var(--mor);border-width:2px"><div class="sinif-no" style="color:var(--mor)">AA+</div><div class="sinif-ac">en iyi</div></div>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 3: SEPET OKUTMA ─────────────────────────────────── -->\n<div style="display:none" id="pts2">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">3</div>\n      <div>\n        <div class="ekran-baslik">Sepet Okutma</div>\n        <div class="ekran-ust">Sipariş kabulünden sonra</div>\n      </div>\n    </div>\n\n    <div class="akis">\n      <div class="akis-adim">\n        <div class="akis-no">1</div>\n        <div class="akis-kart">Boş bir sepet al</div>\n      </div>\n      <div class="akis-ok">›</div>\n      <div class="akis-adim">\n        <div class="akis-no">2</div>\n        <div class="akis-kart">Üzerindeki <strong>karekodu</strong> terminale okut</div>\n      </div>\n      <div class="akis-ok">›</div>\n      <div class="akis-adim">\n        <div class="akis-no">3</div>\n        <div class="akis-kart">Ekranda sepetin <strong>numarası çıkar</strong></div>\n      </div>\n      <div class="akis-ok">›</div>\n      <div class="akis-adim">\n        <div class="akis-no">4</div>\n        <div class="akis-kart">Ürünleri topla, <strong>bankoya bırak</strong></div>\n      </div>\n    </div>\n\n    <div class="ekran-grid">\n      <div style="display:flex;flex-direction:column;align-items:center;gap:10px">\n        <div style="font-size:12px;font-weight:600;color:var(--metin2)">Depodaki sepet</div>\n        <svg viewBox="0 0 160 210" xmlns="http://www.w3.org/2000/svg" width="160" height="210">\n          <circle cx="35" cy="202" r="8" fill="#888"/>\n          <circle cx="125" cy="202" r="8" fill="#888"/>\n          <line x1="35" y1="194" x2="35" y2="65" stroke="#bbb" stroke-width="5" stroke-linecap="round"/>\n          <line x1="125" y1="194" x2="125" y2="65" stroke="#bbb" stroke-width="5" stroke-linecap="round"/>\n          <line x1="35" y1="155" x2="125" y2="155" stroke="#bbb" stroke-width="3.5"/>\n          <path d="M28 65 Q80 44 132 65" stroke="#E53935" stroke-width="8" fill="none" stroke-linecap="round"/>\n          <rect x="20" y="64" width="120" height="55" rx="6" fill="#E53935"/>\n          <rect x="27" y="70" width="106" height="44" rx="4" fill="#EF5350" opacity=".35"/>\n          <line x1="55" y1="70" x2="55" y2="113" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="80" y1="70" x2="80" y2="113" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="107" y1="70" x2="107" y2="113" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="27" y1="86" x2="136" y2="86" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="27" y1="100" x2="136" y2="100" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <rect x="30" y="71" width="65" height="35" rx="5" fill="#FDD835"/>\n          <text x="45" y="95" font-size="24" font-weight="900" fill="#5C3CBB" font-family="\'JetBrains Mono\',monospace">58</text>\n          <rect x="98" y="73" width="16" height="16" rx="2" fill="none" stroke="#222" stroke-width="1.3"/>\n          <rect x="100" y="75" width="5" height="5" fill="#222"/>\n          <rect x="107" y="75" width="5" height="5" fill="#222"/>\n          <rect x="100" y="82" width="5" height="5" fill="#222"/>\n          <line x1="107" y1="82" x2="113" y2="82" stroke="#222" stroke-width="1.3"/>\n          <line x1="110" y1="78" x2="110" y2="88" stroke="#222" stroke-width="1.3"/>\n          <path d="M108 89 C108 98 90 105 80 108" stroke="#4CAF50" stroke-width="2.5" fill="none" stroke-dasharray="4,2.5" marker-end="url(#a)"/>\n          <defs><marker id="a" markerWidth="7" markerHeight="7" refX="3" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#4CAF50"/></marker></defs>\n          <rect x="20" y="124" width="120" height="55" rx="6" fill="#E53935"/>\n          <rect x="27" y="130" width="106" height="44" rx="4" fill="#EF5350" opacity=".35"/>\n          <line x1="55" y1="130" x2="55" y2="173" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="80" y1="130" x2="80" y2="173" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="107" y1="130" x2="107" y2="173" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="27" y1="146" x2="136" y2="146" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <line x1="27" y1="160" x2="136" y2="160" stroke="#B71C1C" stroke-width="1.5" opacity=".5"/>\n          <rect x="30" y="131" width="65" height="35" rx="5" fill="#FDD835"/>\n          <text x="45" y="155" font-size="24" font-weight="900" fill="#5C3CBB" font-family="\'JetBrains Mono\',monospace">60</text>\n          <rect x="98" y="133" width="16" height="16" rx="2" fill="none" stroke="#222" stroke-width="1.3"/>\n          <rect x="100" y="135" width="5" height="5" fill="#222"/>\n          <rect x="107" y="135" width="5" height="5" fill="#222"/>\n          <rect x="100" y="142" width="5" height="5" fill="#222"/>\n          <line x1="107" y1="142" x2="113" y2="142" stroke="#222" stroke-width="1.3"/>\n          <line x1="110" y1="138" x2="110" y2="148" stroke="#222" stroke-width="1.3"/>\n        </svg>\n\n        <div class="eslesme">\n          <div class="eslesme-kutu">\n            <div class="eslesme-label">Sepet üzerinde</div>\n            <div class="eslesme-no">58</div>\n          </div>\n          <div class="eslesme-eq">=</div>\n          <div class="eslesme-kutu">\n            <div class="eslesme-label">Terminalde çıkan</div>\n            <div class="eslesme-no">BNK.058</div>\n          </div>\n        </div>\n      </div>\n\n      <div class="acik">\n        <h3>Sepet nasıl tanımlanır?</h3>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Boş bir sepet al — sarı etikette numara ve karekod vardır</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Bu karekodu terminale okut</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Ekranda sepetin üzerinde yazan numara çıkar — bu numara sepetin ta kendisidir (örn: BNK.058 = 58 numaralı sepet)</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Artık o sepet siparişe bağlanmıştır — ürünleri o sepete topla</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Her sipariş kendi sepetine gider — karıştırma</div></div>\n        <div class="uw"><p>Karekodu okutmadan ürün toplamaya başlama — sipariş sepete bağlı olmalı.</p></div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 4: HAZIRLAMA YEŞİL ──────────────────────────────── -->\n<div style="display:none" id="pts3">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">4</div>\n      <div>\n        <div class="ekran-baslik">Sipariş Hazırlama</div>\n        <div class="ekran-ust">Yeşil timer — normal hız</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:42</span><span>▾ ▣ ▪</span></div>\n        <div class="t-dh">2B73</div>\n        <div class="t-di">\n          <div><div class="t-dtarih">13/05/2026 - 20:41</div><div class="t-bnk">BNK.058</div></div>\n          <div class="t-timer y">⏱ 00:19</div>\n        </div>\n        <div class="t-cbr"><div class="t-cb"></div><span>Siparişten sonra depo işleri nedeniyle meşgulde bırak.</span></div>\n        <div class="t-elle">Elle Barkod Gir</div>\n        <div class="t-ur"><div class="t-uicon">🍞</div><div class="t-uinfo"><div class="t-uad">Uno Tam Buğdaylı Kavılcalı Tava Ekmeği (450 g)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">23.05.2026</span><span class="t-skt-n">24.05.2026</span></div></div><div class="t-adet g">1</div></div>\n        <div class="t-ur"><div class="t-uicon">💧</div><div class="t-uinfo"><div class="t-uad">Erikli Doğal Kaynak Suyu (12 x 500 ml)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">17.04.2027</span><span class="t-skt-n">18.04.2027</span></div></div><div class="t-adet b">2</div></div>\n        <div class="t-ur"><div class="t-uicon">💧</div><div class="t-uinfo"><div class="t-uad">Erikli Doğal Kaynak Suyu (6 x 1 L)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">21.04.2027</span></div></div><div class="t-adet g">1</div></div>\n      </div>\n      <div style="display:flex;flex-direction:column;gap:12px">\n        <div class="acik">\n          <h3>Sipariş hazırlarken</h3>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Üstteki kod (2B73) siparişin numarasıdır</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Yeşil timer normal hızda olduğunu gösterir</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Her ürünü barkodla okut — ürün adının karşısındaki kutucuk sistemin senden toplamanı istediği adet sayısını gösterir</div></div>\n          <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">"Elle Barkod Gir" — barkod okutulmazsa elle yazılabilir</div></div>\n        </div>\n        <div class="adet-kutu">\n          <div class="adet-no">2</div>\n          <div class="adet-text">Kutucukta <strong>2</strong> yazıyorsa o üründen <strong>2 adet</strong> okutman ve sepetine 2 adet koyman gerekir. Bu sayıya dikkat et — eksik veya fazla okutma!</div>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 5: SÜRE AŞIMI ───────────────────────────────────── -->\n<div style="display:none" id="pts4">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">5</div>\n      <div>\n        <div class="ekran-baslik">Süre Aşımı</div>\n        <div class="ekran-ust">Kırmızı timer — hızlan</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:42</span><span>▾ ▣ ▪</span></div>\n        <div class="t-dh">2B73</div>\n        <div class="t-di">\n          <div><div class="t-dtarih">13/05/2026 - 20:41</div><div style="font-size:8px;color:#888;margin-top:1px">BNK.058</div></div>\n          <div class="t-timer k">⏱ 00:50</div>\n        </div>\n        <div class="t-cbr"><div class="t-cb"></div><span>Siparişten sonra depo işleri nedeniyle meşgulde bırak.</span></div>\n        <div class="t-altabs"><div class="t-altab a">Okutulacak (4.0)</div><div class="t-altab">Kasalanan (0.0)</div></div>\n        <div class="t-elle">Elle Barkod Gir</div>\n        <div class="t-ur"><div class="t-uicon">🍞</div><div class="t-uinfo"><div class="t-uad">Uno Tam Buğdaylı Kavılcalı Tava Ekmeği (450 g)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">23.05.2026</span><span class="t-skt-n">24.05.2026</span></div></div><div class="t-adet">1</div></div>\n        <div class="t-ur"><div class="t-uicon">💧</div><div class="t-uinfo"><div class="t-uad">Erikli Doğal Kaynak Suyu (12 x 500 ml)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">17.04.2027</span><span class="t-skt-n">18.04.2027</span></div></div><div class="t-adet">1</div></div>\n        <div class="t-eksik">Eksik Ürün Bildir</div>\n      </div>\n      <div class="acik">\n        <h3>Kırmızı timer ne anlama gelir?</h3>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Timer kırmızıya döndüğünde belirlenen süre dolmuş demektir</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Hazırlamaya devam et ama hızlan — bu süre deponun puanına yansır</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text"><strong>Okutulacak</strong> sekmesi: henüz taranmayan ürünler</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text"><strong>Kasalanan</strong> sekmesi: taranıp sepete eklenenler</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Okutulacak ve Kasalanan sayıları eşitlenince sipariş tamamlanmış demektir</div></div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 6: KASALANAN ────────────────────────────────────── -->\n<div style="display:none" id="pts5">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">6</div>\n      <div>\n        <div class="ekran-baslik">Kasalanan Ekranı</div>\n        <div class="ekran-ust">Taranan ürünler kasalanır</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:44</span><span>▾ ▣ ▪</span></div>\n        <div class="t-dh">2B73</div>\n        <div class="t-di">\n          <div><div class="t-dtarih">13/05/2026 - 20:41</div><div style="font-size:8px;color:#888;margin-top:1px">BNK.058</div></div>\n          <div class="t-timer k">⏱ 03:04</div>\n        </div>\n        <div class="t-cbr"><div class="t-cb"></div><span>Siparişten sonra depo işleri nedeniyle meşgulde bırak.</span></div>\n        <div class="t-altabs"><div class="t-altab">Okutulacak (2.0)</div><div class="t-altab a">Kasalanan (2.0)</div></div>\n        <div class="t-elle">Elle Barkod Gir</div>\n        <div class="t-ur"><div class="t-uicon">🍞</div><div class="t-uinfo"><div class="t-uad">Uno Tam Buğdaylı Kavılcalı Tava Ekmeği (450 g)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">23.05.2026</span><span class="t-skt-n">24.05.2026</span></div></div><div class="t-adet">1</div></div>\n        <div class="t-ur"><div class="t-uicon">🧀</div><div class="t-uinfo"><div class="t-uad">Sütaş Dilimli Tost Peyniri (200 g)</div><div class="t-skt"><span class="t-skt-l">SKT</span><span class="t-skt-k">27.08.2026</span><span class="t-skt-n">03.09.2026</span></div></div><div class="t-adet">1</div></div>\n        <div class="t-eksik">Eksik Ürün Bildir</div>\n      </div>\n      <div class="acik">\n        <h3>Kasalanan sekmesi</h3>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Okuttuğun ürünler otomatik "Kasalanan" sekmesine geçer</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Parantez içindeki sayı (2.0) kaç ürün kasalandığını gösterir</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Okutulacak ve Kasalanan sayıları eşitlenince sipariş tamam</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Tüm ürünler tamam olunca "Teslim" popup\'ı çıkar</div></div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 7: TESLİM ───────────────────────────────────────── -->\n<div style="display:none" id="pts6">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">7</div>\n      <div>\n        <div class="ekran-baslik">Teslim Bildirimi</div>\n        <div class="ekran-ust">Sipariş tamamlandı — kurye bekliyor</div>\n      </div>\n    </div>\n    <div class="ekran-grid">\n      <div class="terminal">\n        <div class="t-sb"><span>20:47</span><span>▾ ▣ ▪</span></div>\n        <div class="t-header"><div class="t-logo">getir<em>terminal</em></div></div>\n        <div class="t-teslim-popup">\n          <div class="t-teslim-icon">‹</div>\n          <div><div class="t-teslim-ad">Teslim</div><div class="t-teslim-alt">Sipariş tamam! Artık sıra kuryede. Sepeti bankoya bırakmayı unutma!</div></div>\n        </div>\n        <div class="t-stitle"><span>Görevler</span><span style="color:var(--mor)">20:47 ↺</span></div>\n        <div class="t-tabs"><div class="t-tab a">Öne Çı...</div><div class="t-tab">Sayım</div><div class="t-tab">Tedarik</div><div class="t-tab">Transfer</div></div>\n        <div class="t-gorev"><span class="t-badge te">Tedarik</span><div class="t-barkod">6a042e7dd47fa...</div><div class="t-tarih">10:55</div><span class="t-ok" style="color:var(--yesil)">✓</span></div>\n        <div class="t-gorev"><span class="t-badge tr">Transfer</span><div class="t-barkod">6a0435dbceacd...</div><div class="t-tarih">15:34</div><span class="t-ok" style="color:var(--yesil)">✓</span></div>\n        <div class="t-gorev"><span class="t-badge sa">Sayım</span><div class="t-barkod">6a0496bf3b2db...</div><div class="t-tarih">17:38</div><span class="t-ok" style="color:var(--yesil)">✓</span></div>\n      </div>\n      <div class="acik">\n        <h3>Teslim bildirimi çıkınca</h3>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Mor popup "Teslim" yazısıyla çıktığında sipariş hazır demektir</div></div>\n        <div class="acik-madde"><div class="acik-ok">→</div><div class="acik-text">Sepeti hemen bankoya bırak — kurye bekliyor olabilir</div></div>\n      </div>\n    </div>\n  </div>\n</div>\n\n<!-- ── SAYFA 8: ÖZET ─────────────────────────────────────────── -->\n<div style="display:none" id="pts7">\n  <div class="ekran-kart">\n    <div class="ekran-no-row">\n      <div class="ekran-no">★</div>\n      <div>\n        <div class="ekran-baslik">Hızlı Başvuru Özeti</div>\n        <div class="ekran-ust">En önemli kurallar</div>\n      </div>\n    </div>\n    <div class="ozet-grid">\n      <div class="ozet-kart">\n        <div class="ozet-icon">🟢</div>\n        <div><div class="ozet-baslik">Timer yeşil</div><div class="ozet-ac">Normal hızda devam et</div></div>\n      </div>\n      <div class="ozet-kart">\n        <div class="ozet-icon">🔴</div>\n        <div><div class="ozet-baslik">Timer kırmızı</div><div class="ozet-ac">Süre doldu — hızlan, deponun puanına yansır</div></div>\n      </div>\n      <div class="ozet-kart">\n        <div class="ozet-icon" style="font-size:22px;font-weight:900;color:var(--mor);padding-top:2px">2</div>\n        <div><div class="ozet-baslik">Adet kutucuğu</div><div class="ozet-ac">O üründen kaç adet toplayacağını gösterir — dikkatli oku</div></div>\n      </div>\n      <div class="ozet-kart">\n        <div class="ozet-icon">📋</div>\n        <div><div class="ozet-baslik">Siparişi Gördüm</div><div class="ozet-ac">Her yeni siparişte mutlaka hemen bas</div></div>\n      </div>\n      <div class="ozet-kart">\n        <div class="ozet-icon">🛒</div>\n        <div><div class="ozet-baslik">Sepet okutma</div><div class="ozet-ac">Karekodu okutunca ekranda sepetin numarası çıkar — o numara sepetin ta kendisidir</div></div>\n      </div>\n      <div class="ozet-kart">\n        <div class="ozet-icon">🏦</div>\n        <div><div class="ozet-baslik">Bankoya bırak</div><div class="ozet-ac">Teslim popup\'ı çıkınca sepeti hemen bankoya bırak</div></div>\n      </div>\n    </div>\n  </div>\n</div>\n</div>' +
+    '<button onclick="modulSinavBaslat(6)" style="width:100%;padding:14px;background:#5C3CBB;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px">Sınava Başla →</button>' +
+  '</div>';
+}
+
+function pwaTerminalSekme(idx, el){
+  var tabs = document.querySelectorAll('#pwa-t-tabs > div');
+  tabs.forEach(function(t, i){
+    t.style.color = i === idx ? '#5C3CBB' : 'var(--text3)';
+    t.style.borderBottom = i === idx ? '2px solid #5C3CBB' : 'none';
+    t.style.marginBottom = i === idx ? '-2px' : '0';
+  });
+  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  for(var i = 0; i < 8; i++){
+    var p = document.getElementById('pts' + i);
+    if(p) p.style.display = (i === idx) ? 'block' : 'none';
+  }
+}
+
 function modulAc(modulId){
   var modul = EGITIM_MODULLERI[modulId];
   if(!modul) return;
@@ -3329,6 +3587,11 @@ function modulAc(modulId){
     '<button onclick="modulSinavBaslat('+modulId+')" style="width:100%;padding:14px;background:'+modul.renk+';color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">Sınava Başla →</button>' +
   '</div>';
 
+  // Terminal modülü (id=6) için rehber görsellerini göster
+  if(modulId === 6){
+    el.innerHTML = getTerminalEgitimHTML();
+    return;
+  }
   el.innerHTML = icerikHtml;
 }
 
