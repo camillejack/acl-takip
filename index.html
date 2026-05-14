@@ -2937,6 +2937,14 @@ if('speechSynthesis' in window){
 const EGITIM_KEY = 'acl_egitim_v1';
 let egitimData = JSON.parse(localStorage.getItem(EGITIM_KEY)||'{}');
 // {tamamlandi: bool, puan: number, tarih: str, yanlis:[]}
+// moduller: {0:{tamamlandi,puan,gecti}, 1:..., 2:..., 3:..., 4:..., 5:..., genel:{...}}
+
+// Yeni modül tabanlı eğitim verisi
+var EGITIM_MODUL_KEY = 'acl_egitim_modul_v1';
+var modulEgitimData = JSON.parse(localStorage.getItem(EGITIM_MODUL_KEY)||'{}');
+// {aktifModul:0, moduller:{0:{tamamlandi,puan,gecti}, ...}, genelTamamlandi:false}
+if(!modulEgitimData.moduller) modulEgitimData.moduller = {};
+if(modulEgitimData.aktifModul === undefined) modulEgitimData.aktifModul = 0;
 
 const SORULAR = [
   {
@@ -3058,7 +3066,396 @@ let sinavDurumu = {
   cevaplandi: false
 };
 
+
+// ─── EĞİTİM MODÜLLERİ ─────────────────────────────────────────────────────────
+
+var EGITIM_MODULLERI = [
+  {
+    id: 0,
+    baslik: 'Mesai & Vardiya Kuralları',
+    ikon: '⏰',
+    renk: '#5C3CBB',
+    icerik: [
+      'Vardiya başlangıç saatinden en az 10 dakika önce depoda hazır olunmalıdır.',
+      'İş başı, ACL Takip uygulamasından GPS ile teyit edilerek yapılmalıdır. Manuel iş başı yasaktır.',
+      'Vardiya değişiminde stok durumu ve açık siparişler gelen personele aktarılır.',
+      'İzin veya devamsızlık en az 24 saat önceden bildirilir. Ani devamsızlıkta mutlaka aranır.',
+      'Mola süreleri belirlenen saatlerde kullanılır, aşılamaz, mola dışında depo terk edilemez.',
+      'Terminalde Müsait statüsünden Meşgule geçiş depo sorumlusunun onayı olmadan yapılamaz.',
+      'Vardiya bitiminde stok raporu alınır ve sorumluya iletilmeden çıkış yapılmaz.'
+    ],
+    sorular: [
+      {soru:'Vardiyaya kaç dakika önce hazır olunmalıdır?', secenekler:['5 dakika','10 dakika','15 dakika','Tam saatinde'], dogru:1, aciklama:'Vardiya başlangıcından en az 10 dakika önce depoda hazır olunması zorunludur.'},
+      {soru:'İş başı nasıl yapılmalıdır?', secenekler:['Sözlü olarak sorumluya söylenerek','Sadece terminale giriş yaparak','ACL Takip uygulamasından GPS ile teyit edilerek','Mesaj atarak'], dogru:2, aciklama:'İş başı GPS teyitli olarak ACL Takip uygulamasından yapılmalıdır.'},
+      {soru:'İzin veya devamsızlık ne zaman bildirilmelidir?', secenekler:['Aynı gün sabah','En az 24 saat önceden','En az 1 hafta önceden','Gece vardiyasındaysa gerek yok'], dogru:1, aciklama:'İzin ve devamsızlık durumları en az 24 saat önceden depo sorumlusuna bildirilmelidir.'},
+      {soru:'Mola süresini aşan personel ne yapmalıdır?', secenekler:['Haber vermeden dönebilir','Sorumluya haber vermelidir','Fazla molanın telafisini yapabilir','Durumu arkadaşına bırakabilir'], dogru:1, aciklama:'Mola süreleri belirlenen saatte kullanılır ve aşılamaz. Sorun varsa sorumluya bildirilir.'},
+      {soru:'Terminalde Müsaitten Meşgule geçiş nasıl yapılır?', secenekler:['İstediğinde kendisi yapabilir','Depo sorumlusunun onayıyla','Vardiya amirinin onayıyla','Gerek yok, otomatik değişir'], dogru:1, aciklama:'Bu statü değişikliği depo sorumlusundan onay alınmadan yapılamaz.'},
+      {soru:'Vardiya bitiminde çıkış yapmadan önce ne yapılmalıdır?', secenekler:['Sadece ekipmanları bırakmak yeterli','Stok raporu alınıp sorumluya iletilmeli','Temizlik yapılmalı','Hiçbir şey gerekmez'], dogru:1, aciklama:'Stok raporu alınıp sorumluya iletilmeden vardiya bitirilmez.'},
+      {soru:'Ani devamsızlık durumunda ne yapılmalıdır?', secenekler:['Mesaj atmak yeterlidir','Aranarak bilgi verilmelidir','Arkadaşa haber bırakmak yeterlidir','Sonraki gün açıklanabilir'], dogru:1, aciklama:'Ani devamsızlıklarda mutlaka aranarak bilgi verilmesi zorunludur.'},
+      {soru:'Mola süresinde depoyu terk etmek mümkün müdür?', secenekler:['Evet, mola serbesttir','Hayır, mola dışında depo terk edilemez','Sadece 15 dakikaya kadar','Sorumluya söylenirse terk edilebilir'], dogru:1, aciklama:'Mola dışında depo terk edilemez; mola yalnızca belirlenen süre ve alanda kullanılır.'},
+      {soru:'GPS ile iş başı yapılmazsa ne olur?', secenekler:['Hiçbir şey olmaz','Mesai sayılmaz ve usulsüzlük kaydı oluşur','Sadece uyarı alınır','Otomatik düzeltilir'], dogru:1, aciklama:'Manuel veya sistemi atlatarak yapılan iş başı kabul edilmez ve disiplin sürecini başlatır.'},
+      {soru:'Vardiya teslimi sırasında ne aktarılmalıdır?', secenekler:['Sadece ürün sayısı','Stok durumu ve açık siparişler','Sadece sorunlu ürünler','Hiçbir şey gerekmez'], dogru:1, aciklama:'Vardiya değişiminde stok durumu ve açık siparişler gelen personele eksiksiz aktarılır.'}
+    ]
+  },
+  {
+    id: 1,
+    baslik: 'Kıyafet & Hijyen Kuralları',
+    ikon: '👕',
+    renk: '#2E7D32',
+    icerik: [
+      'Şirket tarafından verilen üniforma tam ve düzgün giyilir. Yırtık, lekeli veya ütüsüz olamaz.',
+      'Kapalı burunlu, kaymaz tabanlı ayakkabı zorunludur. Terlik veya sandaletle çalışılamaz.',
+      'Çalışma alanında yemek yenilmez. Yiyecek tüketimi yalnızca mola alanında yapılır.',
+      'Hastalık belirtisi yaşayan personel gıda alanında çalışmaz ve sorumlusuna bildirir.',
+      'Vardiya sonunda tezgah, zemin temizlenir. Kirli alan bir sonraki vardiyaya bırakılmaz.'
+    ],
+    sorular: [
+      {soru:'Ayakkabı konusunda hangi kural geçerlidir?', secenekler:['İstediği ayakkabıyı giyebilir','Kapalı burunlu kaymaz tabanlı zorunludur','Spor ayakkabı yeterlidir','Sandalet hijyenik olursa uygun sayılır'], dogru:1, aciklama:'İş güvenliği açısından kapalı burunlu kaymaz tabanlı ayakkabı zorunludur.'},
+      {soru:'Üniforma nasıl olmalıdır?', secenekler:['Rahat olduğu sürece fark etmez','Tam düzgün ve temiz giyilmeli','Sadece müşteri görürse giyilmeli','İsteğe bağlıdır'], dogru:1, aciklama:'Üniforma her zaman tam, düzgün ve temiz giyilmeli; yırtık, lekeli veya ütüsüz olamaz.'},
+      {soru:'Çalışma sırasında yemek yenilebilir mi?', secenekler:['Evet, her yerde yenilebilir','Sadece köşede yenilebilir','Hayır, sadece mola alanında yenir','Müşteri yoksa yenilebilir'], dogru:2, aciklama:'Çalışma alanında yemek yenilmez; yiyecek tüketimi yalnızca mola alanında yapılır.'},
+      {soru:'Hastalık belirtisi olan personel ne yapmalıdır?', secenekler:['Raporlu olmadan da çalışabilir','Sorumlusuna bildirir ve gıda alanında çalışmaz','İlaç alarak devam edebilir','Maske takarak çalışabilir'], dogru:1, aciklama:'Hastalık belirtisi yaşayan personel gıda alanında çalışmaz ve durumu sorumlusuna bildirir.'},
+      {soru:'Vardiya sonunda temizlik sorumluluğu kime aittir?', secenekler:['Temizlik görevlisine','Vardiyayı bitiren personele','Bir sonraki vardiyaya','Depo sorumlusuna'], dogru:1, aciklama:'Her personel kendi vardiyası sonunda tezgahı ve zemini temizlemekle yükümlüdür.'},
+      {soru:'Lekeli üniformayla çalışmak uygun mudur?', secenekler:['Evet, iş ortamında normaldir','Hayır, kabul edilemez','Hafif leke sorun olmaz','Sadece belli bölümlerde sorun olur'], dogru:1, aciklama:'Lekeli, yırtık veya düzensiz üniforma kabul edilemez; kurallara uygun giyinmek zorunludur.'},
+      {soru:'Terlik ile çalışmak neden yasaktır?', secenekler:['Görüntü bozar','İş kazası riskini artırır','Müşteriler görebilir','Temizliği zorlaştırır'], dogru:1, aciklama:'Terlik ve sandalet iş güvenliği açısından tehlikelidir; kayma ve düşme riskini artırır.'},
+      {soru:'Kirli çalışma alanı bir sonraki vardiyaya bırakılabilir mi?', secenekler:['Evet, onlar temizler','Hayır, temiz bırakılmalıdır','Sadece zemin bırakılabilir','Hafta sonu izin günlerinde bırakılabilir'], dogru:1, aciklama:'Kirli alan kesinlikle bir sonraki vardiyaya bırakılamaz; her personel kendi alanını temizler.'},
+      {soru:'Üniforma ne zaman giyilmelidir?', secenekler:['Sadece müşteri bölümünde','Vardiya boyunca tüm çalışma süresi','Yalnızca üst yönetim geldiğinde','İstenen zamanlarda'], dogru:1, aciklama:'Üniforma tüm çalışma süresi boyunca eksiksiz giyilmelidir.'},
+      {soru:'Mola alanı dışında atıştırmalık yenilebilir mi?', secenekler:['Küçük atıştırmalıklar sorun olmaz','Hayır, kesinlikle yasaktır','Müşteri yoksa yenilebilir','Su içmek serbest ama yemek yasak'], dogru:1, aciklama:'Mola alanı dışında hiçbir yiyecek tüketilemez; bu hijyen kuralıdır.'}
+    ]
+  },
+  {
+    id: 2,
+    baslik: 'Telefon Kullanım Kuralları',
+    ikon: '📱',
+    renk: '#E65100',
+    icerik: [
+      'Kişisel telefon kullanımı yalnızca mola sürelerinde yapılabilir.',
+      'Görev telefonu (terminal) yalnızca iş amaçlı kullanılır. Kişisel uygulama yasaktır.',
+      'ACL Takip uygulaması mesai saatleri boyunca açık tutulur, konum izni iptal edilemez.',
+      'Depo içinde fotoğraf ve video çekmek yasaktır. Önceden izin gerektirir.',
+      'Görev sırasında kulaklıkla müzik dinlemek yasaktır. Çevre sesleri duyulabilir olmalıdır.'
+    ],
+    sorular: [
+      {soru:'Kişisel telefon ne zaman kullanılabilir?', secenekler:['Her zaman','Sadece mola sürelerinde','Sipariş yokken','Depo boşken'], dogru:1, aciklama:'Kişisel telefon yalnızca mola sürelerinde kullanılabilir.'},
+      {soru:'ACL Takip uygulaması ne zaman açık olmalıdır?', secenekler:['Sadece iş başında','Mesai saatleri boyunca','Yalnızca GPS gereken anlarda','İhtiyaç duyulduğunda'], dogru:1, aciklama:'ACL Takip uygulaması mesai saatleri boyunca açık tutulur.'},
+      {soru:'Görev telefonunda kişisel uygulama kullanılabilir mi?', secenekler:['Evet, serbest','Hayır, yasaktır','Sadece mola sürelerinde','Sorumlu izin verirse'], dogru:1, aciklama:'Görev telefonu (terminal) yalnızca iş amaçlı kullanılır; kişisel uygulama, oyun ve sosyal medya yasaktır.'},
+      {soru:'Depo içinde fotoğraf çekmek için ne gerekir?', secenekler:['Gerek yok, serbesttir','Arkadaşa sormak yeterli','Önceden izin alınması zorunludur','Sadece ürün fotoğrafı çekilebilir'], dogru:2, aciklama:'Depo içinde fotoğraf ve video çekmek önceden izin alınmadan yasaktır.'},
+      {soru:'Görev sırasında kulaklıkla müzik dinlenebilir mi?', secenekler:['Evet, konsantrasyon sağlar','Hayır, yasaktır','Bir kulaklıkla dinlenebilir','Depoda kişi yoksa dinlenebilir'], dogru:1, aciklama:'Görev sırasında kulaklık kullanmak yasaktır; çevre sesleri her zaman duyulabilir olmalıdır.'},
+      {soru:'Konum iznini iptal etmek mümkün müdür?', secenekler:['Evet, kişisel haktır','Hayır, mesai boyunca açık kalmalıdır','Sadece mola sırasında kapatılabilir','Depo içindeyken kapatılabilir'], dogru:1, aciklama:'ACL Takip uygulamasının konum izni mesai boyunca açık tutulur; iptal etmek yasaktır.'},
+      {soru:'Görev telefonu kaybolursa ne yapılır?', secenekler:['Sessiz kalınır','Derhal depo sorumlusuna bildirilir','Yeni biri alınır','Birkaç gün beklenir'], dogru:1, aciklama:'Görev telefonunun kaybolması veya zarar görmesi durumunda derhal depo sorumlusuna bildirilir.'},
+      {soru:'Sipariş toplama sırasında kişisel telefona bakmak neden yasaktır?', secenekler:['Görüntü bozar','Sipariş hatalarına ve iş kazalarına yol açar','Müşteriler görür','Terminal bozulur'], dogru:1, aciklama:'Görev sırasında telefona bakmak sipariş hatalarına ve iş kazalarına neden olabilir.'},
+      {soru:'Kişisel telefon görüşmesi için ne yapılmalıdır?', secenekler:['Hemen cevap verilebilir','Mola beklenmelidir','Kısaca konuşulabilir','Sessiz modda cevap verilebilir'], dogru:1, aciklama:'Kişisel görüşmeler yalnızca mola sürelerinde yapılabilir.'},
+      {soru:'Sosyal medyaya girmek için hangi durum geçerlidir?', secenekler:['Boş anlarda girilebilir','Sadece molada ve kişisel telefondan','Terminal üzerinden her zaman','Depo içinde yasak değil'], dogru:1, aciklama:'Sosyal medya yalnızca mola sürelerinde ve kişisel telefondan kullanılabilir; terminalde kullanım yasaktır.'}
+    ]
+  },
+  {
+    id: 3,
+    baslik: 'Depo İçi Davranış Kuralları',
+    ikon: '🏭',
+    renk: '#1565C0',
+    icerik: [
+      'Depo içinde koşulmaz. Yürüyerek hızlı hareket edilir. Koşmak iş kazalarına zemin hazırlar.',
+      'Raflardan ürün alırken yüksek raf güvenliğine dikkat edilir. Merdivensiz tırmanılamaz.',
+      'Depo koridorları ve acil çıkış yolları her zaman açık tutulur.',
+      'Başka personelin görevine müdahale edilmez. Şüphede sorumluya danışılır.',
+      'Hasar gören ürünler rafta bırakılmaz; derhal sorumluya bildirilir.',
+      'Depo giriş çıkışlarında yetkisiz kişiler içeri alınmaz.',
+      'Herhangi bir iş kazası veya tehlikeli durum anında sorumluya bildirilir.'
+    ],
+    sorular: [
+      {soru:'Depo içinde koşmak neden yasaktır?', secenekler:['Görüntü bozar','İş kazası riskini artırır','Ürünlere zarar verir','Gürültü yapar'], dogru:1, aciklama:'Koşmak iş kazalarına zemin hazırlar; depo içinde yürüyerek hızlı hareket edilir.'},
+      {soru:'Yüksek raftan ürün almak için ne kullanılır?', secenekler:['Tırmanılarak alınır','Merdiven kullanılır','Uzun kollu araç kullanılır','Yardım istenir'], dogru:1, aciklama:'Merdiven kullanılmadan yüksek raflara tırmanmak kesinlikle yasaktır.'},
+      {soru:'Acil çıkış yolları nasıl olmalıdır?', secenekler:['Stok depolamak için kullanılabilir','Her zaman açık ve engelsiz olmalıdır','Sadece acil durumlarda açılır','Hafif malzeme konulabilir'], dogru:1, aciklama:'Acil çıkış yolları ve koridorlar hiçbir şekilde engellenemez; her zaman açık tutulur.'},
+      {soru:'Hasar gören ürün ne yapılır?', secenekler:['Rafa geri konulur','Çöpe atılır','Derhal sorumluya bildirilir','Onarılıp kullanılır'], dogru:2, aciklama:'Hasar gören ürünler rafta bırakılmaz; sorumluya bildirilir ve hasar kaydı düşülür.'},
+      {soru:'Yetkisiz kişi depo içine alınabilir mi?', secenekler:['Evet, sorun olmaz','Hayır, kesinlikle yasaktır','Sadece tanınan biri alınabilir','Sorumlu uzaktaysa alınabilir'], dogru:1, aciklama:'Yetkisiz kişiler kesinlikle depo içine alınamaz; ziyaretçiler yalnızca sorumlu eşliğinde girebilir.'},
+      {soru:'İş kazası yaşandığında ne yapılmalıdır?', secenekler:['Küçükse görmezden gelinebilir','Anında sorumluya bildirilir','Arkadaşa söylenir','İşe devam edilir'], dogru:1, aciklama:'Küçük görünen kazalar dahil tüm iş kazaları ve tehlikeli durumlar anında sorumluya bildirilir.'},
+      {soru:'Başka personelin görevine müdahale edilebilir mi?', secenekler:['Evet, yardımcı olmak için','Hayır, şüphede sorumluya danışılır','Acil durumlarda evet','Her zaman'], dogru:1, aciklama:'Başka personelin görevine müdahale edilmez; sorun varsa sorumluya danışılır.'},
+      {soru:'Sigara içmek için uygun alan neresidir?', secenekler:['Depo köşesi','Belirlenen sigara alanı','Her yerde içilebilir','Arka kapı önü'], dogru:1, aciklama:'Sigara yalnızca belirlenen alanda içilebilir; depo içinde ve bitişik alanlarda kesinlikle yasaktır.'},
+      {soru:'Depo koridorları neden açık tutulur?', secenekler:['Estetik görünüm için','Güvenli hareket ve acil çıkış için','Kontrol kolaylığı için','Stok sayımı için'], dogru:1, aciklama:'Koridorlar güvenli hareket, acil çıkış ve sipariş toplama için her zaman açık tutulmalıdır.'},
+      {soru:'Ağır ürün kaldırırken doğru teknik nedir?', secenekler:['Beli eğerek kaldırılır','Diz bükülür, bacaklar kullanılır','Çırparak kaldırılır','Tek elle tutulur'], dogru:1, aciklama:'Ağır ürün kaldırırken diz bükülür ve bacak gücü kullanılır; beli eğmek bel incinmesine yol açar.'}
+    ]
+  },
+  {
+    id: 4,
+    baslik: 'Manav Bölümü Kuralları',
+    ikon: '🥦',
+    renk: '#33691E',
+    icerik: [
+      'Her vardiya başında tüm ürünlerin SKT kontrolü yapılır. Bozulan ürünler raftan hemen alınır.',
+      'FIFO kuralı uygulanır — ilk giren ürün önce çıkar. Yeni gelen ürünler arkaya, eskiler öne alınır.',
+      'Kasalar yere, koridora veya geçiş yoluna bırakılamaz. Boş kasalar belirlenen alanda istiflenmelidir.',
+      'Tartı tezgahı her zaman temiz ve düzenli tutulur. Etiket kağıdı tezgaha serilmez.',
+      'Zemine düşen ürünler anında kaldırılır. Yerde ürün veya atık bırakılamaz.',
+      'Kasalar reyona yerleştirilirken etiket ön yüze bakacak şekilde konulur.',
+      'İstif yapılırken alt kasanın etiketi kapanmamalıdır. Her etiket görünür olmalıdır.'
+    ],
+    sorular: [
+      {soru:'FIFO kuralı ne demektir?', secenekler:["İlk çıkan ilk girer",'İlk giren ilk çıkar','Son giren ilk çıkar','Ağır olan önce çıkar'], dogru:1, aciklama:'FIFO (First In First Out) — ilk giren ürün önce satılır; eski ürünler öne, yeni gelenler arkaya konur.'},
+      {soru:'Yeni gelen ürün kasası nereye konur?', secenekler:['Öne, müşteri görsün diye','Arkaya, eski ürün önde kalır','Yan tarafa','Karıştırılarak konulur'], dogru:1, aciklama:'FIFO kuralı gereği yeni gelen ürünler arkaya, mevcut eski ürünler öne alınır.'},
+      {soru:'SKT kontrolü ne sıklıkla yapılmalıdır?', secenekler:['Haftada bir','Her ay','Her vardiya başında','Yalnızca yeni mal geldiğinde'], dogru:2, aciklama:'SKT kontrolü her vardiya başında yapılmalı; bozulan ürünler derhal raftan alınmalıdır.'},
+      {soru:'Kasalar reyona konurken etiket nasıl olmalıdır?', secenekler:['Arka tarafa bakmalı','Ön yüze bakacak şekilde görünür olmalı','Yanda olabilir','Etiket önemli değil'], dogru:1, aciklama:'Kasalar reyona, tezgaha veya vitriye yerleştirilirken etiket mutlaka ön yüze bakacak şekilde konulur.'},
+      {soru:'Zemine düşen ürün ne zaman kaldırılır?', secenekler:['Vardiya sonunda','Anında kaldırılır','Birikince kaldırılır','Temizlikçi kaldırır'], dogru:1, aciklama:'Zemine düşen ürünler anında kaldırılmalıdır; yerde ürün veya atık bırakmak kayma kazasına yol açar.'},
+      {soru:'Tartı tezgahında etiket kağıdı serilmesi uygun mudur?', secenekler:['Evet, koruma sağlar','Hayır, tezgah temiz tutulmalı','Bazen uygundur','Sadece temiz kağıt olursa'], dogru:1, aciklama:'Tartı tezgahı her zaman temiz tutulur; etiket kağıdı, plastik ambalaj veya ürün tezgaha serilmez.'},
+      {soru:'İstif sırasında alt kasanın etiketi kapanırsa ne yapılır?', secenekler:['Sorun değil, biliyoruz ne olduğunu','İstif yeniden düzenlenir','Etiket çıkarılır','Üst kasaya not yazılır'], dogru:1, aciklama:'Her kasanın etiketi dışarıdan görünür olmalıdır; etiket kapanıyorsa istif yeniden düzenlenir.'},
+      {soru:'Boş kasalar nereye bırakılmalıdır?', secenekler:['Koridora','Tezgaha','Belirlenen istif alanına','Her yere'], dogru:2, aciklama:'Boş kasalar belirlenen alanda düzenli şekilde istiflenmeli; koridora veya geçiş yoluna bırakılamaz.'},
+      {soru:'Bozulan ürün rafta bırakılabilir mi?', secenekler:['Evet, müşteri seçer','Hayır, derhal raftan alınır','Sadece çok bozulunca','Vardiya sonunda alınır'], dogru:1, aciklama:'Bozulan, ezilen veya renk değiştiren ürünler derhal raftan alınır ve sorumluya bildirilir.'},
+      {soru:'Etiket hangi bilgileri içermelidir?', secenekler:['Sadece ürün adı','Ürün adı ve fiyat','Ürün adı, paketleme tarihi ve son tüketim tarihi','Sadece barkod'], dogru:2, aciklama:'Etiket; ürün adı, paketleme tarihi ve son tüketim tarihini içermeli; etiketsiz kasa reyona konulamaz.'}
+    ]
+  },
+  {
+    id: 5,
+    baslik: 'Soğuk Oda Kuralları',
+    ikon: '❄️',
+    renk: '#1565C0',
+    icerik: [
+      'Soğuk oda kapısı gereksiz yere açık bırakılamaz. Giriş-çıkış sonrası kapı derhal kapatılır.',
+      'Sebze/Meyve odası: +8°C/+12°C, Şarküteri odası: 0°C/+4°C aralığında olmalıdır.',
+      'Sıcaklık sapması tespit edilince derhal depo sorumlusuna bildirilir.',
+      'Ürünler zemine değil raflara veya paletlere yerleştirilir.',
+      'Soğuk oda sistemi depo yöneticisinin onayı olmadan kapatılamaz (OFF yapılamaz).',
+      'Soğuk odada uzun süre beklenmez; 5 dakikayı aşmamalıdır.',
+      'SKT kontrolü soğuk odada da yapılır. Süresi dolan ürünler ayrılır ve bildirilir.'
+    ],
+    sorular: [
+      {soru:'Sebze/Meyve soğuk odasının hedef sıcaklık aralığı nedir?', secenekler:['+2°C / +6°C','+8°C / +12°C','+14°C / +18°C','0°C / +4°C'], dogru:1, aciklama:'Sebze/Meyve odası +8°C ile +12°C arasında tutulmalıdır.'},
+      {soru:'Şarküteri soğuk odasının hedef sıcaklık aralığı nedir?', secenekler:['0°C / +4°C','+5°C / +10°C','+8°C / +12°C','-5°C / 0°C'], dogru:0, aciklama:'Şarküteri odası 0°C ile +4°C arasında tutulmalıdır.'},
+      {soru:'Soğuk oda kapısı ne zaman kapatılmalıdır?', secenekler:['İhtiyaç halinde kapatılır','Giriş-çıkış sonrası derhal kapatılır','Kapı açık kalabilir','Sadece gece kapatılır'], dogru:1, aciklama:'Soğuk oda kapısı giriş ve çıkış sonrası derhal kapatılmalı; gereksiz yere açık bırakılamaz.'},
+      {soru:'Soğuk odayı kapatmak (OFF yapmak) için ne gerekir?', secenekler:['Gerek yok, herkes yapabilir','Depo yöneticisinin onayı zorunludur','Vardiya amiri yeterlidir','Teknik arıza varsa yapılabilir'], dogru:1, aciklama:'Soğuk oda sistemi depo yöneticisinin onayı olmadan kesinlikle kapatılamaz.'},
+      {soru:'Soğuk odada ürünler nereye konulmalıdır?', secenekler:['Zemine','Raflara veya paletlere','Kapı önüne','Boş yere'], dogru:1, aciklama:'Ürünler zemine değil raflara veya paletlere yerleştirilmelidir.'},
+      {soru:'Sıcaklık hedef aralığın dışına çıkarsa ne yapılır?', secenekler:['Beklenir, düzelir','Kapı açılır','Derhal depo sorumlusuna bildirilir','Sisteme müdahale edilir'], dogru:2, aciklama:'Sıcaklık sapması tespit edilince ürün güvenliği için derhal depo sorumlusuna bildirilir.'},
+      {soru:'Soğuk odada ne kadar süre kalınabilir?', secenekler:['Süre sınırı yoktur','En fazla 5 dakika','En fazla 30 dakika','Rahat olduğu sürece'], dogru:1, aciklama:'Soğuk hava maruziyeti 5 dakikayı aşmamalıdır; uzun süreli kalınması sağlık riski oluşturur.'},
+      {soru:'Soğuk odada SKT kontrolü yapılmalı mıdır?', secenekler:['Hayır, sadece rafta yapılır','Evet, soğuk odada da yapılmalıdır','Sadece şarküteri odasında','Ayda bir yeterlidir'], dogru:1, aciklama:'SKT kontrolü soğuk odada da yapılır; süresi dolan ürünler ayrılır ve sorumluya bildirilir.'},
+      {soru:'Soğuk oda önündeki geçiş yolu nasıl olmalıdır?', secenekler:['Kasa veya koli konulabilir','Her zaman açık ve engelsiz','Küçük malzeme konulabilir','Kullanılmıyorsa dolabilir'], dogru:1, aciklama:'Soğuk oda kapısının önü ve içindeki geçiş yolları her zaman açık ve engelsiz tutulur.'},
+      {soru:'Soğuk odada zemin ıslaksa ne yapılır?', secenekler:['Uyarı levhası konulur ve bırakılır','Anında temizlenir','Sonraki vardiyaya bırakılır','Sıcaklık yüzünden normaldir'], dogru:1, aciklama:'Sıvı dökülmeleri ve buz birikintisi anında temizlenir; kayma riski oluşturulamaz.'}
+    ]
+  }
+];
+
+var GENEL_SINAV_SORULAR = [
+  {soru:'FIFO kuralı neyi ifade eder?', secenekler:['Son giren ilk çıkar','İlk giren ilk çıkar','Ağır olan önce çıkar','Tarih fark etmez'], dogru:1, aciklama:'FIFO — İlk giren ürün önce satılır; eskiler öne, yeniler arkaya konur.'},
+  {soru:'Sebze/Meyve soğuk odası kaç derece olmalıdır?', secenekler:['0/+4°C','+8/+12°C','+15/+20°C','-5/0°C'], dogru:1, aciklama:'Sebze/Meyve odası +8°C ile +12°C arasında tutulmalıdır.'},
+  {soru:'Müsaitten Meşgule geçiş ne zaman yapılabilir?', secenekler:['İstediği zaman','Depo sorumlusunun onayıyla','Vardiya başında','Mola sırasında'], dogru:1, aciklama:'Bu statü değişikliği depo sorumlusundan onay alınmadan yapılamaz.'},
+  {soru:'Kasanın etiketi reyonda nasıl durmalıdır?', secenekler:['Arka tarafa','Ön yüze bakacak şekilde','Yanda','Fark etmez'], dogru:1, aciklama:'Etiket her zaman ön yüze bakacak ve okunabilir şekilde konulur.'},
+  {soru:'Soğuk oda sistemi kim onayı olmadan kapatılamaz?', secenekler:['Vardiya amiri','Depo yöneticisi','Herhangi bir personel','Teknik servis'], dogru:1, aciklama:'Soğuk oda sistemi depo yöneticisinin onayı olmadan kesinlikle kapatılamaz.'},
+  {soru:'Kişisel telefon görev sırasında ne zaman kullanılabilir?', secenekler:['Her zaman','Sadece molada','Boş anlarda','Asla kullanılamaz'], dogru:1, aciklama:'Kişisel telefon yalnızca mola sürelerinde kullanılabilir.'},
+  {soru:'Depo içinde koşmak neden yasaktır?', secenekler:['Görüntü bozar','İş kazası riski','Ürünlere zarar verir','Gürültü yapar'], dogru:1, aciklama:'Koşmak iş kazalarına zemin hazırlar; yürüyerek hızlı hareket edilir.'},
+  {soru:'SKT kontrolü ne sıklıkta yapılmalıdır?', secenekler:['Haftada bir','Her ay','Her vardiya başında','Ayda bir'], dogru:2, aciklama:'Her vardiya başında tüm ürünlerin SKT kontrolü yapılmalıdır.'},
+  {soru:'İş başı nasıl yapılır?', secenekler:['Sözlü olarak','ACL Takip uygulamasından GPS ile','Terminale giriş yaparak','Mesaj atarak'], dogru:1, aciklama:'İş başı GPS teyitli olarak ACL Takip uygulamasından yapılmalıdır.'},
+  {soru:'Zemine düşen ürün ne zaman kaldırılır?', secenekler:['Vardiya sonunda','Anında kaldırılır','Birikince','Temizlikçi kaldırır'], dogru:1, aciklama:'Zemine düşen ürünler anında kaldırılmalıdır; kayma kazası riski oluşturur.'}
+];
+
+// ─── MODÜL EĞİTİM SİSTEMİ ─────────────────────────────────────────────────────
+
+var aktifModulSinav = null;
+
+function renderEgitimModul(){
+  var el = document.getElementById('egitim-content');
+  if(!el) return;
+
+  // Tüm modüller tamamlandı mı?
+  var tumTamamlandi = EGITIM_MODULLERI.every(function(m){
+    return modulEgitimData.moduller[m.id] && modulEgitimData.moduller[m.id].gecti;
+  });
+  var genelTamamlandi = modulEgitimData.genelTamamlandi;
+
+  var html = '';
+
+  // Rozet
+  if(tumTamamlandi && genelTamamlandi){
+    html += '<div style="background:linear-gradient(135deg,var(--accent),#e8a000);border-radius:var(--r-lg);padding:20px;text-align:center;margin-bottom:16px">' +
+      '<div style="font-size:40px;margin-bottom:8px">🏆</div>' +
+      '<div style="font-size:16px;font-weight:700;color:#000">Tüm Eğitimler Tamamlandı!</div>' +
+      '<div style="font-size:12px;color:rgba(0,0,0,.7);margin-top:4px">Tebrikler, tüm modülleri ve genel sınavı geçtiniz</div>' +
+    '</div>';
+  }
+
+  // Modül kartları
+  EGITIM_MODULLERI.forEach(function(modul, i){
+    var modulSonuc = modulEgitimData.moduller[modul.id];
+    var tamamlandi = modulSonuc && modulSonuc.gecti;
+    var oncekiTamamlandi = i === 0 || (modulEgitimData.moduller[i-1] && modulEgitimData.moduller[i-1].gecti);
+    var acik = oncekiTamamlandi;
+
+    var durum = tamamlandi ? '✅ Geçildi — '+modulSonuc.puan+'%' : (acik ? '▶ Başla' : '🔒 Kilitli');
+    var durumRenk = tamamlandi ? 'var(--green)' : (acik ? modul.renk : 'var(--text3)');
+
+    html += '<div class="egitim-kart" style="opacity:'+(acik?1:0.5)+'">' +
+      '<div class="egitim-bolum-header">' +
+        '<div style="font-size:24px;width:40px;height:40px;background:'+(acik?modul.renk:'var(--bg3)')+';border-radius:10px;display:flex;align-items:center;justify-content:center">' + modul.ikon + '</div>' +
+        '<div style="flex:1">' +
+          '<div class="egitim-bolum-title">' + modul.baslik + '</div>' +
+          '<div style="font-size:11px;color:'+durumRenk+';margin-top:2px;font-weight:600">' + durum + '</div>' +
+        '</div>' +
+        (acik ? '<button onclick="modulAc('+modul.id+')" style="background:'+modul.renk+';color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">' + (tamamlandi ? 'Tekrar' : 'Başla') + '</button>' : '') +
+      '</div>' +
+    '</div>';
+  });
+
+  // Genel sınav kartı
+  var genelAcik = EGITIM_MODULLERI.every(function(m){ return modulEgitimData.moduller[m.id] && modulEgitimData.moduller[m.id].gecti; });
+  html += '<div class="egitim-kart" style="opacity:'+(genelAcik?1:0.5)+';border:2px solid '+(genelAcik?'var(--accent)':'var(--border)')+'">' +
+    '<div class="egitim-bolum-header">' +
+      '<div style="font-size:24px;width:40px;height:40px;background:'+(genelAcik?'var(--accent)':'var(--bg3)')+';border-radius:10px;display:flex;align-items:center;justify-content:center">🏆</div>' +
+      '<div style="flex:1">' +
+        '<div class="egitim-bolum-title">Genel Sınav</div>' +
+        '<div style="font-size:11px;color:'+(genelTamamlandi?'var(--green)':(genelAcik?'var(--accent)':'var(--text3)'))+';margin-top:2px;font-weight:600">' +
+          (genelTamamlandi ? '✅ Geçildi — '+modulEgitimData.genelPuan+'%' : (genelAcik ? '▶ Tüm modülleri geçince açılır' : '🔒 Önce tüm modülleri tamamla')) +
+        '</div>' +
+      '</div>' +
+      (genelAcik ? '<button onclick="genelSinavBaslat()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">' + (genelTamamlandi ? 'Tekrar' : 'Başla') + '</button>' : '') +
+    '</div>' +
+  '</div>';
+
+  el.innerHTML = html;
+}
+
+function modulAc(modulId){
+  var modul = EGITIM_MODULLERI[modulId];
+  if(!modul) return;
+
+  // İçerik + sınav overlay göster
+  var el = document.getElementById('egitim-content');
+
+  var icerikHtml = '<div style="padding:4px 0">' +
+    '<button onclick="renderEgitimModul()" style="background:var(--bg3);border:none;border-radius:8px;padding:8px 14px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:16px">← Geri</button>' +
+    '<div class="egitim-kart">' +
+      '<div class="egitim-bolum-header">' +
+        '<div style="font-size:24px;width:40px;height:40px;background:'+modul.renk+';border-radius:10px;display:flex;align-items:center;justify-content:center">' + modul.ikon + '</div>' +
+        '<div><div class="egitim-bolum-title">' + modul.baslik + '</div><div style="font-size:11px;color:var(--text3);margin-top:2px">' + modul.sorular.length + ' soruluk sınav</div></div>' +
+      '</div>' +
+      '<div class="egitim-bolum-body">' +
+        modul.icerik.map(function(m,i){ return '<div class="egitim-adim"><div class="egitim-adim-no">'+(i+1)+'</div><div class="egitim-adim-text">'+m+'</div></div>'; }).join('') +
+      '</div>' +
+    '</div>' +
+    '<button onclick="modulSinavBaslat('+modulId+')" style="width:100%;padding:14px;background:'+modul.renk+';color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">Sınava Başla →</button>' +
+  '</div>';
+
+  el.innerHTML = icerikHtml;
+}
+
+function modulSinavBaslat(modulId){
+  var modul = EGITIM_MODULLERI[modulId];
+  aktifModulSinav = {modulId: modulId, sorular: modul.sorular, soruIdx: 0, yanitlar: [], cevaplandi: false};
+  renderModulSinavSoru();
+}
+
+function genelSinavBaslat(){
+  aktifModulSinav = {modulId: 'genel', sorular: GENEL_SINAV_SORULAR, soruIdx: 0, yanitlar: [], cevaplandi: false};
+  renderModulSinavSoru();
+}
+
+function renderModulSinavSoru(){
+  var el = document.getElementById('egitim-content');
+  if(!el || !aktifModulSinav) return;
+
+  var s = aktifModulSinav;
+  var soru = s.sorular[s.soruIdx];
+  var modulId = s.modulId;
+  var modul = modulId === 'genel' ? {baslik:'Genel Sınav', ikon:'🏆', renk:'var(--accent)'} : EGITIM_MODULLERI[modulId];
+
+  s.cevaplandi = false;
+
+  var ilerleme = Math.round(((s.soruIdx+1)/s.sorular.length)*100);
+
+  el.innerHTML = '<div style="padding:4px 0">' +
+    '<div style="background:var(--bg2);border-radius:var(--r-lg);overflow:hidden;margin-bottom:12px">' +
+      '<div style="background:'+modul.renk+';padding:12px 16px;display:flex;align-items:center;justify-content:space-between">' +
+        '<div style="font-size:13px;font-weight:700;color:'+(modulId==='genel'?'#000':'#fff')+'">'+modul.ikon+' '+modul.baslik+'</div>' +
+        '<div style="font-size:12px;color:'+(modulId==='genel'?'rgba(0,0,0,.7)':'rgba(255,255,255,.7)')+'">'+( s.soruIdx+1)+' / '+s.sorular.length+'</div>' +
+      '</div>' +
+      '<div style="height:4px;background:var(--bg3)"><div style="height:100%;background:'+modul.renk+';width:'+ilerleme+'%;transition:width .3s"></div></div>' +
+    '</div>' +
+    '<div class="sinav-soru-no">Soru ' + (s.soruIdx+1) + '</div>' +
+    '<div class="sinav-soru">' + soru.soru + '</div>' +
+    soru.secenekler.map(function(sec,i){
+      return '<button class="sinav-secenek" onclick="modulCevapla('+i+')" id="msec-'+i+'"><span style="font-family:var(--mono);color:var(--text3);margin-right:8px">'+String.fromCharCode(65+i)+')</span>'+sec+'</button>';
+    }).join('') +
+    '<div class="sinav-aciklama" id="modul-aciklama">' + soru.aciklama + '</div>' +
+    '<button class="sinav-ileri-btn" id="modul-ileri" onclick="modulIleri()">' + (s.soruIdx===s.sorular.length-1?'Sınavı Bitir':'Sonraki Soru →') + '</button>' +
+  '</div>';
+}
+
+function modulCevapla(secIdx){
+  if(!aktifModulSinav || aktifModulSinav.cevaplandi) return;
+  aktifModulSinav.cevaplandi = true;
+  var s = aktifModulSinav;
+  var soru = s.sorular[s.soruIdx];
+  var dogru = soru.dogru === secIdx;
+
+  s.yanitlar.push({soruIdx: s.soruIdx, secilen: secIdx, dogru: dogru});
+
+  for(var i=0; i<soru.secenekler.length; i++){
+    var btn = document.getElementById('msec-'+i);
+    if(!btn) continue;
+    if(i===soru.dogru) btn.classList.add('dogru');
+    else if(i===secIdx && !dogru) btn.classList.add('yanlis');
+    btn.disabled = true;
+  }
+
+  document.getElementById('modul-aciklama').style.display = 'block';
+  document.getElementById('modul-ileri').style.display = 'block';
+  if(dogru) bip(1047,0.2,0.3); else bip(220,0.4,0.4);
+}
+
+function modulIleri(){
+  if(!aktifModulSinav) return;
+  aktifModulSinav.soruIdx++;
+  if(aktifModulSinav.soruIdx >= aktifModulSinav.sorular.length){
+    modulSinavSonuc();
+  } else {
+    renderModulSinavSoru();
+  }
+}
+
+function modulSinavSonuc(){
+  if(!aktifModulSinav) return;
+  var s = aktifModulSinav;
+  var dogru = s.yanitlar.filter(function(y){ return y.dogru; }).length;
+  var puan = Math.round((dogru/s.sorular.length)*100);
+  var gecti = puan >= 70;
+  var modulId = s.modulId;
+
+  if(modulId === 'genel'){
+    modulEgitimData.genelTamamlandi = gecti;
+    modulEgitimData.genelPuan = puan;
+  } else {
+    modulEgitimData.moduller[modulId] = {tamamlandi:true, puan:puan, gecti:gecti, tarih:todayStr};
+  }
+  localStorage.setItem(EGITIM_MODUL_KEY, JSON.stringify(modulEgitimData));
+
+  // Firebase'e kaydet
+  if(window._fbReady && user){
+    fbSet('egitim_modul_sonuclari', normTel(user.tel)+'_mod'+modulId+'_'+todayStr.replace(/\./g,'-'), {
+      tel: user.tel, ad: user.ad, modulId: modulId,
+      puan: puan, gecti: gecti, dogru: dogru, tarih: todayStr
+    }).catch(function(){});
+  }
+
+  var modul = modulId === 'genel' ? {baslik:'Genel Sınav', ikon:'🏆', renk:'var(--accent)'} : EGITIM_MODULLERI[modulId];
+  var el = document.getElementById('egitim-content');
+
+  el.innerHTML = '<div style="text-align:center;padding:32px 16px">' +
+    '<div style="font-size:56px;margin-bottom:16px">' + (gecti?'🎉':'📚') + '</div>' +
+    '<div style="font-size:48px;font-weight:800;color:'+(gecti?'var(--green)':'var(--red)')+';margin-bottom:8px">'+puan+'%</div>' +
+    '<div style="font-size:16px;font-weight:700;color:'+(gecti?'var(--green)':'var(--red)')+';margin-bottom:24px">' + (gecti?'Tebrikler! Modülü geçtiniz.':'Başarısız. Tekrar deneyin.') + '</div>' +
+    '<div style="background:var(--bg2);border-radius:var(--r-lg);padding:16px;text-align:left;margin-bottom:24px">' +
+      '<div class="sinav-sonuc-item"><span>Modül</span><span>'+modul.ikon+' '+modul.baslik+'</span></div>' +
+      '<div class="sinav-sonuc-item"><span>Doğru</span><span class="sinav-sonuc-val" style="color:var(--green)">'+dogru+' / '+s.sorular.length+'</span></div>' +
+      '<div class="sinav-sonuc-item"><span>Puan</span><span class="sinav-sonuc-val" style="color:'+(gecti?'var(--green)':'var(--red)')+'">'+puan+'%</span></div>' +
+      '<div class="sinav-sonuc-item"><span>Geçme Notu</span><span class="sinav-sonuc-val">70%</span></div>' +
+      '<div class="sinav-sonuc-item"><span>Sonuç</span><span class="sinav-sonuc-val" style="color:'+(gecti?'var(--green)':'var(--red)')+'">'+( gecti?'GEÇTİ':'KALDI')+'</span></div>' +
+    '</div>' +
+    '<button onclick="renderEgitimModul()" style="width:100%;padding:14px;background:'+modul.renk+';color:'+(modulId==='genel'?'#000':'#fff')+';border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">' +
+      (gecti ? 'Modüllere Dön ✓' : 'Tekrar Dene') +
+    '</button>' +
+  '</div>';
+
+  aktifModulSinav = null;
+}
+
 function renderEgitim(){
+  renderEgitimModul();
+}
+function renderEgitim_ESKI_(){
   const el = document.getElementById('egitim-content');
   if(!el) return;
   const tamamlandi = egitimData.tamamlandi;
