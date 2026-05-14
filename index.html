@@ -3257,11 +3257,11 @@ function renderEgitimModul(){
   });
   var genelTamamlandi = modulEgitimData.genelTamamlandi;
 
-  var html = '';
+  var egitimHtml = '';
 
   // Rozet
   if(tumTamamlandi && genelTamamlandi){
-    html += '<div style="background:linear-gradient(135deg,var(--accent),#e8a000);border-radius:var(--r-lg);padding:20px;text-align:center;margin-bottom:16px">' +
+    egitimHtml += '<div style="background:linear-gradient(135deg,var(--accent),#e8a000);border-radius:var(--r-lg);padding:20px;text-align:center;margin-bottom:16px">' +
       '<div style="font-size:40px;margin-bottom:8px">🏆</div>' +
       '<div style="font-size:16px;font-weight:700;color:#000">Tüm Eğitimler Tamamlandı!</div>' +
       '<div style="font-size:12px;color:rgba(0,0,0,.7);margin-top:4px">Tebrikler, tüm modülleri ve genel sınavı geçtiniz</div>' +
@@ -3278,7 +3278,7 @@ function renderEgitimModul(){
     var durum = tamamlandi ? '✅ Geçildi — '+modulSonuc.puan+'%' : (acik ? '▶ Başla' : '🔒 Kilitli');
     var durumRenk = tamamlandi ? 'var(--green)' : (acik ? modul.renk : 'var(--text3)');
 
-    html += '<div class="egitim-kart" style="opacity:'+(acik?1:0.5)+'">' +
+    egitimHtml += '<div class="egitim-kart" style="opacity:'+(acik?1:0.5)+'">' +
       '<div class="egitim-bolum-header">' +
         '<div style="font-size:24px;width:40px;height:40px;background:'+(acik?modul.renk:'var(--bg3)')+';border-radius:10px;display:flex;align-items:center;justify-content:center">' + modul.ikon + '</div>' +
         '<div style="flex:1">' +
@@ -3292,7 +3292,7 @@ function renderEgitimModul(){
 
   // Genel sınav kartı
   var genelAcik = EGITIM_MODULLERI.every(function(m){ return modulEgitimData.moduller[m.id] && modulEgitimData.moduller[m.id].gecti; });
-  html += '<div class="egitim-kart" style="opacity:'+(genelAcik?1:0.5)+';border:2px solid '+(genelAcik?'var(--accent)':'var(--border)')+'">' +
+  egitimHtml += '<div class="egitim-kart" style="opacity:'+(genelAcik?1:0.5)+';border:2px solid '+(genelAcik?'var(--accent)':'var(--border)')+'">' +
     '<div class="egitim-bolum-header">' +
       '<div style="font-size:24px;width:40px;height:40px;background:'+(genelAcik?'var(--accent)':'var(--bg3)')+';border-radius:10px;display:flex;align-items:center;justify-content:center">🏆</div>' +
       '<div style="flex:1">' +
@@ -3305,7 +3305,7 @@ function renderEgitimModul(){
     '</div>' +
   '</div>';
 
-  el.innerHTML = html;
+  el.innerHTML = egitimHtml;
 }
 
 function modulAc(modulId){
