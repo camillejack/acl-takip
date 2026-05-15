@@ -1062,13 +1062,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   // Uygulama açıkken gelen push mesajlarını yakala (ön plan)
   if(messaging){
     onMessage(messaging, function(payload){
-      console.log('FCM ön plan mesaj:', payload);
-      // Ses + overlay — duyuruSesiCal ve duyuruGoster global fonksiyonlar
       if(typeof duyuruSesiCal === 'function') duyuruSesiCal();
     });
   }
 
-  // FCM token al ve Firestore'a kaydet
+  // FCM token al ve Firestore'a kaydet — ileride push için hazır olsun
   async function fcmTokenAl(userTel){
     if(!messaging) return null;
     try{
@@ -1082,89 +1080,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
           kayit: new Date().toISOString()
         });
         window._fcmToken = token;
-        console.log('FCM token kaydedildi');
       }
       return token;
-    }catch(e){ console.warn('FCM token alınamadı:', e); return null; }
+    }catch(e){ return null; }
   }
 
-  // FCM push gönder — tüm kayıtlı tokenlar için
+  // FCM push gönderimi — şimdilik devre dışı (backend gerektirir)
+  // İleride Cloudflare Workers veya Cloud Functions ile aktif edilecek
   async function fcmPushGonder(baslik, icerik, hedefler){
-    try{
-      // Tüm push tokenları çek
-      var snap = await getDocs(collection(db, 'push_tokens'));
-      var tokenlar = [];
-      snap.forEach(function(d){
-        var data = d.data();
-        if(!data.fcmToken) return;
-        // Hedef filtresi
-        if(!hedefler || hedefler.length === 0){
-          tokenlar.push(data.fcmToken); // genel — herkese
-        } else {
-          // normTel ile karşılaştır
-          var telNorm = data.tel ? data.tel.replace(/\D/g,'').replace(/^0/,'') : '';
-          if(hedefler.some(function(h){ return h === telNorm || h === data.tel; })){
-            tokenlar.push(data.fcmToken);
-          }
-        }
-      });
-
-      if(!tokenlar.length) return;
-
-      // FCM V1 API — her token için ayrı istek (tarayıcıdan doğrudan)
-      // Not: Bu iç kullanım uygulaması için kabul edilebilir yöntem
-      var apiKey = "AIzaSyDdedlkOrBhYRCcXjXDoSRCilDR-2vwHug";
-      var projectId = "acl-takip";
-
-      for(var i=0; i<tokenlar.length; i++){
-        try{
-          await fetch('https://fcm.googleapis.com/v1/projects/'+projectId+'/messages:send', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + await _getFCMAccessToken(apiKey)
-            },
-            body: JSON.stringify({
-              message: {
-                token: tokenlar[i],
-                notification: { title: baslik, body: icerik },
-                webpush: {
-                  notification: {
-                    title: baslik,
-                    body: icerik,
-                    icon: '/icon-192.png',
-                    badge: '/icon-192.png',
-                    vibrate: [200,100,200,100,200]
-                  },
-                  fcm_options: { link: '/' }
-                }
-              }
-            })
-          });
-        }catch(e){ console.warn('FCM push hatası token '+i+':', e); }
-      }
-    }catch(e){ console.warn('FCM push gönderim hatası:', e); }
-  }
-
-  // OAuth2 access token al (Firebase API Key ile)
-  async function _getFCMAccessToken(apiKey){
-    // Firestore'dan mevcut token varsa kullan
-    var cached = window._fcmAccessToken;
-    if(cached && cached.exp > Date.now()) return cached.token;
-    // Firebase Auth identity toolkit ile token al
-    try{
-      var res = await fetch('https://securetoken.googleapis.com/v1/token?key='+apiKey, {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'grant_type=refresh_token&refresh_token='+(window._fbRefreshToken||'')
-      });
-      var d = await res.json();
-      if(d.access_token){
-        window._fcmAccessToken = { token: d.access_token, exp: Date.now() + (d.expires_in-60)*1000 };
-        return d.access_token;
-      }
-    }catch(e){}
-    return null;
+    // TODO: backend hazır olduğunda aktif edilecek
+    return;
   }
 
   // Global erişim
