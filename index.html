@@ -349,6 +349,32 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   cursor:pointer;backdrop-filter:blur(8px);
 }
 
+/* EĞİTİM BOARD & GEÇMİŞ */
+.egitim-board-wrap{margin-top:16px}
+.egitim-board-baslik{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.egitim-board-ay{font-size:11px;color:var(--accent);font-family:var(--mono);font-weight:600;text-transform:none;letter-spacing:0}
+.egitim-board-tablo{width:100%;border-collapse:collapse;background:var(--bg2);border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border)}
+.egitim-board-tablo th{padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);background:var(--bg3);text-align:left;border-bottom:1px solid var(--border)}
+.egitim-board-tablo td{padding:8px 10px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border)}
+.egitim-board-tablo tr:last-child td{border-bottom:none}
+.egitim-board-tablo tr:hover td{background:rgba(255,255,255,.02)}
+.egitim-board-puan{font-family:var(--mono);font-weight:700;font-size:12px}
+.egitim-board-puan.gecti{color:var(--green)}
+.egitim-board-puan.kaldi{color:var(--red)}
+.egitim-board-puan.bos{color:var(--text3)}
+.egitim-gecmis-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-top:8px}
+.egitim-gecmis-ay{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none}
+.egitim-gecmis-ay-lbl{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.egitim-gecmis-ay-puan{font-size:12px;font-family:var(--mono);font-weight:700}
+.egitim-gecmis-detay{display:none;padding:0 14px 12px;border-top:1px solid var(--border)}
+.egitim-gecmis-detay.acik{display:block}
+.egitim-gecmis-satir{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px}
+.egitim-gecmis-satir:last-child{border-bottom:none}
+.egitim-gecmis-modul{flex:1;color:var(--text2)}
+.egitim-gecmis-zaman{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.egitim-gecmis-puan{font-family:var(--mono);font-weight:700;font-size:12px;min-width:40px;text-align:right}
+.egitim-yukle-spinner{text-align:center;padding:20px;font-size:12px;color:var(--text3)}
+
 /* EĞİTİM MODÜLü */
 .egitim-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
 .egitim-bolum-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
@@ -1292,6 +1318,10 @@ async function syncFromCloud(){
     }
 
     toast('Veriler senkronize edildi ✓','ok');
+
+    // Eğitim ilerlemesini yükle (ay kontrolü dahil)
+    await egitimIlerlemesiYukle();
+
   }catch(e){
     console.warn('Sync hatası:', e);
     toast('Çevrimdışı — local veriler kullanılıyor','');
@@ -3099,15 +3129,153 @@ if('speechSynthesis' in window){
 // ─── EĞİTİM + SINAV SİSTEMİ ──────────────────────────────────
 const EGITIM_KEY = 'acl_egitim_v1';
 let egitimData = JSON.parse(localStorage.getItem(EGITIM_KEY)||'{}');
-// {tamamlandi: bool, puan: number, tarih: str, yanlis:[]}
-// moduller: {0:{tamamlandi,puan,gecti}, 1:..., 2:..., 3:..., 4:..., 5:..., genel:{...}}
 
 // Yeni modül tabanlı eğitim verisi
 var EGITIM_MODUL_KEY = 'acl_egitim_modul_v1';
 var modulEgitimData = JSON.parse(localStorage.getItem(EGITIM_MODUL_KEY)||'{}');
-// {aktifModul:0, moduller:{0:{tamamlandi,puan,gecti}, ...}, genelTamamlandi:false}
 if(!modulEgitimData.moduller) modulEgitimData.moduller = {};
 if(modulEgitimData.aktifModul === undefined) modulEgitimData.aktifModul = 0;
+
+// Mevcut ay anahtarı: "2026-05" formatı
+function suankiAyKey(){
+  var t = new Date();
+  return t.getFullYear()+'-'+(String(t.getMonth()+1).padStart(2,'0'));
+}
+
+// Türkçe ay adı
+function ayAdi(ayKey){
+  var aylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  var p = ayKey.split('-');
+  return aylar[parseInt(p[1],10)-1]+' '+p[0];
+}
+
+// Bir sonraki ayın 1'i — sınav açılış tarihi
+function sonrakiSinavTarihi(){
+  var t = new Date();
+  var sonrakiAy = new Date(t.getFullYear(), t.getMonth()+1, 1);
+  return sonrakiAy.toLocaleDateString('tr-TR'); // "01.06.2026"
+}
+
+// Bir sonraki ay key
+function sonrakiAyKey(){
+  var t = new Date();
+  var sonraki = new Date(t.getFullYear(), t.getMonth()+1, 1);
+  return sonraki.getFullYear()+'-'+(String(sonraki.getMonth()+1).padStart(2,'0'));
+}
+
+// Eğitim ilerlemesini Firebase'e kaydet
+async function egitimIlerlemesiKaydet(){
+  if(!window._fbReady || !user) return;
+  var ayKey = suankiAyKey();
+  var docId = normTel(user.tel)+'_'+ayKey;
+  await fbSet('egitim_ilerlemesi', docId, {
+    tel: user.tel,
+    ad: user.ad,
+    rol: user.rol||'personel',
+    ayKey: ayKey,
+    moduller: modulEgitimData.moduller,
+    genelTamamlandi: modulEgitimData.genelTamamlandi||false,
+    genelPuan: modulEgitimData.genelPuan||0,
+    guncelleme: new Date().toISOString()
+  }).catch(function(){});
+}
+
+// Eğitim ilerlemesini Firebase'den yükle
+async function egitimIlerlemesiYukle(){
+  if(!window._fbReady || !user) return;
+  var ayKey = suankiAyKey();
+  var docId = normTel(user.tel)+'_'+ayKey;
+  try{
+    var fbData = await fbGet('egitim_ilerlemesi', docId);
+    if(fbData && fbData.moduller){
+      // Firebase'deki veriyi local ile karşılaştır - daha fazla tamamlanmış olan kazanır
+      var fbModuller = fbData.moduller;
+      var localModuller = modulEgitimData.moduller || {};
+      var guncellendi = false;
+      Object.keys(fbModuller).forEach(function(k){
+        if(!localModuller[k] || !localModuller[k].gecti && fbModuller[k].gecti){
+          localModuller[k] = fbModuller[k];
+          guncellendi = true;
+        }
+      });
+      if(guncellendi){
+        modulEgitimData.moduller = localModuller;
+      }
+      if(!modulEgitimData.genelTamamlandi && fbData.genelTamamlandi){
+        modulEgitimData.genelTamamlandi = fbData.genelTamamlandi;
+        modulEgitimData.genelPuan = fbData.genelPuan;
+        guncellendi = true;
+      }
+      if(guncellendi){
+        localStorage.setItem(EGITIM_MODUL_KEY, JSON.stringify(modulEgitimData));
+      }
+    }
+  }catch(e){ console.warn('Eğitim ilerleme yükleme hatası:', e); }
+
+  // Ay sıfırlama kontrolü
+  var kayitliAy = modulEgitimData.ayKey || '';
+  if(kayitliAy && kayitliAy !== ayKey){
+    // Yeni ay — sıfırla
+    modulEgitimData = {moduller:{}, aktifModul:0, genelTamamlandi:false, genelPuan:0, ayKey:ayKey};
+    localStorage.setItem(EGITIM_MODUL_KEY, JSON.stringify(modulEgitimData));
+    toast('Yeni ay başladı — eğitim sıfırlandı 📚','');
+  } else if(!kayitliAy){
+    modulEgitimData.ayKey = ayKey;
+    localStorage.setItem(EGITIM_MODUL_KEY, JSON.stringify(modulEgitimData));
+  }
+}
+
+// Sınav geçmişini Firebase'e kaydet (her sınav girişimi ayrı kayıt)
+async function egitimGecmisiKaydet(modulId, puan, gecti, dogru, toplamSoru){
+  if(!window._fbReady || !user) return;
+  var ayKey = suankiAyKey();
+  var simdi = new Date();
+  var saat = simdi.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  var tarihStr = simdi.toLocaleDateString('tr-TR');
+  var ts = simdi.getTime();
+  var docId = normTel(user.tel)+'_'+ayKey+'_mod'+modulId+'_'+ts;
+  await fbSet('egitim_gecmisi', docId, {
+    tel: user.tel,
+    ad: user.ad,
+    rol: user.rol||'personel',
+    ayKey: ayKey,
+    modulId: modulId,
+    puan: puan,
+    gecti: gecti,
+    dogru: dogru,
+    toplamSoru: toplamSoru,
+    tarih: tarihStr,
+    saat: saat,
+    ts: ts
+  }).catch(function(){});
+}
+
+// Kişisel geçmiş yükle (tüm aylar)
+async function egitimKisiselGecmisYukle(){
+  if(!window._fbReady || !user) return [];
+  try{
+    var tumKayitlar = await fbCollection('egitim_gecmisi');
+    var benimKayitlar = tumKayitlar.filter(function(k){
+      return normTel(k.tel) === normTel(user.tel);
+    });
+    return benimKayitlar.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }catch(e){ return []; }
+}
+
+// Board: tüm personel bu ayın durumu (yönetici için)
+async function egitimBoardYukle(){
+  if(!window._fbReady || !user) return [];
+  var ayKey = suankiAyKey();
+  try{
+    var tumIlerleme = await fbCollection('egitim_ilerlemesi');
+    return tumIlerleme.filter(function(k){ return k.ayKey === ayKey; })
+      .sort(function(a,b){
+        var puanA = a.genelPuan||0;
+        var puanB = b.genelPuan||0;
+        return puanB - puanA;
+      });
+  }catch(e){ return []; }
+}
 
 const SORULAR = [
   {
@@ -3446,29 +3614,78 @@ function renderEgitimModul(){
   var el = document.getElementById('egitim-content');
   if(!el) return;
 
+  var ayKey = suankiAyKey();
+
   // Tüm modüller tamamlandı mı?
   var tumTamamlandi = EGITIM_MODULLERI.every(function(m){
     return modulEgitimData.moduller[m.id] && modulEgitimData.moduller[m.id].gecti;
   });
   var genelTamamlandi = modulEgitimData.genelTamamlandi;
+  var tamamen = tumTamamlandi && genelTamamlandi;
 
   var egitimHtml = '';
 
-  // Rozet
-  if(tumTamamlandi && genelTamamlandi){
-    egitimHtml += '<div style="background:linear-gradient(135deg,var(--accent),#e8a000);border-radius:var(--r-lg);padding:20px;text-align:center;margin-bottom:16px">' +
-      '<div style="font-size:40px;margin-bottom:8px">🏆</div>' +
-      '<div style="font-size:16px;font-weight:700;color:#000">Tüm Eğitimler Tamamlandı!</div>' +
-      '<div style="font-size:12px;color:rgba(0,0,0,.7);margin-top:4px">Tebrikler, tüm modülleri ve genel sınavı geçtiniz</div>' +
-    '</div>';
+  // ── TAMAMLANMA ÖZETİ KARTI ─────────────────────────────────
+  if(tamamen){
+    var sonrakiTarih = sonrakiSinavTarihi();
+    var sonrakiAy    = sonrakiAyKey();
+
+    // Modül puan tablosu
+    var modulPuanSatirlar = '';
+    EGITIM_MODULLERI.forEach(function(m){
+      var sonuc = modulEgitimData.moduller[m.id];
+      var puan  = sonuc ? sonuc.puan : 0;
+      var renk  = sonuc && sonuc.gecti ? '#69f0ae' : '#ff6b6b';
+      modulPuanSatirlar +=
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:12px">' +
+          '<span style="color:rgba(0,0,0,.7)">'+m.ikon+' '+m.baslik+'</span>' +
+          '<span style="font-family:var(--mono);font-weight:700;color:'+renk+'">'+puan+'%</span>' +
+        '</div>';
+    });
+    var genelPuanRenk = (modulEgitimData.genelPuan||0) >= 70 ? '#69f0ae' : '#ff6b6b';
+
+    egitimHtml +=
+      '<div style="background:linear-gradient(135deg,var(--accent),#e8a000);border-radius:var(--r-lg);padding:20px;margin-bottom:16px">' +
+        '<div style="text-align:center;margin-bottom:16px">' +
+          '<div style="font-size:40px;margin-bottom:6px">🏆</div>' +
+          '<div style="font-size:16px;font-weight:700;color:#000">'+ayAdi(ayKey)+' Eğitimi Tamamlandı!</div>' +
+          '<div style="font-size:12px;color:rgba(0,0,0,.65);margin-top:4px">Tüm modüller ve genel sınav geçildi</div>' +
+        '</div>' +
+        '<div style="background:rgba(0,0,0,.1);border-radius:10px;padding:12px">' +
+          modulPuanSatirlar +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13px;font-weight:700">' +
+            '<span style="color:#000">🏆 Genel Sınav</span>' +
+            '<span style="font-family:var(--mono);color:'+genelPuanRenk+'">'+( modulEgitimData.genelPuan||0)+'%</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:14px;background:rgba(0,0,0,.15);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+          '<span style="font-size:20px">📅</span>' +
+          '<div>' +
+            '<div style="font-size:10px;color:rgba(0,0,0,.6);text-transform:uppercase;letter-spacing:.06em">Sonraki Sınav</div>' +
+            '<div style="font-size:13px;font-weight:700;color:#000">'+ayAdi(sonrakiAy)+' — 1 '+sonrakiTarih.split('.')[1]+'.'+sonrakiTarih.split('.')[2]+'</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
   }
 
-  // Modül kartları
+  // ── MODÜL KARTLARI ─────────────────────────────────────────
   EGITIM_MODULLERI.forEach(function(modul, i){
     var modulSonuc = modulEgitimData.moduller[modul.id];
     var tamamlandi = modulSonuc && modulSonuc.gecti;
     var oncekiTamamlandi = i === 0 || (modulEgitimData.moduller[i-1] && modulEgitimData.moduller[i-1].gecti);
     var acik = oncekiTamamlandi;
+
+    // Buton mantığı
+    var butonHtml = '';
+    if(acik){
+      if(tamamlandi && tamamen){
+        // Tümü tamamlandı — pasif buton, yeni ay bekleniyor
+        butonHtml = '<button disabled style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;cursor:not-allowed;opacity:.6">✓ Tamamlandı</button>';
+      } else {
+        // Normal akış
+        butonHtml = '<button onclick="modulAc('+modul.id+')" style="background:'+modul.renk+';color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">'+(tamamlandi?'Tekrar':'Başla')+'</button>';
+      }
+    }
 
     var durum = tamamlandi ? '✅ Geçildi — '+modulSonuc.puan+'%' : (acik ? '▶ Başla' : '🔒 Kilitli');
     var durumRenk = tamamlandi ? 'var(--green)' : (acik ? modul.renk : 'var(--text3)');
@@ -3480,27 +3697,165 @@ function renderEgitimModul(){
           '<div class="egitim-bolum-title">' + modul.baslik + '</div>' +
           '<div style="font-size:11px;color:'+durumRenk+';margin-top:2px;font-weight:600">' + durum + '</div>' +
         '</div>' +
-        (acik ? '<button onclick="modulAc('+modul.id+')" style="background:'+modul.renk+';color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer">' + (tamamlandi ? 'Tekrar' : 'Başla') + '</button>' : '') +
+        butonHtml +
       '</div>' +
     '</div>';
   });
 
-  // Genel sınav kartı
+  // ── GENEL SINAV KARTI ──────────────────────────────────────
   var genelAcik = EGITIM_MODULLERI.every(function(m){ return modulEgitimData.moduller[m.id] && modulEgitimData.moduller[m.id].gecti; });
+  var genelTamamlandi2 = modulEgitimData.genelTamamlandi;
+
+  var genelButonHtml = '';
+  if(genelAcik){
+    if(genelTamamlandi2 && tamamen){
+      genelButonHtml = '<button disabled style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:11px;cursor:not-allowed;opacity:.6">✓ Tamamlandı</button>';
+    } else {
+      genelButonHtml = '<button onclick="genelSinavBaslat()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">'+(genelTamamlandi2?'Tekrar':'Başla')+'</button>';
+    }
+  }
+
   egitimHtml += '<div class="egitim-kart" style="opacity:'+(genelAcik?1:0.5)+';border:2px solid '+(genelAcik?'var(--accent)':'var(--border)')+'">' +
     '<div class="egitim-bolum-header">' +
       '<div style="font-size:24px;width:40px;height:40px;background:'+(genelAcik?'var(--accent)':'var(--bg3)')+';border-radius:10px;display:flex;align-items:center;justify-content:center">🏆</div>' +
       '<div style="flex:1">' +
         '<div class="egitim-bolum-title">Genel Sınav</div>' +
-        '<div style="font-size:11px;color:'+(genelTamamlandi?'var(--green)':(genelAcik?'var(--accent)':'var(--text3)'))+';margin-top:2px;font-weight:600">' +
-          (genelTamamlandi ? '✅ Geçildi — '+modulEgitimData.genelPuan+'%' : (genelAcik ? '▶ Tüm modülleri geçince açılır' : '🔒 Önce tüm modülleri tamamla')) +
+        '<div style="font-size:11px;color:'+(genelTamamlandi2?'var(--green)':(genelAcik?'var(--accent)':'var(--text3)'))+';margin-top:2px;font-weight:600">' +
+          (genelTamamlandi2 ? '✅ Geçildi — '+modulEgitimData.genelPuan+'%' : (genelAcik ? '▶ Tüm modülleri geçince açılır' : '🔒 Önce tüm modülleri tamamla')) +
         '</div>' +
       '</div>' +
-      (genelAcik ? '<button onclick="genelSinavBaslat()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">' + (genelTamamlandi ? 'Tekrar' : 'Başla') + '</button>' : '') +
+      genelButonHtml +
     '</div>' +
   '</div>';
 
+  // Kişisel geçmiş + Yönetici board placeholder (async doldurulacak)
+  egitimHtml += '<div id="egitim-gecmis-bolum"><div class="egitim-yukle-spinner">⟳ Geçmiş yükleniyor...</div></div>';
+  if(user && rolSeviye(user.rol) >= 2){
+    egitimHtml += '<div id="egitim-board-bolum"><div class="egitim-yukle-spinner">⟳ Personel durumu yükleniyor...</div></div>';
+  }
+
   el.innerHTML = egitimHtml;
+
+  // Async bölümleri doldur
+  _renderEgitimGecmis();
+  if(user && rolSeviye(user.rol) >= 2) _renderEgitimBoard();
+}
+
+// Kişisel geçmiş render
+async function _renderEgitimGecmis(){
+  var el = document.getElementById('egitim-gecmis-bolum');
+  if(!el) return;
+
+  var kayitlar = await egitimKisiselGecmisYukle();
+  if(!kayitlar.length){
+    el.innerHTML = '';
+    return;
+  }
+
+  // Aylara göre grupla
+  var aylar = {};
+  kayitlar.forEach(function(k){
+    var ay = k.ayKey || suankiAyKey();
+    if(!aylar[ay]) aylar[ay] = [];
+    aylar[ay].push(k);
+  });
+
+  var modulAdlari = {'genel':'🏆 Genel Sınav'};
+  EGITIM_MODULLERI.forEach(function(m){ modulAdlari[m.id] = m.ikon+' '+m.baslik; });
+
+  var html = '<div class="egitim-board-wrap">' +
+    '<div class="egitim-board-baslik">📋 Sınav Geçmişim</div>';
+
+  Object.keys(aylar).sort(function(a,b){ return b.localeCompare(a); }).forEach(function(ayKey, idx){
+    var ayKayitlar = aylar[ayKey];
+    var enYuksekPuan = Math.max.apply(null, ayKayitlar.map(function(k){ return k.puan||0; }));
+    var gectiSayisi = ayKayitlar.filter(function(k){ return k.gecti; }).length;
+    var puanRenk = enYuksekPuan >= 70 ? 'var(--green)' : 'var(--red)';
+    var acikClass = idx === 0 ? 'acik' : '';
+
+    html += '<div class="egitim-gecmis-kart">' +
+      '<div class="egitim-gecmis-ay" onclick="this.nextElementSibling.classList.toggle(\'acik\')">' +
+        '<span class="egitim-gecmis-ay-lbl">'+ayAdi(ayKey)+'</span>' +
+        '<span class="egitim-gecmis-ay-puan" style="color:'+puanRenk+'">'+enYuksekPuan+'% en yüksek · '+gectiSayisi+' geçti</span>' +
+        '<span style="font-size:14px;color:var(--text3);margin-left:8px">›</span>' +
+      '</div>' +
+      '<div class="egitim-gecmis-detay '+acikClass+'">';
+
+    ayKayitlar.forEach(function(k){
+      var modulAd = modulAdlari[k.modulId] || ('Modül '+k.modulId);
+      var puanRenkSatir = k.gecti ? 'var(--green)' : 'var(--red)';
+      html += '<div class="egitim-gecmis-satir">' +
+        '<span class="egitim-gecmis-modul">'+modulAd+'</span>' +
+        '<span class="egitim-gecmis-zaman">'+k.tarih+' '+k.saat+'</span>' +
+        '<span class="egitim-gecmis-puan" style="color:'+puanRenkSatir+'">'+k.puan+'%</span>' +
+      '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Yönetici board render
+async function _renderEgitimBoard(){
+  var el = document.getElementById('egitim-board-bolum');
+  if(!el) return;
+
+  var boardData = await egitimBoardYukle();
+  var ayKey = suankiAyKey();
+
+  var html = '<div class="egitim-board-wrap" style="margin-top:20px">' +
+    '<div class="egitim-board-baslik">👥 Personel Eğitim Durumu ' +
+      '<span class="egitim-board-ay">'+ayAdi(ayKey)+'</span>' +
+    '</div>';
+
+  if(!boardData.length){
+    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;text-align:center;font-size:12px;color:var(--text3)">Bu ay henüz sınav girişi yok</div>';
+  } else {
+    var modulBasliklar = EGITIM_MODULLERI.map(function(m){ return m.ikon; });
+    html += '<table class="egitim-board-tablo">' +
+      '<thead><tr>' +
+        '<th>Personel</th>';
+    EGITIM_MODULLERI.forEach(function(m){
+      html += '<th style="text-align:center">'+m.ikon+'</th>';
+    });
+    html += '<th style="text-align:center">🏆 Genel</th>' +
+      '</tr></thead><tbody>';
+
+    boardData.forEach(function(p){
+      var rolCls = ROLLER[p.rol||'personel'] ? ROLLER[p.rol].cls : 'rol-personel';
+      html += '<tr>' +
+        '<td>' +
+          '<div style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(p.ad||'-')+'</div>' +
+          '<span class="rol-badge '+rolCls+'" style="margin-top:3px;display:inline-block">'+rolLabel(p.rol||'personel')+'</span>' +
+        '</td>';
+
+      EGITIM_MODULLERI.forEach(function(m){
+        var mSonuc = p.moduller && p.moduller[m.id];
+        if(mSonuc && mSonuc.tamamlandi){
+          var cls = mSonuc.gecti ? 'gecti' : 'kaldi';
+          html += '<td style="text-align:center"><span class="egitim-board-puan '+cls+'">'+mSonuc.puan+'%</span></td>';
+        } else {
+          html += '<td style="text-align:center"><span class="egitim-board-puan bos">—</span></td>';
+        }
+      });
+
+      if(p.genelTamamlandi){
+        html += '<td style="text-align:center"><span class="egitim-board-puan gecti">'+p.genelPuan+'%</span></td>';
+      } else {
+        html += '<td style="text-align:center"><span class="egitim-board-puan bos">—</span></td>';
+      }
+
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 
@@ -3795,6 +4150,15 @@ function modulAc(modulId){
       '</div>' +
       '<div class="egitim-bolum-body">' +
         modul.icerik.map(function(m,i){ return '<div class="egitim-adim"><div class="egitim-adim-no">'+(i+1)+'</div><div class="egitim-adim-text">'+m+'</div></div>'; }).join('') +
+        (modulId === 4 ?
+          '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">' +
+            '<button onclick="(function(btn){var box=document.getElementById(\'manav-gorsel-box\');var acik=box.style.display===\'block\';box.style.display=acik?\'none\':\'block\';btn.textContent=acik?\'📷 Doğru istifleme örneğini gör ▾\':\'📷 Kapat ▴\';})(this)" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--accent);cursor:pointer;font-family:var(--sans);font-weight:600;text-align:left">📷 Doğru istifleme örneğini gör ▾</button>' +
+            '<div id="manav-gorsel-box" style="display:none;margin-top:8px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border)">' +
+              '<img src="img/manav-istifleme.jpg" alt="Doğru kasa istifleme örneği" style="width:100%;display:block;object-fit:cover" onerror="this.parentElement.innerHTML=\'<div style=\\\"padding:16px;font-size:12px;color:var(--text3);text-align:center\\\">Görsel yüklenemedi — img/manav-istifleme.jpg dosyasını kontrol edin</div>\'">' +
+              '<div style="padding:8px 12px;background:var(--bg2);font-size:11px;color:var(--text3);line-height:1.5">Kasalar paletler üzerine düzenli istiflenmiş, etiketler görünür, koridorlar açık — doğru uygulama örneği.</div>' +
+            '</div>' +
+          '</div>'
+        : '') +
       '</div>' +
     '</div>' +
     '<button onclick="modulSinavBaslat('+modulId+')" style="width:100%;padding:14px;background:'+modul.renk+';color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">Sınava Başla →</button>' +
@@ -3897,15 +4261,14 @@ function modulSinavSonuc(){
   } else {
     modulEgitimData.moduller[modulId] = {tamamlandi:true, puan:puan, gecti:gecti, tarih:todayStr};
   }
+  // Ay anahtarını garantile
+  if(!modulEgitimData.ayKey) modulEgitimData.ayKey = suankiAyKey();
   localStorage.setItem(EGITIM_MODUL_KEY, JSON.stringify(modulEgitimData));
 
-  // Firebase'e kaydet
-  if(window._fbReady && user){
-    fbSet('egitim_modul_sonuclari', normTel(user.tel)+'_mod'+modulId+'_'+todayStr.replace(/\./g,'-'), {
-      tel: user.tel, ad: user.ad, modulId: modulId,
-      puan: puan, gecti: gecti, dogru: dogru, tarih: todayStr
-    }).catch(function(){});
-  }
+  // Firebase: her sınav girişimi geçmiş kaydı
+  egitimGecmisiKaydet(modulId, puan, gecti, dogru, s.sorular.length);
+  // Firebase: güncel ilerleme durumu
+  egitimIlerlemesiKaydet();
 
   var modul = modulId === 'genel' ? {baslik:'Genel Sınav', ikon:'🏆', renk:'var(--accent)'} : EGITIM_MODULLERI[modulId];
   var el = document.getElementById('egitim-content');
