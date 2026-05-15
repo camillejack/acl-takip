@@ -5721,24 +5721,48 @@ let _aktifDuyuru = null;
 function duyuruSesiCal(){
   try{
     var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    // 3 kısa bip: SMS tonu
-    var zamanlar = [0, 0.18, 0.36];
-    zamanlar.forEach(function(baslangic){
-      var osc = ctx.createOscillator();
+
+    function bipCal(baslangic, frekans1, frekans2, sure, volume){
+      // Osilator + gain
+      var osc  = ctx.createOscillator();
       var gain = ctx.createGain();
-      osc.connect(gain);
+      // Distortion için waveshaper — sesi daha keskin yapar
+      var shaper = ctx.createWaveShaper();
+      var curve  = new Float32Array(256);
+      for(var i=0;i<256;i++){
+        var x = (i*2)/256 - 1;
+        curve[i] = (Math.PI + 200) * x / (Math.PI + 200 * Math.abs(x));
+      }
+      shaper.curve = curve;
+      shaper.oversample = '4x';
+
+      osc.connect(shaper);
+      shaper.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime + baslangic);
-      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + baslangic + 0.12);
+
+      osc.type = 'square'; // Square wave — daha keskin ve duyulur
+      osc.frequency.setValueAtTime(frekans1, ctx.currentTime + baslangic);
+      osc.frequency.setValueAtTime(frekans2, ctx.currentTime + baslangic + sure * 0.5);
+
+      // Attack - Sustain - Release zarfı
       gain.gain.setValueAtTime(0, ctx.currentTime + baslangic);
-      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + baslangic + 0.02);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + baslangic + 0.14);
+      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + baslangic + 0.01);  // hızlı attack
+      gain.gain.setValueAtTime(volume, ctx.currentTime + baslangic + sure - 0.04);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + baslangic + sure);       // release
+
       osc.start(ctx.currentTime + baslangic);
-      osc.stop(ctx.currentTime + baslangic + 0.15);
-    });
-    // Context'i temizle
-    setTimeout(function(){ try{ ctx.close(); }catch(e){} }, 1000);
+      osc.stop(ctx.currentTime + baslangic + sure);
+    }
+
+    // 3 aşamalı güçlü bildirim tonu
+    // 1. Bip: yüksek-iniş
+    bipCal(0.00, 1200, 900, 0.18, 0.9);
+    // 2. Bip: kısa güçlü
+    bipCal(0.22, 1400, 1000, 0.16, 1.0);
+    // 3. Bip: biraz daha uzun ve güçlü kapanış
+    bipCal(0.42, 1100, 800, 0.22, 0.95);
+
+    setTimeout(function(){ try{ ctx.close(); }catch(e){} }, 1200);
   }catch(e){ console.warn('Ses çalınamadı:', e); }
 }
 
