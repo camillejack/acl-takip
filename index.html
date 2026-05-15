@@ -5632,9 +5632,11 @@ function loginBasarili(){
   document.getElementById('login').classList.add('gone');
   // Bildirim izni iste
   setTimeout(function(){ bildirimIzniIste(); }, 3000);
-  // Bildirim dinlemeye başla
+  // Bildirim dinlemeye başla (polling - 3 dk)
   setTimeout(function(){ bildirimDinle(); }, 5000);
   setInterval(function(){ bildirimDinle(); }, 3 * 60 * 1000); // Her 3 dakikada bir
+  // Duyuru realtime listener — Firebase anlık dinleme
+  setTimeout(function(){ duyuruRealtimeDinle(); }, 6000);
   document.getElementById('brand-user').textContent = user.ad;
   var rolBadge = document.getElementById('rol-badge');
   if(rolBadge && ROLLER[user.rol]){
@@ -5659,6 +5661,11 @@ function showLoginHata(msg){
 
 function doLogout(){
   if(!confirm('Çıkış yapılacak. Emin misin?')) return;
+  // Realtime listener temizle
+  if(_duyuruRealtimeListener){
+    try{ _duyuruRealtimeListener(); }catch(e){}
+    _duyuruRealtimeListener = null;
+  }
   user = null;
   localStorage.removeItem(UKEY);
   sessionSil(); // Session token sil
@@ -5708,6 +5715,96 @@ function yoneticiUIGuncelle(){
 const DUYURU_KEY = 'acl_duyurular_v1';
 let _aktifDuyuru = null;
 
+// ─── DUYURU SES & GERÇEK ZAMANLI DİNLEME ────────────────────
+
+// SMS benzeri bildirim sesi — Web Audio API (dış bağımlılık yok)
+function duyuruSesiCal(){
+  try{
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // 3 kısa bip: SMS tonu
+    var zamanlar = [0, 0.18, 0.36];
+    zamanlar.forEach(function(baslangic){
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime + baslangic);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + baslangic + 0.12);
+      gain.gain.setValueAtTime(0, ctx.currentTime + baslangic);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + baslangic + 0.02);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + baslangic + 0.14);
+      osc.start(ctx.currentTime + baslangic);
+      osc.stop(ctx.currentTime + baslangic + 0.15);
+    });
+    // Context'i temizle
+    setTimeout(function(){ try{ ctx.close(); }catch(e){} }, 1000);
+  }catch(e){ console.warn('Ses çalınamadı:', e); }
+}
+
+// Firebase realtime listener — yeni duyuru eklenince anında tetiklenir
+var _duyuruRealtimeListener = null;
+
+function duyuruRealtimeDinle(){
+  if(!user || !window._fbReady) return;
+  // Önceki listener varsa temizle
+  if(_duyuruRealtimeListener){
+    try{ _duyuruRealtimeListener(); }catch(e){}
+    _duyuruRealtimeListener = null;
+  }
+
+  var _kulTelNorm = normTel(user.tel || '');
+  var _kulDepolar = [];
+  var _ddK = JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(_ddK && _ddK.depolar){
+    _ddK.depolar.forEach(function(d){
+      var iceride = (d.personeller||[]).some(function(p){ return normTel(p.tel||'')=== _kulTelNorm; })
+                 || ((d.shift&&d.shift.persons)||[]).some(function(p){ return normTel(p.tel||'')=== _kulTelNorm; });
+      if(iceride) _kulDepolar.push(d.id);
+    });
+  }
+
+  // Başlangıç zamanı — sadece bu andan sonraki duyuruları bildir
+  var _baslangicTs = Date.now();
+
+  try{
+    var _fb = window._fb;
+    var {db, collection, onSnapshot, query, orderBy} = _fb;
+    var q = query(collection(db, 'duyurular'), orderBy('ts', 'desc'));
+
+    _duyuruRealtimeListener = onSnapshot(q, function(snapshot){
+      snapshot.docChanges().forEach(function(change){
+        if(change.type !== 'added') return;
+        var d = change.doc.data();
+        if(!d || !d.ts) return;
+        // Sadece bu oturumdan sonra gelen duyurular
+        if(d.ts <= _baslangicTs) return;
+        // Gönderen kendisi ise sessizce ekle, bildirim yapma
+        if(d.gonderen === user.ad) return;
+
+        // Bu duyuru bana uygun mu?
+        var banaUygun = false;
+        if(!d.hedef || d.hedef === 'genel') banaUygun = true;
+        else if(d.hedef === 'kisi_' + _kulTelNorm) banaUygun = true;
+        else if(_kulDepolar.indexOf(d.hedef) !== -1) banaUygun = true;
+
+        if(!banaUygun) return;
+
+        // Okunmuş mu?
+        var okunanlar = JSON.parse(localStorage.getItem('acl_okunan_duyuru')||'[]');
+        if(okunanlar.indexOf(d.id) !== -1) return;
+
+        // ✅ Ses çal + göster
+        duyuruSesiCal();
+        // Kısa gecikme — ses başladıktan sonra overlay aç
+        setTimeout(function(){ duyuruGoster(d); }, 300);
+        // Yerel bildirim de göster (uygulama arka plandaysa)
+        yerelBildirimGoster('📢 Yeni Duyuru', (d.icerik||'').substring(0, 80));
+      });
+    }, function(err){ console.warn('Duyuru realtime hata:', err); });
+  }catch(e){ console.warn('Duyuru listener başlatılamadı:', e); }
+}
+
 async function duyuruKontrol(){
   if(!user) return;
   let duyurular = [];
@@ -5752,13 +5849,15 @@ async function duyuruKontrol(){
   if(okunmamis) duyuruGoster(okunmamis);
 }
 
-function duyuruGoster(d){
+function duyuruGoster(d, sesCal){
   _aktifDuyuru = d;
   document.getElementById('duyuru-tarih').textContent = d.tarih||'';
   document.getElementById('duyuru-icerik').textContent = d.icerik||'';
   document.getElementById('duyuru-kimden').textContent = 'Gönderen: '+(d.gonderen||'Yönetim');
   const ov = document.getElementById('duyuru-overlay');
   ov.style.display = 'flex';
+  // Ses — realtime listener zaten çalıyor, duyuruKontrol akışında da çal
+  if(sesCal !== false) duyuruSesiCal();
 }
 
 function duyuruOnayla(){
