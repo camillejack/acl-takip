@@ -375,6 +375,49 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .egitim-gecmis-puan{font-family:var(--mono);font-weight:700;font-size:12px;min-width:40px;text-align:right}
 .egitim-yukle-spinner{text-align:center;padding:20px;font-size:12px;color:var(--text3)}
 
+/* REHBER */
+.rehber-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.rehber-header{padding:13px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;user-select:none;transition:background .15s}
+.rehber-header:hover{background:var(--bg3)}
+.rehber-header-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.rehber-header-title{font-size:13px;font-weight:600;color:var(--text)}
+.rehber-header-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.rehber-chevron{font-size:18px;color:var(--text3);transition:transform .25s;flex-shrink:0;margin-left:auto}
+.rehber-wrap.acik .rehber-chevron{transform:rotate(90deg)}
+.rehber-body{display:none;border-top:1px solid var(--border);padding:12px 14px}
+.rehber-wrap.acik .rehber-body{display:block}
+.rehber-kural{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)}
+.rehber-kural:last-of-type{border-bottom:none}
+.rehber-kural-no{width:21px;height:21px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;font-family:var(--mono);background:var(--bg3);color:var(--accent)}
+.rehber-kural-text{font-size:12px;color:var(--text2);line-height:1.6;flex:1}
+.rehber-kural-text b{color:var(--text)}
+.rehber-uyari{display:flex;gap:9px;align-items:flex-start;border-radius:var(--r-sm);padding:9px 11px;margin-top:10px}
+.rehber-uyari.k{background:var(--red-dim);border:1px solid var(--red-b)}
+.rehber-uyari.k .r-utxt{color:var(--red)}
+.rehber-uyari.y{background:var(--green-dim);border:1px solid var(--green-b)}
+.rehber-uyari.y .r-utxt{color:var(--green)}
+.rehber-uyari.t{background:var(--orange-dim);border:1px solid var(--orange-b)}
+.rehber-uyari.t .r-utxt{color:var(--orange)}
+.rehber-uyari.m{background:var(--blue-dim);border:1px solid var(--border2)}
+.rehber-uyari.m .r-utxt{color:var(--text2)}
+.r-uico{font-size:14px;flex-shrink:0;margin-top:1px}
+.r-utxt{font-size:11px;line-height:1.6;font-weight:500}
+.rehber-dis-tablo{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+.rehber-dis-tablo th{padding:7px 9px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--bg3);color:var(--text3);border-bottom:1px solid var(--border)}
+.rehber-dis-tablo td{padding:7px 9px;color:var(--text2);border-bottom:1px solid var(--border);line-height:1.5;vertical-align:top}
+.rehber-dis-tablo tr:last-child td{border-bottom:none}
+.r-seviye{display:inline-flex;align-items:center;gap:3px;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700;white-space:nowrap}
+.r-s1{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-b)}
+.r-s2{background:rgba(255,152,0,.1);color:#ff9800;border:1px solid rgba(255,152,0,.25)}
+.r-s3{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b)}
+.rehber-sicaklik-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.rehber-sicaklik-kart{background:var(--blue-dim);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px;text-align:center}
+.rehber-ozet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.rehber-ozet-kart{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px}
+.rehber-ozet-baslik{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.rehber-ozet-madde{display:flex;align-items:flex-start;gap:5px;font-size:11px;color:var(--text2);padding:2px 0;line-height:1.4}
+.rehber-ozet-madde::before{content:'›';color:var(--accent);font-weight:700;flex-shrink:0}
+
 /* EĞİTİM MODÜLü */
 .egitim-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
 .egitim-bolum-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
@@ -3606,6 +3649,42 @@ var GENEL_SINAV_SORULAR = [
   {soru:'Kırmızı timer ne anlama gelir?', secenekler:['Normal hız','Süre aşıldı hızlan','Sipariş iptal','Mola zamanı'], dogru:1, aciklama:'Kırmızı timer belirlenen sipariş toplama süresinin dolduğunu gösterir. Hızlanmak ve tamamlamak gerekir.'}
 ];
 
+// ─── REHBER YARDIMCI FONKSİYONLARI ──────────────────────────
+function rehberToggle(id){
+  var el = document.getElementById(id);
+  if(el) el.classList.toggle('acik');
+}
+
+function _rehberKart(id, ikon, ikoBg, baslik, alt, kurallar, uyariTip, uyariIco, uyariMetin){
+  var html = '<div class="rehber-wrap" id="'+id+'">' +
+    '<div class="rehber-header" onclick="rehberToggle(\''+id+'\')">' +
+      '<div class="rehber-header-ico" style="background:'+ikoBg+'">'+ikon+'</div>' +
+      '<div style="flex:1">' +
+        '<div class="rehber-header-title">'+baslik+'</div>' +
+        '<div class="rehber-header-sub">'+alt+'</div>' +
+      '</div>' +
+      '<div class="rehber-chevron">›</div>' +
+    '</div>' +
+    '<div class="rehber-body">';
+  kurallar.forEach(function(k){
+    html += '<div class="rehber-kural"><div class="rehber-kural-no">'+k[0]+'</div><div class="rehber-kural-text">'+k[1]+'</div></div>';
+  });
+  if(uyariTip && uyariIco && uyariMetin){
+    html += '<div class="rehber-uyari '+uyariTip+'"><div class="r-uico">'+uyariIco+'</div><div class="r-utxt">'+uyariMetin+'</div></div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+function _rehberOzetKart(baslik, maddeler){
+  var html = '<div class="rehber-ozet-kart"><div class="rehber-ozet-baslik">'+baslik+'</div>';
+  maddeler.forEach(function(m){
+    html += '<div class="rehber-ozet-madde">'+m+'</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 // ─── MODÜL EĞİTİM SİSTEMİ ─────────────────────────────────────────────────────
 
 var aktifModulSinav = null;
@@ -3625,7 +3704,141 @@ function renderEgitimModul(){
 
   var egitimHtml = '';
 
-  // ── TAMAMLANMA ÖZETİ KARTI ─────────────────────────────────
+  // ── DEPO GENEL KURALLAR REHBERİ ────────────────────────────
+  egitimHtml += '<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:0 0 8px;display:flex;align-items:center;gap:8px">📖 Depo Genel Kurallar Rehberi<span style="flex:1;height:1px;background:var(--border);display:inline-block"></span></div>';
+
+  // Mesai & Vardiya
+  egitimHtml += _rehberKart('rb0','⏰','rgba(92,60,187,.25)','Mesai & Vardiya Kuralları','Çalışma saatleri ve devam zorunluluğu',[
+    ['01','Vardiya başlangıç saatinden <b>en az 10 dakika önce</b> depoda hazır olunmalıdır.'],
+    ['02','<b>İş başı ACL Takip uygulamasından GPS ile teyit edilerek</b> yapılmalıdır. Manuel iş başı yapılamaz.'],
+    ['03','Vardiya değişiminde stok durumu ve açık siparişler <b>gelen personele aktarılır.</b>'],
+    ['04','İzin veya devamsızlık <b>en az 24 saat önceden</b> bildirilmelidir. Ani devamsızlıklarda mutlaka aranır.'],
+    ['05','Mola süreleri belirlenen saatlerde kullanılır. <b>Mola dışında depo terk edilemez.</b>'],
+    ['06','Terminalde <b>Müsait → Meşgule geçiş</b> depo sorumlusunun onayı olmadan yapılamaz.'],
+    ['07','Vardiya bitiminde stok raporu alınır ve <b>sorumluya iletilmeden çıkış yapılmaz.</b>']
+  ],'k','🚨','Habersiz devamsızlık, mazeretsiz geç geliş ve iş başı usulsüzlüğü disiplin sürecini başlatır.');
+
+  // Kıyafet & Hijyen
+  egitimHtml += _rehberKart('rb1','👕','rgba(46,125,50,.25)','Kıyafet & Hijyen Kuralları','Görünüm ve temizlik standartları',[
+    ['01','<b>Üniforma tam ve düzgün giyilir.</b> Yırtık, lekeli veya ütüsüz olamaz.'],
+    ['02','<b>Kapalı burunlu, kaymaz tabanlı ayakkabı</b> zorunludur. Terlik veya sandaletle çalışılamaz.'],
+    ['03','Çalışma alanında <b>yemek yenilmez.</b> Yiyecek tüketimi yalnızca mola alanında yapılır.'],
+    ['04','Çalışma alanı <b>her vardiya sonunda temizlenir.</b> Kirli alan bir sonraki vardiyaya bırakılamaz.'],
+    ['05','Hastalık belirtisi yaşayan personel <b>gıda alanında çalışmaz</b> ve sorumlusuna bildirir.']
+  ],'y','✅','Temiz ve düzenli görünüm hem müşteri güvenini hem de iş güvenliğini doğrudan etkiler.');
+
+  // Telefon
+  egitimHtml += _rehberKart('rb2','📱','rgba(230,81,0,.25)','Telefon Kullanım Kuralları','Kişisel cihaz ve iş telefonu kullanımı',[
+    ['01','Kişisel telefon kullanımı <b>yalnızca mola sürelerinde</b> yapılabilir.'],
+    ['02','Görev telefonu (terminal) <b>yalnızca iş amaçlı</b> kullanılır. Kişisel uygulama yasaktır.'],
+    ['03','<b>ACL Takip uygulaması mesai saatleri boyunca açık tutulur.</b> Konum iznini iptal etmek yasaktır.'],
+    ['04','Depo içinde <b>fotoğraf ve video çekmek yasaktır.</b> Önceden izin gerektirir.'],
+    ['05','<b>Kulaklıkla müzik dinlemek</b> görev sırasında yasaktır. Çevre sesleri duyulabilir olmalıdır.'],
+    ['06','Görev telefonunun kaybolması veya zarar görmesi <b>derhal sorumluya bildirilir.</b>']
+  ],'t','⚠️','Sipariş toplama sırasında telefona bakılması hem sipariş hatalarına hem de iş kazalarına neden olabilir.');
+
+  // Depo İçi Davranış
+  egitimHtml += _rehberKart('rb3','🏭','rgba(21,101,192,.25)','Depo İçi Davranış Kuralları','Güvenlik, düzen ve iş birliği',[
+    ['01','Depo içinde <b>koşulmaz.</b> Yürüyerek hızlı hareket edilir.'],
+    ['02','<b>Merdiven kullanılmadan</b> yüksek raflara tırmanılamaz.'],
+    ['03','Ağır ürünler taşınırken <b>diz bükülür, bel değil bacaklar kullanılır.</b>'],
+    ['04','Depo koridorları ve <b>acil çıkış yolları her zaman açık tutulur.</b>'],
+    ['05','Başka personelin görevine müdahale edilmez. <b>Şüphede sorumluya danışılır.</b>'],
+    ['06','Depo içinde <b>yüksek sesle konuşmak, bağırmak veya tartışmak</b> yasaktır.'],
+    ['07','Hasar gören ürünler rafta bırakılmaz. <b>Derhal sorumluya bildirilir.</b>'],
+    ['08','Depo giriş-çıkışlarında <b>yetkisiz kişiler içeri alınmaz.</b>'],
+    ['09','Sigara <b>yalnızca belirlenen alanda</b> içilebilir. Depo içinde kesinlikle yasaktır.'],
+    ['10','Herhangi bir <b>iş kazası veya tehlikeli durum anında sorumluya bildirilir.</b>']
+  ],null,null,null);
+
+  // Disiplin
+  egitimHtml += '<div class="rehber-wrap" id="rb4">' +
+    '<div class="rehber-header" onclick="rehberToggle(\'rb4\')">' +
+      '<div class="rehber-header-ico" style="background:rgba(255,107,107,.12)">⚖️</div>' +
+      '<div style="flex:1">' +
+        '<div class="rehber-header-title">Disiplin Yaptırımları</div>' +
+        '<div class="rehber-header-sub">İhlal durumlarında uygulanacak süreçler</div>' +
+      '</div>' +
+      '<div class="rehber-chevron">›</div>' +
+    '</div>' +
+    '<div class="rehber-body">' +
+      '<table class="rehber-dis-tablo"><thead><tr><th>İhlal</th><th>Seviye</th><th>Yaptırım</th></tr></thead><tbody>' +
+        '<tr><td>İlk kez geç geliş, kıyafet ihlali, telefon kullanımı</td><td><span class="r-seviye r-s1">⚠ 1. Seviye</span></td><td>Sözlü uyarı — kayıt tutulur</td></tr>' +
+        '<tr><td>Tekrarlı geç geliş, sistem ihlali, mola aşımı</td><td><span class="r-seviye r-s2">🔶 2. Seviye</span></td><td>Yazılı uyarı — özlük dosyasına işlenir</td></tr>' +
+        '<tr><td>İzinsiz devamsızlık, müdürsüz statü değişimi, görev reddi</td><td><span class="r-seviye r-s2">🔶 2. Seviye</span></td><td>Yazılı uyarı + indirim / ücretsiz izin</td></tr>' +
+        '<tr><td>Ürün hasarı, kural ihlalinin tekrarı, yetkisiz kişi girişi</td><td><span class="r-seviye r-s3">🔴 3. Seviye</span></td><td>Resmi ihtar — insan kaynakları süreci</td></tr>' +
+        '<tr><td>Hırsızlık, kasıtlı zarar, şiddet, taciz</td><td><span class="r-seviye r-s3">🔴 3. Seviye</span></td><td>Derhal iş akdi feshi — yasal işlem</td></tr>' +
+        '<tr><td>Gıda güvenliği ihlali, sahte iş başı, sistem manipülasyonu</td><td><span class="r-seviye r-s3">🔴 3. Seviye</span></td><td>Derhal iş akdi feshi — yasal işlem</td></tr>' +
+      '</tbody></table>' +
+      '<div class="rehber-uyari k" style="margin-top:10px"><div class="r-uico">🚨</div><div class="r-utxt">Tüm ihlaller kayıt altına alınır ve birikimli değerlendirilir. <b>3 yazılı uyarı</b> doğrudan iş akdi feshine gerekçe oluşturabilir.</div></div>' +
+      '<div class="rehber-uyari m" style="margin-top:8px"><div class="r-uico">ℹ️</div><div class="r-utxt">Disiplin süreci başlamadan önce personele savunma hakkı tanınır. Her karar yazılı olarak tebliğ edilir.</div></div>' +
+    '</div>' +
+  '</div>';
+
+  // Manav Bölümü
+  egitimHtml += _rehberKart('rb5','🥦','rgba(51,105,30,.3)','Manav Bölümü Kuralları','Meyve, sebze ve tartı tezgahı standartları',[
+    ['01','Her vardiya başında tüm ürünlerin <b>SKT kontrolü yapılır.</b> Bozulan ürünler raftan hemen alınır.'],
+    ['02','<b>FIFO kuralı uygulanır</b> — ilk giren ürün önce çıkar. Yeni gelenler arkaya, eskiler öne.'],
+    ['03','<b>Kasalar yere, koridora veya geçiş yoluna bırakılamaz.</b> Boş kasalar belirlenen alanda istiflenmelidir.'],
+    ['04','<b>Tartı tezgahı her zaman temiz ve düzenli tutulur.</b> Etiket kağıdı tezgaha serilmez.'],
+    ['05','Zemine düşen ürünler <b>anında kaldırılır.</b> Kayma riski oluşturan her durum derhal temizlenir.'],
+    ['06','<b>Etiketsiz ürün satışa sunulamaz.</b> Etiket; ürün adı, paketleme tarihi ve SKT içermelidir.'],
+    ['07','Vardiya sonunda tezgah silinir, zemin süpürülür. <b>Kirli alan bir sonraki vardiyaya bırakılamaz.</b>'],
+    ['08','Kasalar reyona yerleştirilirken <b>etiket her zaman ön yüze bakacak şekilde konulur.</b>'],
+    ['09','İstif yapılırken <b>alt kasanın etiketi kapanmamalıdır.</b> Etiket kapanıyorsa istif yeniden düzenlenir.']
+  ],'k','🚨','Manav bölümü her an temiz, düzenli ve güvenli olmalıdır. Vardiya boyunca sürekli kontrol sorumluluğu personeldedir.');
+
+  // Soğuk Oda
+  egitimHtml += '<div class="rehber-wrap" id="rb6">' +
+    '<div class="rehber-header" onclick="rehberToggle(\'rb6\')">' +
+      '<div class="rehber-header-ico" style="background:rgba(21,101,192,.25)">❄️</div>' +
+      '<div style="flex:1">' +
+        '<div class="rehber-header-title">Soğuk Oda Kuralları</div>' +
+        '<div class="rehber-header-sub">Sebze/Meyve +8/+12°C · Şarküteri 0/+4°C</div>' +
+      '</div>' +
+      '<div class="rehber-chevron">›</div>' +
+    '</div>' +
+    '<div class="rehber-body">' +
+      '<div class="rehber-sicaklik-grid">' +
+        '<div class="rehber-sicaklik-kart"><div style="font-size:16px;margin-bottom:4px">🥦</div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Sebze / Meyve</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)">+8°C / +12°C</div></div>' +
+        '<div class="rehber-sicaklik-kart"><div style="font-size:16px;margin-bottom:4px">🧀</div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Şarküteri</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)">0°C / +4°C</div></div>' +
+      '</div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">01</div><div class="rehber-kural-text">Soğuk oda kapısı gereksiz yere <b>açık bırakılamaz.</b> Giriş-çıkış sonrası derhal kapatılır.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">02</div><div class="rehber-kural-text">Termometre değerleri <b>her vardiyada kontrol edilir.</b> Sapma tespit edilince derhal bildirilir.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">03</div><div class="rehber-kural-text">Ürünler <b>zemine değil raflara veya paletlere</b> yerleştirilir.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">04</div><div class="rehber-kural-text">Soğuk oda önündeki <b>geçiş yolları her zaman açık tutulur.</b> Kapı önüne kasa bırakılamaz.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">05</div><div class="rehber-kural-text">Soğuk odada <b>en fazla 5 dakika</b> kalınabilir. Soğuk hava maruziyeti aşılmamalıdır.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">06</div><div class="rehber-kural-text"><b>SKT kontrolü soğuk odada da yapılır.</b> Süresi dolan ürünler ayrılır ve sorumluya bildirilir.</div></div>' +
+      '<div class="rehber-kural"><div class="rehber-kural-no">07</div><div class="rehber-kural-text">Zemin <b>kaymaz ve temiz tutulur.</b> Sıvı dökülmeleri ve buz birikintisi anında temizlenir.</div></div>' +
+      '<div class="rehber-uyari k"><div class="r-uico">🚨</div><div class="r-utxt">Soğuk oda sistemi <b>depo yöneticisinin onayı olmadan kapatılamaz (OFF yapılamaz).</b> İzinsiz kapatma ürün kayıplarına ve disiplin sürecine neden olur.</div></div>' +
+      '<div class="rehber-uyari t" style="margin-top:8px"><div class="r-uico">🌡️</div><div class="r-utxt">Sıcaklık sapması = ürün kayıpları ve gıda güvenliği ihlali. Termometre hedef aralığın dışına çıkarsa <b>derhal sorumluya bildir.</b></div></div>' +
+    '</div>' +
+  '</div>';
+
+  // Kural Özeti
+  egitimHtml += '<div class="rehber-wrap" id="rb7">' +
+    '<div class="rehber-header" onclick="rehberToggle(\'rb7\')">' +
+      '<div class="rehber-header-ico" style="background:rgba(255,214,0,.12)">📋</div>' +
+      '<div style="flex:1">' +
+        '<div class="rehber-header-title">Kural Özeti</div>' +
+        '<div class="rehber-header-sub">En önemli başlıklar — hızlı başvuru</div>' +
+      '</div>' +
+      '<div class="rehber-chevron">›</div>' +
+    '</div>' +
+    '<div class="rehber-body">' +
+      '<div class="rehber-ozet-grid">' +
+        _rehberOzetKart('⏰ Mesai',['10 dk önce hazır ol','GPS ile iş başı yap','İzni 24 saat önceden bildir','Stok raporu almadan çıkma']) +
+        _rehberOzetKart('👕 Kıyafet',['Üniforma tam ve düzgün giy','Kaymaz ayakkabı zorunlu','Çalışma alanında yemek yeme']) +
+        _rehberOzetKart('📱 Telefon',['Sadece molada kullan','ACL Takip açık tutulmalı','Depo içi fotoğraf yasak','Görevde kulaklık yasak']) +
+        _rehberOzetKart('🏭 Depo İçi',['Koşma, yürüyerek hareket et','Koridorları açık tut','Hasar gören ürünü bildir','Yetkisiz kişi içeri alma']) +
+        _rehberOzetKart('🥦 Manav',['Her vardiya SKT kontrolü yap','FIFO — eski öne, yeni arkaya','Etiket ön yüze baksın','Tartı tezgahını temiz tut']) +
+        _rehberOzetKart('❄️ Soğuk Oda',['Kapıyı açık bırakma','Sıcaklığı her vardiya kontrol et','Ürünler rafa konur yere değil','Kapatmak için yönetici onayı']) +
+      '</div>' +
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-top:8px;font-size:11px;color:var(--text3);text-align:center;line-height:1.6">📌 Tüm personel bu kuralları okuduğunu ve anladığını kabul eder. Bilgisizlik mazeret sayılmaz.</div>' +
+    '</div>' +
+  '</div>';
+
+  egitimHtml += '<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:16px 0 8px;display:flex;align-items:center;gap:8px">📚 Eğitim Modülleri<span style="flex:1;height:1px;background:var(--border);display:inline-block"></span></div>';
   if(tamamen){
     var sonrakiTarih = sonrakiSinavTarihi();
     var sonrakiAy    = sonrakiAyKey();
