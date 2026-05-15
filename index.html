@@ -75,7 +75,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* SCREENS */
 .screens{flex:1;overflow:hidden;position:relative}
 .screen{position:absolute;inset:0;overflow-y:auto;padding:0 20px 60px;transition:opacity .2s,transform .2s}
-.screen.hidden{opacity:0;pointer-events:none;transform:translateY(8px)}
+.screen.hidden{opacity:0;pointer-events:none;transform:translateY(8px);display:none}
 .screen::-webkit-scrollbar{display:none}
 .slabel{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px}
 .slabel:first-child{margin-top:0}
@@ -1110,6 +1110,62 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- GÖREV MODAL OVERLAYLERİ — body seviyesinde (position:fixed için) -->
+<div class="gorev-modal-overlay" id="gmodal-tamamla">
+  <div class="gorev-modal" onclick="event.stopPropagation()">
+    <div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gmodalKapat('tamamla')">×</button></div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--accent)">📸 3 farklı açıdan fotoğraf ve açıklama zorunludur</div>
+    <div class="gorev-form-label">Fotoğraflar (3 adet zorunlu)</div>
+    <div class="gorev-foto-grid" id="gtm-foto-grid">
+      <div class="gorev-foto-box" onclick="gorevFotoSec(0)" id="gtm-foto-0"><span style="font-size:22px">📷</span><span>Fotoğraf 1</span></div>
+      <div class="gorev-foto-box" onclick="gorevFotoSec(1)" id="gtm-foto-1"><span style="font-size:22px">📷</span><span>Fotoğraf 2</span></div>
+      <div class="gorev-foto-box" onclick="gorevFotoSec(2)" id="gtm-foto-2"><span style="font-size:22px">📷</span><span>Fotoğraf 3</span></div>
+    </div>
+    <input type="file" id="gtm-file-input" accept="image/*" style="display:none" onchange="gorevFotoYukle(this)">
+    <div class="gorev-form-label" style="margin-top:14px">Tamamlama Açıklaması</div>
+    <textarea class="gorev-form-input" id="gtm-aciklama" rows="4" placeholder="Görev nasıl tamamlandı?..."></textarea>
+    <div id="gtm-sure-bilgi" style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px"></div>
+    <button class="gorev-btn-accent" onclick="gorevTamamlaGonder()">✅ Görevi Tamamlandı Olarak İşaretle</button>
+  </div>
+</div>
+
+<div class="gorev-modal-overlay" id="gmodal-savunma">
+  <div class="gorev-modal" onclick="event.stopPropagation()">
+    <div class="gorev-modal-baslik">Savunma Yaz <button class="gorev-modal-kapat" onclick="gmodalKapat('savunma')">×</button></div>
+    <div class="gorev-savunma-kutu" style="margin-bottom:14px"><div style="font-size:18px">⚠️</div><div class="gorev-savunma-txt">5 olumsuz değerlendirme aldınız. Savunmanızı göndermeden yeni görev atanmayacaktır.</div></div>
+    <div class="gorev-form-label">Savunma Metni</div>
+    <textarea class="gorev-form-input" id="gsavunma-txt" rows="6" placeholder="Açıklama yazın..."></textarea>
+    <button class="gorev-btn-primary" onclick="gorevSavunmaGonder()">📤 Savunmayı Gönder</button>
+  </div>
+</div>
+
+<div class="gorev-modal-overlay" id="gmodal-yeni-sablon">
+  <div class="gorev-modal" onclick="event.stopPropagation()">
+    <div class="gorev-modal-baslik">Yeni Şablon <button class="gorev-modal-kapat" onclick="gmodalKapat('yeni-sablon')">×</button></div>
+    <div class="gorev-form-label">Şablon Adı</div>
+    <input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Şablon adı...">
+    <div class="gorev-form-label">Açıklama</div>
+    <textarea class="gorev-form-input" id="gs-aciklama" rows="3" placeholder="Görev detayları..."></textarea>
+    <div class="gorev-form-label">Tahmini Süre (dakika)</div>
+    <input class="gorev-form-input" id="gs-sure" type="number" placeholder="45">
+    <div class="gorev-form-label">İkon (emoji)</div>
+    <input class="gorev-form-input" id="gs-ikon" type="text" placeholder="🧹">
+    <button class="gorev-btn-primary" onclick="gorevSablonKaydet()">💾 Şablonu Kaydet</button>
+  </div>
+</div>
+
+<div class="gorev-modal-overlay" id="gmodal-sablon-sec">
+  <div class="gorev-modal" onclick="event.stopPropagation()">
+    <div class="gorev-modal-baslik">Şablondan Görev Ata <button class="gorev-modal-kapat" onclick="gmodalKapat('sablon-sec')">×</button></div>
+    <div id="gsec-sablon-detay" style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>
+    <div class="gorev-form-label">Atanacak Personel</div>
+    <select class="gorev-form-input" id="gsec-personel"><option value="">-- Personel Seçin --</option></select>
+    <div class="gorev-form-label">Bitiş Süresi</div>
+    <input class="gorev-form-input" id="gsec-bitis" type="datetime-local">
+    <button class="gorev-btn-primary" onclick="gorevSablondanAta()">📋 Görevi Ata</button>
+  </div>
+</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -4079,7 +4135,8 @@ async function _gorevSablonlarHtml(){
 }
 
 function _gorevModalleriHtml(){
-  // Personel listesi için şablon modalında lazım
+  // Modallar artık body seviyesinde statik olarak tanımlandı (position:fixed sorununu çözer)
+  // Şablon seç modalındaki personel listesini güncelle
   var hedefRoller = atanabilirRoller();
   var personelListesi = [];
   var gorulenTel = {};
@@ -4094,66 +4151,16 @@ function _gorevModalleriHtml(){
       }
     });
   });
-  var personelOpts = '<option value="">-- Personel Seçin --</option>';
-  personelListesi.forEach(function(p){
-    personelOpts += '<option value="'+p.tel+'|'+escHtml(p.ad)+'">'+escHtml(p.ad)+' — '+rolLabel(p.rol)+'</option>';
-  });
-
-  return '' +
-  // GÖREV TAMAMLA
-  '<div class="gorev-modal-overlay" id="gmodal-tamamla">' +
-  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
-    '<div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gmodalKapat(\'tamamla\')">×</button></div>' +
-    '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--accent)">📸 3 farklı açıdan fotoğraf ve açıklama zorunludur</div>' +
-    '<div class="gorev-form-label">Fotoğraflar (3 adet zorunlu)</div>' +
-    '<div class="gorev-foto-grid" id="gtm-foto-grid">' +
-      '<div class="gorev-foto-box" onclick="gorevFotoSec(0)" id="gtm-foto-0"><span style="font-size:22px">📷</span><span>Fotoğraf 1</span></div>' +
-      '<div class="gorev-foto-box" onclick="gorevFotoSec(1)" id="gtm-foto-1"><span style="font-size:22px">📷</span><span>Fotoğraf 2</span></div>' +
-      '<div class="gorev-foto-box" onclick="gorevFotoSec(2)" id="gtm-foto-2"><span style="font-size:22px">📷</span><span>Fotoğraf 3</span></div>' +
-    '</div>' +
-    '<input type="file" id="gtm-file-input" accept="image/*" style="display:none" onchange="gorevFotoYukle(this)">' +
-    '<div class="gorev-form-label" style="margin-top:14px">Tamamlama Açıklaması</div>' +
-    '<textarea class="gorev-form-input" id="gtm-aciklama" rows="4" placeholder="Görev nasıl tamamlandı? Dikkat edilen noktalar..."></textarea>' +
-    '<div id="gtm-sure-bilgi" style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px"></div>' +
-    '<button class="gorev-btn-accent" onclick="gorevTamamlaGonder()">✅ Görevi Tamamlandı Olarak İşaretle</button>' +
-  '</div></div>' +
-
-  // SAVUNMA
-  '<div class="gorev-modal-overlay" id="gmodal-savunma">' +
-  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
-    '<div class="gorev-modal-baslik">Savunma Yaz <button class="gorev-modal-kapat" onclick="gmodalKapat(\'savunma\')">×</button></div>' +
-    '<div class="gorev-savunma-kutu" style="margin-bottom:14px"><div style="font-size:18px">⚠️</div><div class="gorev-savunma-txt">5 olumsuz değerlendirme aldınız. Savunmanızı göndermeden yeni görev atanmayacaktır.</div></div>' +
-    '<div class="gorev-form-label">Savunma Metni</div>' +
-    '<textarea class="gorev-form-input" id="gsavunma-txt" rows="6" placeholder="Geç kalan veya tamamlanamayan görevler için açıklama yazın..."></textarea>' +
-    '<button class="gorev-btn-primary" onclick="gorevSavunmaGonder()">📤 Savunmayı Gönder</button>' +
-  '</div></div>' +
-
-  // YENİ ŞABLON
-  '<div class="gorev-modal-overlay" id="gmodal-yeni-sablon">' +
-  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
-    '<div class="gorev-modal-baslik">Yeni Şablon <button class="gorev-modal-kapat" onclick="gmodalKapat(\'yeni-sablon\')">×</button></div>' +
-    '<div class="gorev-form-label">Şablon Adı</div>' +
-    '<input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Şablon adı...">' +
-    '<div class="gorev-form-label">Açıklama</div>' +
-    '<textarea class="gorev-form-input" id="gs-aciklama" rows="3" placeholder="Görev detayları..."></textarea>' +
-    '<div class="gorev-form-label">Tahmini Süre (dakika)</div>' +
-    '<input class="gorev-form-input" id="gs-sure" type="number" placeholder="45">' +
-    '<div class="gorev-form-label">İkon (emoji)</div>' +
-    '<input class="gorev-form-input" id="gs-ikon" type="text" placeholder="🧹">' +
-    '<button class="gorev-btn-primary" onclick="gorevSablonKaydet()">💾 Şablonu Kaydet</button>' +
-  '</div></div>' +
-
-  // ŞABLONDAN ATA
-  '<div class="gorev-modal-overlay" id="gmodal-sablon-sec">' +
-  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
-    '<div class="gorev-modal-baslik">Şablondan Görev Ata <button class="gorev-modal-kapat" onclick="gmodalKapat(\'sablon-sec\')">×</button></div>' +
-    '<div id="gsec-sablon-detay" style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>' +
-    '<div class="gorev-form-label">Atanacak Personel</div>' +
-    '<select class="gorev-form-input" id="gsec-personel">'+personelOpts+'</select>' +
-    '<div class="gorev-form-label">Bitiş Süresi</div>' +
-    '<input class="gorev-form-input" id="gsec-bitis" type="datetime-local">' +
-    '<button class="gorev-btn-primary" onclick="gorevSablondanAta()">📋 Görevi Ata</button>' +
-  '</div></div>';
+  // gsec-personel select'ini güncelle
+  var gsecEl = document.getElementById('gsec-personel');
+  if(gsecEl){
+    var opts = '<option value="">-- Personel Seçin --</option>';
+    personelListesi.forEach(function(p){
+      opts += '<option value="'+p.tel+'|'+escHtml(p.ad)+'">'+escHtml(p.ad)+' — '+rolLabel(p.rol)+'</option>';
+    });
+    gsecEl.innerHTML = opts;
+  }
+  return ''; // HTML body'de statik
 }
 
 // Modal aç/kapat
