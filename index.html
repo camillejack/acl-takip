@@ -1038,7 +1038,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDdedlkOrBhYRCcXjXDoSRCilDR-2vwHug",
@@ -1049,11 +1050,127 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     appId: "1:1085007217462:web:c2d97b91c51462b392a997"
   };
 
+  const VAPID_KEY = "BFI3alMKxUYANH4PauXc_2yAtoROelgRPioFI4tmIGbJTMEgcaRYu5jQhaAvjMPgNsNg__EP9pfMISfJLimqiJc";
+
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  // Firestore yardımcıları - global erişim için window'a bağla
-  window._fb = { db, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, onSnapshot };
+  // Messaging başlat
+  let messaging = null;
+  try{ messaging = getMessaging(app); }catch(e){ console.warn('FCM başlatılamadı:', e); }
+
+  // Uygulama açıkken gelen push mesajlarını yakala (ön plan)
+  if(messaging){
+    onMessage(messaging, function(payload){
+      console.log('FCM ön plan mesaj:', payload);
+      // Ses + overlay — duyuruSesiCal ve duyuruGoster global fonksiyonlar
+      if(typeof duyuruSesiCal === 'function') duyuruSesiCal();
+    });
+  }
+
+  // FCM token al ve Firestore'a kaydet
+  async function fcmTokenAl(userTel){
+    if(!messaging) return null;
+    try{
+      var reg = await navigator.serviceWorker.ready;
+      var token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+      if(token){
+        await setDoc(doc(db, 'push_tokens', userTel), {
+          fcmToken: token,
+          tel: userTel,
+          platform: navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') ? 'ios' : 'android_web',
+          kayit: new Date().toISOString()
+        });
+        window._fcmToken = token;
+        console.log('FCM token kaydedildi');
+      }
+      return token;
+    }catch(e){ console.warn('FCM token alınamadı:', e); return null; }
+  }
+
+  // FCM push gönder — tüm kayıtlı tokenlar için
+  async function fcmPushGonder(baslik, icerik, hedefler){
+    try{
+      // Tüm push tokenları çek
+      var snap = await getDocs(collection(db, 'push_tokens'));
+      var tokenlar = [];
+      snap.forEach(function(d){
+        var data = d.data();
+        if(!data.fcmToken) return;
+        // Hedef filtresi
+        if(!hedefler || hedefler.length === 0){
+          tokenlar.push(data.fcmToken); // genel — herkese
+        } else {
+          // normTel ile karşılaştır
+          var telNorm = data.tel ? data.tel.replace(/\D/g,'').replace(/^0/,'') : '';
+          if(hedefler.some(function(h){ return h === telNorm || h === data.tel; })){
+            tokenlar.push(data.fcmToken);
+          }
+        }
+      });
+
+      if(!tokenlar.length) return;
+
+      // FCM V1 API — her token için ayrı istek (tarayıcıdan doğrudan)
+      // Not: Bu iç kullanım uygulaması için kabul edilebilir yöntem
+      var apiKey = "AIzaSyDdedlkOrBhYRCcXjXDoSRCilDR-2vwHug";
+      var projectId = "acl-takip";
+
+      for(var i=0; i<tokenlar.length; i++){
+        try{
+          await fetch('https://fcm.googleapis.com/v1/projects/'+projectId+'/messages:send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + await _getFCMAccessToken(apiKey)
+            },
+            body: JSON.stringify({
+              message: {
+                token: tokenlar[i],
+                notification: { title: baslik, body: icerik },
+                webpush: {
+                  notification: {
+                    title: baslik,
+                    body: icerik,
+                    icon: '/icon-192.png',
+                    badge: '/icon-192.png',
+                    vibrate: [200,100,200,100,200]
+                  },
+                  fcm_options: { link: '/' }
+                }
+              }
+            })
+          });
+        }catch(e){ console.warn('FCM push hatası token '+i+':', e); }
+      }
+    }catch(e){ console.warn('FCM push gönderim hatası:', e); }
+  }
+
+  // OAuth2 access token al (Firebase API Key ile)
+  async function _getFCMAccessToken(apiKey){
+    // Firestore'dan mevcut token varsa kullan
+    var cached = window._fcmAccessToken;
+    if(cached && cached.exp > Date.now()) return cached.token;
+    // Firebase Auth identity toolkit ile token al
+    try{
+      var res = await fetch('https://securetoken.googleapis.com/v1/token?key='+apiKey, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'grant_type=refresh_token&refresh_token='+(window._fbRefreshToken||'')
+      });
+      var d = await res.json();
+      if(d.access_token){
+        window._fcmAccessToken = { token: d.access_token, exp: Date.now() + (d.expires_in-60)*1000 };
+        return d.access_token;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  // Global erişim
+  window._fb = { db, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy };
+  window._fcmTokenAl = fcmTokenAl;
+  window._fcmPushGonder = fcmPushGonder;
 
   // Uygulama hazır sinyali
   window._fbReady = true;
@@ -5437,19 +5554,22 @@ function bildirimTokenKaydet(){
   if(!navigator.serviceWorker) return;
   navigator.serviceWorker.ready.then(function(reg){
     _swReg = reg;
-    // Basit token: cihaz+user kimliği
     if(user && window._fbReady){
-      var token = 'web_' + normTel(user.tel) + '_' + Date.now();
-      var existing = localStorage.getItem('acl_push_token');
-      if(!existing){
-        localStorage.setItem('acl_push_token', token);
-        fbSet('push_tokens', normTel(user.tel), {
-          token: token,
-          tel: user.tel,
-          ad: user.ad,
-          platform: navigator.userAgent,
-          kayit: new Date().toISOString()
-        }).catch(function(){});
+      // Gerçek FCM token al
+      if(window._fcmTokenAl){
+        window._fcmTokenAl(normTel(user.tel)).catch(function(){});
+      } else {
+        // Fallback: eski basit token sistemi
+        var token = 'web_' + normTel(user.tel) + '_' + Date.now();
+        var existing = localStorage.getItem('acl_push_token');
+        if(!existing){
+          localStorage.setItem('acl_push_token', token);
+          fbSet('push_tokens', normTel(user.tel), {
+            token: token, tel: user.tel, ad: user.ad,
+            platform: navigator.userAgent,
+            kayit: new Date().toISOString()
+          }).catch(function(){});
+        }
       }
     }
   }).catch(function(){});
@@ -6103,8 +6223,26 @@ function duyuruYayinla(){
 
   if(window._fbReady){
     fbSet('duyurular', duyuru.id, duyuru)
-      .then(()=>toast('Duyuru yayınlandı ✓','ok'))
-      .catch(()=>toast('Duyuru yerel kaydedildi','ok'));
+      .then(function(){
+        toast('Duyuru yayınlandı ✓','ok');
+        // FCM push gönder
+        if(window._fcmPushGonder){
+          var pushBaslik = '📢 ACL Depo — Yeni Duyuru';
+          var pushIcerik = (duyuru.icerik||'').substring(0,100);
+          var pushHedefler = null; // genel = null
+          if(duyuru.hedef === 'kisi_' + (duyuru.hedefAd||'')){
+            // tek kişi
+            var telPart = duyuru.hedef.replace('kisi_','');
+            pushHedefler = [telPart];
+          } else if(duyuru.hedef === 'coklu' && duyuru.hedefler){
+            pushHedefler = duyuru.hedefler;
+          } else if(duyuru.hedef && duyuru.hedef.startsWith('depo_')){
+            pushHedefler = null; // depo bazlı — şimdilik herkese, filtre realtime'da yapılıyor
+          }
+          window._fcmPushGonder(pushBaslik, pushIcerik, pushHedefler).catch(function(){});
+        }
+      })
+      .catch(function(){ toast('Duyuru yerel kaydedildi','ok'); });
   } else {
     toast('Duyuru yayınlandı ✓','ok');
   }
