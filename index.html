@@ -5786,6 +5786,7 @@ function duyuruRealtimeDinle(){
         var banaUygun = false;
         if(!d.hedef || d.hedef === 'genel') banaUygun = true;
         else if(d.hedef === 'kisi_' + _kulTelNorm) banaUygun = true;
+        else if(d.hedef === 'coklu' && d.hedefler && d.hedefler.indexOf(_kulTelNorm) !== -1) banaUygun = true;
         else if(_kulDepolar.indexOf(d.hedef) !== -1) banaUygun = true;
 
         if(!banaUygun) return;
@@ -5839,11 +5840,12 @@ async function duyuruKontrol(){
   const okunmamis = duyurular.find(function(d){
     if(okunanlar.includes(d.id)) return false;
     if(!d.hedef || d.hedef === 'genel') return true;
-    // Kişiye özel
     if(d.hedef && d.hedef.startsWith('kisi_')){
       return d.hedef === 'kisi_'+_kulTelNorm;
     }
-    // Depo bazlı
+    if(d.hedef === 'coklu' && d.hedefler){
+      return d.hedefler.indexOf(_kulTelNorm) !== -1;
+    }
     return _kulDepolar.includes(d.hedef);
   });
   if(okunmamis) duyuruGoster(okunmamis);
@@ -5890,6 +5892,43 @@ function renderDuyuruEkrani(){
     const formDiv = document.createElement('div');
     formDiv.id = 'duyuru-form-wrap';
     formDiv.style.display = isYonetici() ? 'block' : 'none';
+
+    // Tüm personeli tek listede topla
+    var _tumPersonel = [];
+    getDepolar().forEach(function(d){
+      var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+      var gorulen = {};
+      pers.forEach(function(p){
+        var tn = normTel(p.tel||'');
+        if(tn && !gorulen[tn]){
+          gorulen[tn] = true;
+          _tumPersonel.push({telNorm: tn, ad: p.name||'', depo: d.ad||''});
+        }
+      });
+    });
+
+    var kisiOpts = '<option value="">-- Kişi Seçin --</option>';
+    getDepolar().forEach(function(d){
+      kisiOpts += '<optgroup label="'+escHtml(d.ad||'Depo')+'">';
+      var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+      var gorulen = {};
+      pers.forEach(function(p){
+        var tn = normTel(p.tel||'');
+        if(tn && !gorulen[tn]){ gorulen[tn]=true; kisiOpts += '<option value="'+tn+'">'+escHtml(p.name||'')+'</option>'; }
+      });
+      kisiOpts += '</optgroup>';
+    });
+
+    var cokluCheckboxlar = '';
+    _tumPersonel.forEach(function(p){
+      cokluCheckboxlar +=
+        '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text2)" onclick="event.stopPropagation()">'+
+          '<input type="checkbox" value="'+p.telNorm+'" data-ad="'+escHtml(p.ad)+'" onchange="duyuruCokluSecimGuncelle()" style="accent-color:var(--accent2);width:15px;height:15px;flex-shrink:0">'+
+          '<span>'+escHtml(p.ad)+'</span>'+
+          '<span style="font-size:10px;color:var(--text3);margin-left:auto">'+escHtml(p.depo)+'</span>'+
+        '</label>';
+    });
+
     formDiv.innerHTML =
       '<div class="slabel" style="margin-top:0">Duyuru Yayınla</div>'+
       '<button class="duyuru-yeni-btn" onclick="duyuruFormAc()">📢 Yeni Duyuru Yayınla</button>'+
@@ -5899,27 +5938,21 @@ function renderDuyuruEkrani(){
           '<option value="genel">🌐 Tüm Personel (Genel)</option>'+
           (getDepolar().map(function(d){ return '<option value="depo_'+d.id+'">🏢 '+escHtml(d.ad||'Depo')+'</option>'; }).join(''))+
           '<option value="kisi">👤 Belirli Bir Kişi...</option>'+
+          '<option value="coklu">👥 Birden Fazla Kişi...</option>'+
         '</select>'+
+        // Tek kişi seçimi
         '<div id="duyuru-kisi-sec" style="display:none;margin-bottom:10px">'+
           '<select id="duyuru-kisi-id" class="mgr-input" style="width:100%;font-size:13px;padding:8px 10px">'+
-            (function(){
-              var opts = '<option value="">-- Kişi Seçin --</option>';
-              getDepolar().forEach(function(d){
-                opts += '<optgroup label="'+escHtml(d.ad||'Depo')+'">';
-                var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
-                var gorulen = {};
-                pers.forEach(function(p){
-                  var tn = normTel(p.tel||'');
-                  if(!gorulen[tn]){
-                    gorulen[tn]=true;
-                    opts += '<option value="'+tn+'">'+escHtml(p.name||'')+'</option>';
-                  }
-                });
-                opts += '</optgroup>';
-              });
-              return opts;
-            })()+
+            kisiOpts+
           '</select>'+
+        '</div>'+
+        // Çoklu kişi seçimi
+        '<div id="duyuru-coklu-sec" style="display:none;margin-bottom:10px">'+
+          '<div id="duyuru-secilen-chipler" style="display:flex;flex-wrap:wrap;gap:5px;min-height:28px;margin-bottom:8px"></div>'+
+          '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;max-height:200px;overflow-y:auto">'+
+            cokluCheckboxlar+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:6px">Seçilen kişi sayısı: <span id="duyuru-secilen-sayi" style="color:var(--accent);font-weight:700">0</span></div>'+
         '</div>'+
         '<div class="mgr-label" style="margin-bottom:5px">Duyuru İçeriği</div>'+
         '<textarea id="duyuru-icerik-input" class="note-ta" rows="4" placeholder="Duyuru metni..." style="margin-bottom:10px;width:100%"></textarea>'+
@@ -5949,6 +5982,7 @@ function renderDuyuruEkrani(){
         const okundu = okunanlar.includes(d.id);
         const _het = (!d.hedef||d.hedef==='genel') ? '🌐 Genel'
           : d.hedef.startsWith('kisi_') ? ('👤 '+escHtml(d.hedefAd||'Kişi'))
+          : d.hedef === 'coklu' ? ('👥 '+escHtml(d.hedefAd||(d.hedefler?d.hedefler.length+' kişi':'Seçili Kişiler')))
           : ('🏢 '+escHtml(d.hedefAd||'Depo'));
         return '<div class="duyuru-kart" style="'+(okundu?'':'border-color:var(--accent2)')+'">'+
           '<div class="duyuru-kart-top">'+
@@ -5967,8 +6001,31 @@ function renderDuyuruEkrani(){
 
 
 function duyuruHedefDegisti(val){
-  var kisiDiv = document.getElementById('duyuru-kisi-sec');
-  if(kisiDiv) kisiDiv.style.display = (val==='kisi') ? 'block' : 'none';
+  var kisiDiv   = document.getElementById('duyuru-kisi-sec');
+  var cokluDiv  = document.getElementById('duyuru-coklu-sec');
+  if(kisiDiv)  kisiDiv.style.display  = (val === 'kisi')   ? 'block' : 'none';
+  if(cokluDiv) cokluDiv.style.display = (val === 'coklu')  ? 'block' : 'none';
+  // Çoklu moddan çıkınca seçimleri temizle
+  if(val !== 'coklu'){
+    var boxes = document.querySelectorAll('#duyuru-coklu-sec input[type=checkbox]');
+    boxes.forEach(function(b){ b.checked = false; });
+    duyuruCokluSecimGuncelle();
+  }
+}
+
+function duyuruCokluSecimGuncelle(){
+  var boxes   = document.querySelectorAll('#duyuru-coklu-sec input[type=checkbox]:checked');
+  var chipWrap = document.getElementById('duyuru-secilen-chipler');
+  var sayiEl   = document.getElementById('duyuru-secilen-sayi');
+  if(sayiEl) sayiEl.textContent = boxes.length;
+  if(!chipWrap) return;
+  chipWrap.innerHTML = '';
+  boxes.forEach(function(b){
+    var chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--accent2);color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600';
+    chip.innerHTML = escHtml(b.dataset.ad||b.value) + ' <span onclick="(function(el){el.checked=false;duyuruCokluSecimGuncelle();})(document.querySelector(\'input[value=\\\'' + b.value + '\\\']\'))" style="cursor:pointer;font-size:13px;line-height:1;opacity:.8">×</span>';
+    chipWrap.appendChild(chip);
+  });
 }
 
 function duyuruFormAc(){
@@ -5981,9 +6038,35 @@ function duyuruYayinla(){
   const icerik = (ta ? ta.value : '').trim();
   if(!icerik){ toast('Duyuru içeriği boş olamaz','err'); return; }
 
+  const hedefSel = document.getElementById('duyuru-hedef');
+  const hedefVal = hedefSel ? hedefSel.value : 'genel';
+  let hedef = hedefVal, hedefAd = '', hedefler = null;
+
+  if(hedefVal === 'kisi'){
+    const kisiSel = document.getElementById('duyuru-kisi-id');
+    const kisiTel = kisiSel ? kisiSel.value : '';
+    const kisiAd  = kisiSel ? (kisiSel.options[kisiSel.selectedIndex]||{}).text : '';
+    if(!kisiTel){ toast('Lütfen bir kişi seçin','err'); return; }
+    hedef   = 'kisi_' + kisiTel;
+    hedefAd = kisiAd;
+  } else if(hedefVal === 'coklu'){
+    const boxes = document.querySelectorAll('#duyuru-coklu-sec input[type=checkbox]:checked');
+    if(!boxes.length){ toast('Lütfen en az bir kişi seçin','err'); return; }
+    hedefler = Array.from(boxes).map(function(b){ return b.value; });
+    hedefAd  = Array.from(boxes).map(function(b){ return b.dataset.ad||b.value; }).join(', ');
+    hedef    = 'coklu';
+  } else if(hedefVal.startsWith('depo_')){
+    hedef   = hedefVal;
+    const depoSel = document.getElementById('duyuru-hedef');
+    hedefAd = depoSel ? (depoSel.options[depoSel.selectedIndex]||{}).text : '';
+  }
+
   const duyuru = {
     id: Date.now()+'',
     icerik,
+    hedef,
+    hedefAd,
+    hedefler: hedefler || null,
     gonderen: user ? user.ad : 'Yönetim',
     rol: user ? (user.rol||'personel') : '',
     tarih: todayStr + ' ' + new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}),
