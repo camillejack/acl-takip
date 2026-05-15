@@ -719,7 +719,71 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ozet-baslik { font-size:13px; font-weight:700; color:var(--metin); margin-bottom:3px; }
 .ozet-ac { font-size:11px; color:var(--metin2); line-height:1.5; }
 
-</style>
+/* ─── GÖREV & KARİYER SİSTEMİ ─────────────────────────────── */
+.gorev-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;position:relative;overflow:hidden}
+.gorev-kart::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.gorev-kart.gk-bekliyor::before{background:var(--accent)}
+.gorev-kart.gk-devam::before{background:var(--orange)}
+.gorev-kart.gk-tamam::before{background:var(--green)}
+.gorev-kart.gk-gecikti::before{background:var(--red)}
+.gorev-baslik{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.gorev-atayan{font-size:11px;color:var(--text3);margin-top:3px}
+.gorev-chip{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600}
+.gchip-bekliyor{background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-b)}
+.gchip-devam{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-b)}
+.gchip-tamam{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b)}
+.gchip-gecikti{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b)}
+.gchip-mukemmel{background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-b)}
+.gorev-timer-wrap{display:flex;align-items:center;gap:6px;background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;margin-top:10px}
+.gorev-timer-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.gorev-timer-fill{height:100%;border-radius:2px;transition:width .3s}
+.gtf-ok{background:var(--green)}
+.gtf-warn{background:var(--orange)}
+.gtf-danger{background:var(--red)}
+.gorev-deg{display:inline-flex;align-items:center;gap:5px;border-radius:var(--r-sm);padding:4px 10px;font-size:10px;font-weight:700}
+.gdeg-mukemmel{background:var(--gold-dim);color:var(--gold);border:1px solid var(--gold-b)}
+.gdeg-olumlu{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b)}
+.gdeg-olumsuz{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b)}
+.gorev-foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.gorev-foto-box{aspect-ratio:1;border-radius:var(--r-sm);border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:var(--bg3);font-size:10px;color:var(--text3);gap:4px;transition:border-color .2s;overflow:hidden;position:relative}
+.gorev-foto-box:hover{border-color:var(--accent2)}
+.gorev-foto-box.gf-dolu{border-style:solid;border-color:var(--green);background:var(--green-dim)}
+.gorev-foto-box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gorev-tab-wrap{display:flex;background:var(--bg3);border-radius:var(--r-sm);padding:3px;margin-bottom:14px}
+.gorev-tab{flex:1;padding:7px;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);background:transparent;color:var(--text3);transition:all .2s}
+.gorev-tab.active{background:var(--accent2);color:#fff}
+.gorev-sablon-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s}
+.gorev-sablon-kart:hover{border-color:var(--accent2)}
+.gorev-sablon-ico{width:36px;height:36px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.gorev-tamamla-btn{width:100%;padding:11px;background:var(--green);color:#000;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-top:10px}
+.gorev-savunma-kutu{background:var(--red-dim);border:1px solid var(--red-b);border-radius:var(--r-sm);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.gorev-savunma-txt{font-size:12px;color:var(--red);line-height:1.6;font-weight:500}
+/* KARİYER */
+.kariyer-header-wrap{padding:20px;text-align:center;background:linear-gradient(135deg,var(--bg3),var(--bg4));border-bottom:1px solid var(--border)}
+.kariyer-seviye-no{font-size:52px;font-weight:800;font-family:var(--mono);color:var(--accent);line-height:1}
+.kariyer-unvan{font-size:14px;font-weight:600;color:var(--text);margin-top:4px}
+.kariyer-prog-bar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin:16px 0 6px}
+.kariyer-prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .5s}
+.kariyer-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px}
+.kariyer-stat{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center}
+.kariyer-stat-no{font-size:22px;font-weight:800;font-family:var(--mono)}
+.kariyer-stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;font-weight:600}
+.kariyer-basamak-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.kariyer-basamak-item:last-child{border-bottom:none}
+.kariyer-basamak-no{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+/* GÖREV MODAL */
+.gorev-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center}
+.gorev-modal-overlay.acik{display:flex}
+.gorev-modal{background:var(--bg2);border-radius:var(--r-lg) var(--r-lg) 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;padding:20px}
+.gorev-modal-baslik{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;color:var(--text)}
+.gorev-modal-kapat{background:var(--bg3);border:none;color:var(--text3);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center}
+.gorev-form-label{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;display:block;letter-spacing:.04em;text-transform:uppercase}
+.gorev-form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;margin-bottom:10px;transition:border-color .2s}
+.gorev-form-input:focus{border-color:var(--accent2)}
+.gorev-form-input::placeholder{color:var(--text3)}
+select.gorev-form-input option{background:var(--bg3);color:var(--text)}
+.gorev-btn-primary{width:100%;padding:12px;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent2);color:#fff;margin-top:4px}
+.gorev-btn-accent{width:100%;padding:12px;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent);color:#000;margin-top:4px}</style>
 </head>
 <body>
 <div class="app">
@@ -806,6 +870,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="nav-btn" onclick="showScreen('egitim')">📚 Eğitim</button>
     <button class="nav-btn" id="nav-duyuru" onclick="showScreen('duyuru')">📢 Duyuru</button>
     <button class="nav-btn" onclick="showScreen('rapor')">📊 Rapor</button>
+    <button class="nav-btn" onclick="showScreen('gorev')">📋 Görevler</button>
+    <button class="nav-btn" onclick="showScreen('kariyer')">🏆 Kariyer</button>
   </div>
 
   <div class="screens">
@@ -1005,7 +1071,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
     <!-- RAPOR -->
     <div class="screen hidden" id="screen-rapor">
-      <div class="rapor-card">
         <div class="rapor-ico">📊</div>
         <div class="rapor-title">Gün Sonu Raporu</div>
         <div class="rapor-sub">
@@ -1030,6 +1095,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       <div id="rapor-aylik-ozet"></div>
       <div class="slabel">Mola Kullanım Özeti</div>
       <div id="rapor-mola-ozet"></div>
+    </div>
+
+    <!-- GÖREV ATAMA EKRANI -->
+    <div class="screen hidden" id="screen-gorev">
+      <div id="gorev-content"></div>
+    </div>
+
+    <!-- KARİYER BASAMAKLARI EKRANI -->
+    <div class="screen hidden" id="screen-kariyer">
+      <div id="kariyer-content"></div>
     </div>
 
   </div>
@@ -1435,12 +1510,10 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+name).classList.remove('hidden');
-  ['kayit','liste','isbasi','mola','shift','egitim','duyuru','rapor'].forEach((n,i)=>{
+  ['kayit','liste','isbasi','mola','shift','egitim','duyuru','rapor','gorev','kariyer'].forEach((n,i)=>{
     if(n===name){
       const btn = document.querySelectorAll('.nav-btn')[i];
-      btn.classList.add('active');
-      // Aktif sekmeyi görünür yap
-      btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
     }
   });
   if(name==='liste') renderList();
@@ -1450,6 +1523,8 @@ function showScreen(name){
   if(name==='egitim') renderEgitim();
   if(name==='duyuru') renderDuyuruEkrani();
   if(name==='rapor') renderRapor();
+  if(name==='gorev') renderGorevEkrani();
+  if(name==='kariyer') renderKariyerEkrani();
 }
 
 // TOAST
@@ -3691,7 +3766,780 @@ var GENEL_SINAV_SORULAR = [
   {soru:'Kırmızı timer ne anlama gelir?', secenekler:['Normal hız','Süre aşıldı hızlan','Sipariş iptal','Mola zamanı'], dogru:1, aciklama:'Kırmızı timer belirlenen sipariş toplama süresinin dolduğunu gösterir. Hızlanmak ve tamamlamak gerekir.'}
 ];
 
-// ─── REHBER YARDIMCI FONKSİYONLARI ──────────────────────────
+// ─── GÖREV & KARİYER SİSTEMİ ──────────────────────────────────────────────────
+
+// Görev veri yapısı
+// gorevler: { id, baslik, aciklama, atayanTel, atayanAd, atayanRol,
+//             atananTel, atananAd, baslangicTs, bitisTs, oncelik,
+//             durum: 'bekliyor'|'devam'|'tamam'|'gecikti',
+//             tamamlamaTs, tamamlamaAciklama, fotolar:[url1,url2,url3],
+//             degerlendirme: 'mukemmel'|'olumlu'|'olumsuz', olusturmaTs }
+// kariyer_puanlar: { tel, basamak, mukemmelSayisi, olumluSayisi, olumsuzSayisi,
+//                    savunmaGerekli, savunmaYazildi, olusturmaTs }
+// gorev_sablonlar: { id, baslik, aciklama, sure, ikon, olusturanTel }
+
+const KARIYER_BASAMAK_UNVANLARI = {
+  1:'🔰 Yeni Personel', 10:'🥉 Deneyimli Personel', 20:'🥈 Kıdemli Personel',
+  50:'🥇 Kıdemli Uzman', 70:'💎 Uzman Depo Personeli', 90:'👑 Depo Efsanesi'
+};
+
+function kariyerUnvan(basamak){
+  var unvan = '🔰 Yeni Personel';
+  [1,10,20,50,70,90].forEach(function(s){
+    if(basamak >= s) unvan = KARIYER_BASAMAK_UNVANLARI[s];
+  });
+  return unvan;
+}
+
+// Yöneticinin hangi rollere görev atabileceği
+function atanabilirRoller(){
+  if(!user) return [];
+  var rol = user.rol || 'personel';
+  if(rol === 'mudur') return ['sef','amir','personel'];
+  if(rol === 'sef') return ['amir','personel'];
+  if(rol === 'amir') return ['personel'];
+  return [];
+}
+
+// Görev atabiliyor muyuz?
+function gorevAtayabilir(){ return atanabilirRoller().length > 0; }
+
+// ─── GÖREV EKRANI RENDER ──────────────────────────────────────
+function renderGorevEkrani(){
+  var el = document.getElementById('gorev-content');
+  if(!el) return;
+  el.innerHTML = '<div class="egitim-yukle-spinner">⟳ Yükleniyor...</div>';
+  _renderGorevEkrani();
+}
+
+async function _renderGorevEkrani(){
+  var el = document.getElementById('gorev-content');
+  if(!el || !user) return;
+
+  var rolStr = user.rol || 'personel';
+  var yonetici = gorevAtayabilir();
+  var telNorm = normTel(user.tel||'');
+
+  // Firebase'den görevleri çek
+  var tumGorevler = [];
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db, 'gorevler'));
+    snap.forEach(function(d){ tumGorevler.push(d.data()); });
+  }catch(e){ tumGorevler = []; }
+
+  // Bana atanan + benim attığım görevler
+  var banaAtanan = tumGorevler.filter(function(g){ return normTel(g.atananTel||'') === telNorm; });
+  var benimAtadim = tumGorevler.filter(function(g){ return normTel(g.atayanTel||'') === telNorm; });
+
+  // Aktif (bitmemiş) / biten ayrımı
+  var aktifBana = banaAtanan.filter(function(g){ return g.durum !== 'tamam'; });
+  var bitenBana = banaAtanan.filter(function(g){ return g.durum === 'tamam'; });
+  var aktifAtadim = benimAtadim.filter(function(g){ return g.durum !== 'tamam'; });
+  var bitenAtadim = benimAtadim.filter(function(g){ return g.durum === 'tamam'; });
+
+  // Savunma gerekiyor mu?
+  var kariyerData = await _kariyerVeriAl(telNorm);
+  var savunmaGerekli = kariyerData && kariyerData.savunmaGerekli && !kariyerData.savunmaYazildi;
+
+  var html = '';
+
+  // Savunma uyarısı
+  if(savunmaGerekli){
+    html += '<div class="gorev-savunma-kutu" style="margin-top:14px">' +
+      '<div style="font-size:20px">⚠️</div>' +
+      '<div class="gorev-savunma-txt"><b>Savunma Yazmanız Gerekiyor!</b><br>' +
+      '5 olumsuz değerlendirme aldınız. Savunmanızı yazana kadar yeni görev atanmayacaktır.' +
+      '<button onclick="gorevSavunmaModalAc()" style="margin-top:8px;background:var(--red);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);display:block;width:100%">Savunma Yaz →</button>' +
+      '</div></div>';
+  }
+
+  // TAB
+  html += '<div class="gorev-tab-wrap" style="margin-top:' + (savunmaGerekli?'8':'14') + 'px">';
+  if(yonetici){
+    html += '<button class="gorev-tab active" onclick="gorevTabGec(\'ata\')">➕ Ata</button>';
+    html += '<button class="gorev-tab" onclick="gorevTabGec(\'izle\')">👁 İzle</button>';
+  }
+  html += '<button class="gorev-tab' + (yonetici?'':' active') + '" onclick="gorevTabGec(\'benim\')">📋 Görevlerim</button>';
+  html += '<button class="gorev-tab" onclick="gorevTabGec(\'sablon\')">📌 Şablonlar</button>';
+  html += '</div>';
+
+  // TAB: GÖREV ATA (yönetici)
+  if(yonetici){
+    html += '<div id="gtab-ata">';
+    html += _gorevAtaFormHtml();
+    html += '</div>';
+
+    // TAB: İZLE
+    html += '<div id="gtab-izle" style="display:none">';
+    html += '<div class="slabel">Aktif Görevler (' + aktifAtadim.length + ')</div>';
+    if(!aktifAtadim.length){
+      html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Aktif görev yok</div>';
+    } else {
+      aktifAtadim.sort(function(a,b){ return (a.bitisTs||0)-(b.bitisTs||0); }).forEach(function(g){
+        html += _gorevKartHtml(g, true);
+      });
+    }
+    html += '<div class="slabel">Tamamlanan Görevler (' + bitenAtadim.length + ')</div>';
+    if(!bitenAtadim.length){
+      html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz tamamlanan görev yok</div>';
+    } else {
+      bitenAtadim.sort(function(a,b){ return (b.tamamlamaTs||0)-(a.tamamlamaTs||0); }).forEach(function(g){
+        html += _gorevKartHtml(g, true);
+      });
+    }
+    html += '</div>';
+  }
+
+  // TAB: BENİM GÖREVLERİM
+  html += '<div id="gtab-benim" style="display:' + (yonetici?'none':'block') + '">';
+  html += '<div class="slabel">Bana Atanan Aktif Görevler (' + aktifBana.length + ')</div>';
+  if(!aktifBana.length){
+    html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Aktif görev yok</div>';
+  } else {
+    aktifBana.sort(function(a,b){ return (a.bitisTs||0)-(b.bitisTs||0); }).forEach(function(g){
+      html += _gorevKartHtml(g, false);
+    });
+  }
+  html += '<div class="slabel">Tamamladığım Görevler (' + bitenBana.length + ')</div>';
+  if(!bitenBana.length){
+    html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz tamamlanan görev yok</div>';
+  } else {
+    bitenBana.sort(function(a,b){ return (b.tamamlamaTs||0)-(a.tamamlamaTs||0); }).forEach(function(g){
+      html += _gorevKartHtml(g, false);
+    });
+  }
+  html += '</div>';
+
+  // TAB: ŞABLONLAR
+  html += '<div id="gtab-sablon" style="display:none">';
+  html += await _gorevSablonlarHtml();
+  html += '</div>';
+
+  // MODALLAR
+  html += _gorevModalleriHtml();
+
+  el.innerHTML = html;
+}
+
+function gorevTabGec(tab){
+  ['ata','izle','benim','sablon'].forEach(function(t){
+    var el = document.getElementById('gtab-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.gorev-tab').forEach(function(b){
+    var hedef = b.getAttribute('onclick').match(/'(\w+)'/);
+    if(hedef) b.classList.toggle('active', hedef[1]===tab);
+  });
+}
+
+function _gorevAtaFormHtml(){
+  // Atanabilecek personeli topla
+  var hedefRoller = atanabilirRoller();
+  var personelListesi = [];
+  var gorulenTel = {};
+  getDepolar().forEach(function(d){
+    var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+    pers.forEach(function(p){
+      var tn = normTel(p.tel||'');
+      var pRol = p.rol || 'personel';
+      if(tn && !gorulenTel[tn] && hedefRoller.indexOf(pRol) !== -1 && tn !== normTel(user.tel||'')){
+        gorulenTel[tn] = true;
+        personelListesi.push({ad: p.name||'', tel: tn, rol: pRol, depo: d.ad||''});
+      }
+    });
+  });
+
+  var personelOpts = '<option value="">-- Personel Seçin --</option>';
+  personelListesi.forEach(function(p){
+    personelOpts += '<option value="'+p.tel+'|'+escHtml(p.ad)+'">'+escHtml(p.ad)+' — '+rolLabel(p.rol)+'</option>';
+  });
+
+  return '<div class="kart" style="padding:16px;margin-bottom:10px">' +
+    '<div class="slabel" style="margin-top:0">Yeni Görev Ata</div>' +
+    '<label class="gorev-form-label">Görev Başlığı</label>' +
+    '<input class="gorev-form-input" id="gf-baslik" type="text" placeholder="Örn: Manav bölümü SKT kontrolü">' +
+    '<label class="gorev-form-label">Açıklama</label>' +
+    '<textarea class="gorev-form-input" id="gf-aciklama" rows="3" placeholder="Görevin detayları ve beklentiler..."></textarea>' +
+    '<label class="gorev-form-label">Atanacak Personel</label>' +
+    '<select class="gorev-form-input" id="gf-personel">'+personelOpts+'</select>' +
+    '<label class="gorev-form-label">Bitiş Süresi</label>' +
+    '<input class="gorev-form-input" id="gf-bitis" type="datetime-local">' +
+    '<label class="gorev-form-label">Öncelik</label>' +
+    '<select class="gorev-form-input" id="gf-oncelik">' +
+      '<option value="normal">🟡 Normal</option>' +
+      '<option value="acil">🔴 Acil</option>' +
+      '<option value="dusuk">🟢 Düşük</option>' +
+    '</select>' +
+    '<button class="gorev-btn-primary" onclick="gorevAta()">📋 Görevi Ata</button>' +
+  '</div>';
+}
+
+function _gorevKartHtml(g, yoneticiGorunumu){
+  var simdi = Date.now();
+  var durum = g.durum || 'bekliyor';
+  // Süre aşımı otomatik güncelle (görsel)
+  if(durum === 'devam' && g.bitisTs && simdi > g.bitisTs) durum = 'gecikti';
+
+  var chipClass = {bekliyor:'gchip-bekliyor',devam:'gchip-devam',tamam:'gchip-tamam',gecikti:'gchip-gecikti'}[durum] || 'gchip-bekliyor';
+  var kartClass = {bekliyor:'gk-bekliyor',devam:'gk-devam',tamam:'gk-tamam',gecikti:'gk-gecikti'}[durum] || 'gk-bekliyor';
+  var durumEmoji = {bekliyor:'⌛',devam:'⏳',tamam:'✅',gecikti:'❌'}[durum] || '⌛';
+  var durumAd = {bekliyor:'Bekliyor',devam:'Devam',tamam:'Tamamlandı',gecikti:'Gecikti'}[durum] || 'Bekliyor';
+
+  var html = '<div class="gorev-kart '+kartClass+'">';
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+  html += '<div style="flex:1"><div class="gorev-baslik">'+escHtml(g.baslik||'')+'</div>';
+  if(yoneticiGorunumu){
+    html += '<div class="gorev-atayan">👤 '+escHtml(g.atananAd||'')+'</div>';
+  } else {
+    html += '<div class="gorev-atayan">📌 '+escHtml(g.atayanAd||'')+' — '+rolLabel(g.atayanRol||'')+'</div>';
+  }
+  html += '</div>';
+  html += '<span class="gorev-chip '+chipClass+'">'+durumEmoji+' '+durumAd+'</span>';
+  html += '</div>';
+
+  // Süre göstergesi (aktif görevler için)
+  if(durum === 'devam' || durum === 'gecikti'){
+    var toplam = (g.bitisTs||simdi) - (g.olusturmaTs||simdi);
+    var gecen  = simdi - (g.olusturmaTs||simdi);
+    var oran   = toplam > 0 ? Math.min(gecen/toplam, 1) : 1;
+    var fillClass = oran < 0.6 ? 'gtf-ok' : (oran < 0.85 ? 'gtf-warn' : 'gtf-danger');
+    var kalanMs = (g.bitisTs||simdi) - simdi;
+    var kalanStr = kalanMs > 0
+      ? (Math.floor(kalanMs/3600000) > 0 ? Math.floor(kalanMs/3600000)+'s ' : '') + Math.floor((kalanMs%3600000)/60000)+'dk'
+      : '+'+Math.floor(Math.abs(kalanMs)/60000)+'dk';
+    html += '<div class="gorev-timer-wrap">';
+    html += '<span style="font-size:10px;color:var(--text3)">'+(kalanMs>0?'Kalan':'Aşım')+'</span>';
+    html += '<div class="gorev-timer-bar"><div class="gorev-timer-fill '+fillClass+'" style="width:'+(oran*100)+'%"></div></div>';
+    html += '<span style="font-family:var(--mono);font-size:11px;color:'+(kalanMs>0?'var(--green)':'var(--red)')+'">'+kalanStr+'</span>';
+    html += '</div>';
+  }
+
+  // Değerlendirme (tamamlanan görevler)
+  if(durum === 'tamam' && g.degerlendirme){
+    var degMap = {mukemmel:'gdeg-mukemmel',olumlu:'gdeg-olumlu',olumsuz:'gdeg-olumsuz'};
+    var degEmoji = {mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'};
+    html += '<div style="margin-top:8px"><span class="gorev-deg '+degMap[g.degerlendirme]+'">'+degEmoji[g.degerlendirme]+'</span></div>';
+
+    // Fotoğraflar
+    if(g.fotolar && g.fotolar.length){
+      html += '<div class="gorev-foto-grid">';
+      g.fotolar.forEach(function(f){
+        html += '<div class="gorev-foto-box gf-dolu"><img src="'+f+'" alt=""></div>';
+      });
+      html += '</div>';
+    }
+
+    // Açıklama
+    if(g.tamamlamaAciklama){
+      html += '<div style="background:var(--bg3);border-radius:var(--r-sm);padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text2);line-height:1.6;border:1px solid var(--border)">'+escHtml(g.tamamlamaAciklama)+'</div>';
+    }
+  }
+
+  // Tamamla butonu (personel, aktif görev)
+  if(!yoneticiGorunumu && (durum === 'devam' || durum === 'gecikti' || durum === 'bekliyor')){
+    html += '<button class="gorev-tamamla-btn" onclick="gorevTamamlaModalAc(\''+g.id+'\')">✅ Görevi Tamamla</button>';
+  }
+
+  // Tarih bilgisi
+  if(g.bitisTs){
+    var bitisDate = new Date(g.bitisTs).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    html += '<div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono)">Bitiş: '+bitisDate+'</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+async function _gorevSablonlarHtml(){
+  var sablonlar = [];
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db, 'gorev_sablonlar'));
+    snap.forEach(function(d){ sablonlar.push(d.data()); });
+  }catch(e){}
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html += '<div class="slabel" style="margin:0">Görev Şablonları</div>';
+  if(gorevAtayabilir()){
+    html += '<button onclick="gorevYeniSablonModalAc()" style="background:var(--accent2);color:#fff;border:none;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans)">+ Yeni Şablon</button>';
+  }
+  html += '</div>';
+
+  if(!sablonlar.length){
+    html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz şablon yok. + Yeni Şablon ile ekleyin.</div>';
+  } else {
+    sablonlar.forEach(function(s){
+      html += '<div class="gorev-sablon-kart" onclick="gorevSablonSecModalAc(\''+s.id+'\')">';
+      html += '<div class="gorev-sablon-ico">'+(s.ikon||'📋')+'</div>';
+      html += '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(s.baslik||'')+'</div>';
+      html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+escHtml(s.aciklama||'')+(s.sure?' · '+s.sure+' dk':'')+'</div></div>';
+      html += '<span style="font-size:18px;color:var(--text3)">›</span></div>';
+    });
+  }
+  return html;
+}
+
+function _gorevModalleriHtml(){
+  // Personel listesi için şablon modalında lazım
+  var hedefRoller = atanabilirRoller();
+  var personelListesi = [];
+  var gorulenTel = {};
+  getDepolar().forEach(function(d){
+    var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+    pers.forEach(function(p){
+      var tn = normTel(p.tel||'');
+      var pRol = p.rol || 'personel';
+      if(tn && !gorulenTel[tn] && hedefRoller.indexOf(pRol) !== -1 && tn !== normTel(user.tel||'')){
+        gorulenTel[tn] = true;
+        personelListesi.push({ad: p.name||'', tel: tn, rol: pRol});
+      }
+    });
+  });
+  var personelOpts = '<option value="">-- Personel Seçin --</option>';
+  personelListesi.forEach(function(p){
+    personelOpts += '<option value="'+p.tel+'|'+escHtml(p.ad)+'">'+escHtml(p.ad)+' — '+rolLabel(p.rol)+'</option>';
+  });
+
+  return '' +
+  // GÖREV TAMAMLA
+  '<div class="gorev-modal-overlay" id="gmodal-tamamla">' +
+  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
+    '<div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gmodalKapat(\'tamamla\')">×</button></div>' +
+    '<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--accent)">📸 3 farklı açıdan fotoğraf ve açıklama zorunludur</div>' +
+    '<div class="gorev-form-label">Fotoğraflar (3 adet zorunlu)</div>' +
+    '<div class="gorev-foto-grid" id="gtm-foto-grid">' +
+      '<div class="gorev-foto-box" onclick="gorevFotoSec(0)" id="gtm-foto-0"><span style="font-size:22px">📷</span><span>Fotoğraf 1</span></div>' +
+      '<div class="gorev-foto-box" onclick="gorevFotoSec(1)" id="gtm-foto-1"><span style="font-size:22px">📷</span><span>Fotoğraf 2</span></div>' +
+      '<div class="gorev-foto-box" onclick="gorevFotoSec(2)" id="gtm-foto-2"><span style="font-size:22px">📷</span><span>Fotoğraf 3</span></div>' +
+    '</div>' +
+    '<input type="file" id="gtm-file-input" accept="image/*" style="display:none" onchange="gorevFotoYukle(this)">' +
+    '<div class="gorev-form-label" style="margin-top:14px">Tamamlama Açıklaması</div>' +
+    '<textarea class="gorev-form-input" id="gtm-aciklama" rows="4" placeholder="Görev nasıl tamamlandı? Dikkat edilen noktalar..."></textarea>' +
+    '<div id="gtm-sure-bilgi" style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px"></div>' +
+    '<button class="gorev-btn-accent" onclick="gorevTamamlaGonder()">✅ Görevi Tamamlandı Olarak İşaretle</button>' +
+  '</div></div>' +
+
+  // SAVUNMA
+  '<div class="gorev-modal-overlay" id="gmodal-savunma">' +
+  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
+    '<div class="gorev-modal-baslik">Savunma Yaz <button class="gorev-modal-kapat" onclick="gmodalKapat(\'savunma\')">×</button></div>' +
+    '<div class="gorev-savunma-kutu" style="margin-bottom:14px"><div style="font-size:18px">⚠️</div><div class="gorev-savunma-txt">5 olumsuz değerlendirme aldınız. Savunmanızı göndermeden yeni görev atanmayacaktır.</div></div>' +
+    '<div class="gorev-form-label">Savunma Metni</div>' +
+    '<textarea class="gorev-form-input" id="gsavunma-txt" rows="6" placeholder="Geç kalan veya tamamlanamayan görevler için açıklama yazın..."></textarea>' +
+    '<button class="gorev-btn-primary" onclick="gorevSavunmaGonder()">📤 Savunmayı Gönder</button>' +
+  '</div></div>' +
+
+  // YENİ ŞABLON
+  '<div class="gorev-modal-overlay" id="gmodal-yeni-sablon">' +
+  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
+    '<div class="gorev-modal-baslik">Yeni Şablon <button class="gorev-modal-kapat" onclick="gmodalKapat(\'yeni-sablon\')">×</button></div>' +
+    '<div class="gorev-form-label">Şablon Adı</div>' +
+    '<input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Şablon adı...">' +
+    '<div class="gorev-form-label">Açıklama</div>' +
+    '<textarea class="gorev-form-input" id="gs-aciklama" rows="3" placeholder="Görev detayları..."></textarea>' +
+    '<div class="gorev-form-label">Tahmini Süre (dakika)</div>' +
+    '<input class="gorev-form-input" id="gs-sure" type="number" placeholder="45">' +
+    '<div class="gorev-form-label">İkon (emoji)</div>' +
+    '<input class="gorev-form-input" id="gs-ikon" type="text" placeholder="🧹">' +
+    '<button class="gorev-btn-primary" onclick="gorevSablonKaydet()">💾 Şablonu Kaydet</button>' +
+  '</div></div>' +
+
+  // ŞABLONDAN ATA
+  '<div class="gorev-modal-overlay" id="gmodal-sablon-sec">' +
+  '<div class="gorev-modal" onclick="event.stopPropagation()">' +
+    '<div class="gorev-modal-baslik">Şablondan Görev Ata <button class="gorev-modal-kapat" onclick="gmodalKapat(\'sablon-sec\')">×</button></div>' +
+    '<div id="gsec-sablon-detay" style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-bottom:14px"></div>' +
+    '<div class="gorev-form-label">Atanacak Personel</div>' +
+    '<select class="gorev-form-input" id="gsec-personel">'+personelOpts+'</select>' +
+    '<div class="gorev-form-label">Bitiş Süresi</div>' +
+    '<input class="gorev-form-input" id="gsec-bitis" type="datetime-local">' +
+    '<button class="gorev-btn-primary" onclick="gorevSablondanAta()">📋 Görevi Ata</button>' +
+  '</div></div>';
+}
+
+// Modal aç/kapat
+function gmodalAc(id){ var el = document.getElementById('gmodal-'+id); if(el) el.classList.add('acik'); }
+function gmodalKapat(id){ var el = document.getElementById('gmodal-'+id); if(el) el.classList.remove('acik'); }
+
+// Görev ata
+async function gorevAta(){
+  var baslik = (document.getElementById('gf-baslik')||{}).value||'';
+  var aciklama = (document.getElementById('gf-aciklama')||{}).value||'';
+  var personelVal = (document.getElementById('gf-personel')||{}).value||'';
+  var bitis = (document.getElementById('gf-bitis')||{}).value||'';
+  var oncelik = (document.getElementById('gf-oncelik')||{}).value||'normal';
+
+  if(!baslik.trim()){ toast('Görev başlığı zorunlu','err'); return; }
+  if(!personelVal){ toast('Personel seçin','err'); return; }
+  if(!bitis){ toast('Bitiş süresi zorunlu','err'); return; }
+
+  var parcalar = personelVal.split('|');
+  var atananTel = parcalar[0];
+  var atananAd  = parcalar[1]||'';
+  var bitisTs   = new Date(bitis).getTime();
+  if(bitisTs <= Date.now()){ toast('Bitiş süresi geçmişte olamaz','err'); return; }
+
+  var gorev = {
+    id: 'g_'+Date.now(),
+    baslik: baslik.trim(),
+    aciklama: aciklama.trim(),
+    atayanTel: normTel(user.tel||''),
+    atayanAd: user.ad||'',
+    atayanRol: user.rol||'personel',
+    atananTel: atananTel,
+    atananAd: atananAd,
+    oncelik: oncelik,
+    bitisTs: bitisTs,
+    durum: 'devam',
+    olusturmaTs: Date.now(),
+    fotolar: [],
+    tamamlamaAciklama: '',
+    degerlendirme: null,
+    tamamlamaTs: null
+  };
+
+  try{
+    await fbSet('gorevler', gorev.id, gorev);
+    toast('Görev atandı ✓','ok');
+    // Duyuru gönder
+    if(window._fcmPushGonder) window._fcmPushGonder('📋 Yeni Görev', baslik, [atananTel]).catch(function(){});
+    // Formu temizle
+    ['gf-baslik','gf-aciklama','gf-bitis'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    if(document.getElementById('gf-personel')) document.getElementById('gf-personel').value='';
+    renderGorevEkrani();
+  }catch(e){ toast('Görev kaydedilemedi','err'); }
+}
+
+// Görev tamamlama
+var _aktifGorevId = null;
+var _gorevFotolar = [null, null, null];
+var _aktifFotoIndex = 0;
+
+function gorevTamamlaModalAc(gorevId){
+  _aktifGorevId = gorevId;
+  _gorevFotolar = [null, null, null];
+  [0,1,2].forEach(function(i){
+    var el = document.getElementById('gtm-foto-'+i);
+    if(el){ el.className='gorev-foto-box'; el.innerHTML='<span style="font-size:22px">📷</span><span>Fotoğraf '+(i+1)+'</span>'; }
+  });
+  var aclEl = document.getElementById('gtm-aciklama');
+  if(aclEl) aclEl.value = '';
+
+  // Süre bilgisi
+  fbGet('gorevler', gorevId).then(function(g){
+    if(!g) return;
+    var sureBilgi = document.getElementById('gtm-sure-bilgi');
+    if(!sureBilgi) return;
+    var gecenDk = Math.round((Date.now() - (g.olusturmaTs||Date.now())) / 60000);
+    var beklenDk = Math.round(((g.bitisTs||Date.now()) - (g.olusturmaTs||Date.now())) / 60000);
+    var tahmin = gecenDk <= beklenDk * 0.9 ? '⭐ Mükemmel' : (gecenDk <= beklenDk ? '✅ Olumlu' : '❌ Olumsuz');
+    var tahminRenk = gecenDk <= beklenDk * 0.9 ? 'var(--gold)' : (gecenDk <= beklenDk ? 'var(--green)' : 'var(--red)');
+    sureBilgi.innerHTML =
+      '<span style="font-size:16px">⏱️</span>' +
+      '<div><div style="font-size:11px;color:var(--text3)">Geçen süre</div>' +
+      '<div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)">'+gecenDk+' dk</div></div>' +
+      '<div style="margin-left:auto;text-align:right"><div style="font-size:11px;color:var(--text3)">Beklenen</div>' +
+      '<div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)">'+beklenDk+' dk</div></div>' +
+      '<div style="background:var(--bg4);width:1px;align-self:stretch"></div>' +
+      '<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Tahmini</div>' +
+      '<div style="font-size:12px;font-weight:700;color:'+tahminRenk+'">'+tahmin+'</div></div>';
+  }).catch(function(){});
+
+  gmodalAc('tamamla');
+}
+
+function gorevFotoSec(index){
+  _aktifFotoIndex = index;
+  var input = document.getElementById('gtm-file-input');
+  if(input){ input.value=''; input.click(); }
+}
+
+function gorevFotoYukle(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _gorevFotolar[_aktifFotoIndex] = e.target.result;
+    var el = document.getElementById('gtm-foto-'+_aktifFotoIndex);
+    if(el){
+      el.className = 'gorev-foto-box gf-dolu';
+      el.innerHTML = '<img src="'+e.target.result+'" alt=""><span style="position:absolute;bottom:4px;right:4px;background:var(--green);color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700">✓ '+(++_aktifFotoIndex>3?3:_aktifFotoIndex)+'</span>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function gorevTamamlaGonder(){
+  if(!_aktifGorevId){ toast('Görev bulunamadı','err'); return; }
+  var fotolar = _gorevFotolar.filter(function(f){ return f !== null; });
+  if(fotolar.length < 3){ toast('3 fotoğraf zorunludur','err'); return; }
+  var aciklama = (document.getElementById('gtm-aciklama')||{}).value||'';
+  if(!aciklama.trim()){ toast('Tamamlama açıklaması zorunludur','err'); return; }
+
+  try{
+    var g = await fbGet('gorevler', _aktifGorevId);
+    if(!g){ toast('Görev bulunamadı','err'); return; }
+
+    var tamamlamaTs = Date.now();
+    var gecenDk = (tamamlamaTs - (g.olusturmaTs||tamamlamaTs)) / 60000;
+    var beklenDk = ((g.bitisTs||tamamlamaTs) - (g.olusturmaTs||tamamlamaTs)) / 60000;
+    var degerlendirme = gecenDk <= beklenDk * 0.9 ? 'mukemmel' : (gecenDk <= beklenDk ? 'olumlu' : 'olumsuz');
+
+    await fbSet('gorevler', _aktifGorevId, Object.assign({}, g, {
+      durum: 'tamam',
+      tamamlamaTs: tamamlamaTs,
+      tamamlamaAciklama: aciklama.trim(),
+      fotolar: fotolar,
+      degerlendirme: degerlendirme
+    }));
+
+    // Kariyer puanını güncelle
+    await _kariyerPuanGuncelle(normTel(user.tel||''), degerlendirme);
+
+    gmodalKapat('tamamla');
+    toast('Görev tamamlandı! '+({mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[degerlendirme]),'ok');
+    renderGorevEkrani();
+  }catch(e){ toast('Görev kaydedilemedi','err'); }
+}
+
+// Savunma modal
+function gorevSavunmaModalAc(){ gmodalAc('savunma'); }
+
+async function gorevSavunmaGonder(){
+  var txt = (document.getElementById('gsavunma-txt')||{}).value||'';
+  if(!txt.trim()){ toast('Savunma metni boş olamaz','err'); return; }
+  var telNorm = normTel(user.tel||'');
+  try{
+    var mevcut = await _kariyerVeriAl(telNorm) || {};
+    await fbSet('kariyer_puanlar', telNorm, Object.assign({}, mevcut, {
+      savunmaYazildi: true,
+      savunmaTarihi: new Date().toISOString(),
+      savunmaMetni: txt.trim()
+    }));
+    gmodalKapat('savunma');
+    toast('Savunma gönderildi ✓','ok');
+    renderGorevEkrani();
+  }catch(e){ toast('Gönderilemedi','err'); }
+}
+
+// Şablon kaydet
+async function gorevSablonKaydet(){
+  var baslik = (document.getElementById('gs-baslik')||{}).value||'';
+  var aciklama = (document.getElementById('gs-aciklama')||{}).value||'';
+  var sure = parseInt((document.getElementById('gs-sure')||{}).value||'0');
+  var ikon = (document.getElementById('gs-ikon')||{}).value||'📋';
+  if(!baslik.trim()){ toast('Şablon adı zorunlu','err'); return; }
+  var sablon = { id:'s_'+Date.now(), baslik:baslik.trim(), aciklama:aciklama.trim(), sure:sure||0, ikon:ikon.trim()||'📋', olusturanTel:normTel(user.tel||'') };
+  try{
+    await fbSet('gorev_sablonlar', sablon.id, sablon);
+    gmodalKapat('yeni-sablon');
+    toast('Şablon kaydedildi ✓','ok');
+    gorevTabGec('sablon');
+    renderGorevEkrani();
+  }catch(e){ toast('Kaydedilemedi','err'); }
+}
+
+var _aktifSablonId = null;
+async function gorevSablonSecModalAc(sablonId){
+  _aktifSablonId = sablonId;
+  try{
+    var s = await fbGet('gorev_sablonlar', sablonId);
+    var detayEl = document.getElementById('gsec-sablon-detay');
+    if(detayEl && s){
+      detayEl.innerHTML =
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">'+(s.ikon||'📋')+' '+escHtml(s.baslik||'')+'</div>' +
+        '<div style="font-size:11px;color:var(--text3)">'+escHtml(s.aciklama||'')+'</div>' +
+        (s.sure ? '<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:6px">⏱️ Tahmini: '+s.sure+' dakika</div>' : '');
+    }
+    gmodalAc('sablon-sec');
+  }catch(e){}
+}
+
+async function gorevSablondanAta(){
+  var personelVal = (document.getElementById('gsec-personel')||{}).value||'';
+  var bitis = (document.getElementById('gsec-bitis')||{}).value||'';
+  if(!personelVal){ toast('Personel seçin','err'); return; }
+  if(!bitis){ toast('Bitiş süresi zorunlu','err'); return; }
+  try{
+    var s = await fbGet('gorev_sablonlar', _aktifSablonId);
+    if(!s){ toast('Şablon bulunamadı','err'); return; }
+    var parcalar = personelVal.split('|');
+    var atananTel = parcalar[0]; var atananAd = parcalar[1]||'';
+    var bitisTs = new Date(bitis).getTime();
+    if(bitisTs <= Date.now()){ toast('Bitiş süresi geçmişte olamaz','err'); return; }
+    var gorev = { id:'g_'+Date.now(), baslik:s.baslik, aciklama:s.aciklama,
+      atayanTel:normTel(user.tel||''), atayanAd:user.ad||'', atayanRol:user.rol||'personel',
+      atananTel:atananTel, atananAd:atananAd, oncelik:'normal',
+      bitisTs:bitisTs, durum:'devam', olusturmaTs:Date.now(),
+      fotolar:[], tamamlamaAciklama:'', degerlendirme:null, tamamlamaTs:null };
+    await fbSet('gorevler', gorev.id, gorev);
+    gmodalKapat('sablon-sec');
+    toast('Görev atandı ✓','ok');
+    renderGorevEkrani();
+  }catch(e){ toast('Görev kaydedilemedi','err'); }
+}
+
+// ─── KARİYER SİSTEMİ ──────────────────────────────────────────
+async function _kariyerVeriAl(telNorm){
+  try{ return await fbGet('kariyer_puanlar', telNorm); }catch(e){ return null; }
+}
+
+async function _kariyerPuanGuncelle(telNorm, degerlendirme){
+  var mevcut = await _kariyerVeriAl(telNorm) || {
+    tel: telNorm, basamak: 1, mukemmelSayisi: 0, olumluSayisi: 0, olumsuzSayisi: 0,
+    savunmaGerekli: false, savunmaYazildi: false
+  };
+
+  if(degerlendirme === 'mukemmel') mevcut.mukemmelSayisi = (mevcut.mukemmelSayisi||0) + 1;
+  else if(degerlendirme === 'olumlu') mevcut.olumluSayisi = (mevcut.olumluSayisi||0) + 1;
+  else if(degerlendirme === 'olumsuz') mevcut.olumsuzSayisi = (mevcut.olumsuzSayisi||0) + 1;
+
+  // Basamak hesapla
+  var mukemmelBasamak = Math.floor((mevcut.mukemmelSayisi||0) / 5) * 2;
+  var olumluBasamak   = Math.floor((mevcut.olumluSayisi||0) / 5);
+  var olumsuzBasamak  = Math.floor((mevcut.olumsuzSayisi||0) / 5);
+  mevcut.basamak = Math.max(1, Math.min(100, 1 + mukemmelBasamak + olumluBasamak - olumsuzBasamak));
+
+  // Savunma kontrolü (5 olumsuz)
+  if((mevcut.olumsuzSayisi||0) > 0 && (mevcut.olumsuzSayisi||0) % 5 === 0){
+    mevcut.savunmaGerekli = true;
+    mevcut.savunmaYazildi = false;
+  }
+
+  await fbSet('kariyer_puanlar', telNorm, mevcut);
+  return mevcut;
+}
+
+async function renderKariyerEkrani(){
+  var el = document.getElementById('kariyer-content');
+  if(!el || !user) return;
+  el.innerHTML = '<div class="egitim-yukle-spinner">⟳ Yükleniyor...</div>';
+
+  var telNorm = normTel(user.tel||'');
+  var kariyer = await _kariyerVeriAl(telNorm);
+  if(!kariyer){ kariyer = {basamak:1,mukemmelSayisi:0,olumluSayisi:0,olumsuzSayisi:0}; }
+
+  var basamak = kariyer.basamak || 1;
+  var unvan   = kariyerUnvan(basamak);
+  var progPct = (basamak / 100) * 100;
+
+  // Sonraki basamak için kaç puan lazım
+  var sonrakiInfo = '';
+  var toplamOlumlu = (kariyer.olumluSayisi||0) % 5;
+  var toplamMukemmel = (kariyer.mukemmelSayisi||0) % 5;
+  var kalanOlumlu = 5 - toplamOlumlu;
+  var kalanMukemmel = 5 - toplamMukemmel;
+  sonrakiInfo = kalanMukemmel + ' mükemmel veya ' + kalanOlumlu + ' olumlu → Sonraki basamak';
+
+  var html = '';
+
+  // HEADER
+  html += '<div class="kart" style="margin-top:14px">';
+  html += '<div class="kariyer-header-wrap">';
+  html += '<div style="font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Kariyer Seviyesi</div>';
+  html += '<div class="kariyer-seviye-no">'+basamak+'</div>';
+  html += '<div class="kariyer-unvan">'+unvan+'</div>';
+  html += '<div style="margin-top:16px">';
+  html += '<div class="kariyer-prog-bar"><div class="kariyer-prog-fill" style="width:'+progPct+'%"></div></div>';
+  html += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);font-family:var(--mono)">';
+  html += '<span>Seviye '+basamak+'</span><span>'+sonrakiInfo+'</span><span>100</span></div>';
+  html += '</div></div>';
+
+  // STAT GRID
+  html += '<div class="kariyer-stat-grid">';
+  html += '<div class="kariyer-stat"><div class="kariyer-stat-no" style="color:var(--gold)">⭐ '+(kariyer.mukemmelSayisi||0)+'</div><div class="kariyer-stat-lbl">Mükemmel</div></div>';
+  html += '<div class="kariyer-stat"><div class="kariyer-stat-no" style="color:var(--green)">✅ '+(kariyer.olumluSayisi||0)+'</div><div class="kariyer-stat-lbl">Olumlu</div></div>';
+  html += '<div class="kariyer-stat"><div class="kariyer-stat-no" style="color:var(--red)">❌ '+(kariyer.olumsuzSayisi||0)+'</div><div class="kariyer-stat-lbl">Olumsuz</div></div>';
+  html += '</div></div>';
+
+  // Savunma uyarısı
+  if(kariyer.savunmaGerekli && !kariyer.savunmaYazildi){
+    html += '<div class="gorev-savunma-kutu" style="margin-top:10px">';
+    html += '<div style="font-size:20px">⚠️</div>';
+    html += '<div class="gorev-savunma-txt"><b>Savunma Gerekiyor!</b><br>5 olumsuz değerlendirme aldınız. Savunma yazana kadar yeni görev atanmayacaktır.';
+    html += '<button onclick="showScreen(\'gorev\');gorevSavunmaModalAc()" style="margin-top:8px;background:var(--red);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);display:block;width:100%">Savunma Yaz →</button>';
+    html += '</div></div>';
+  }
+
+  // BASAMAK SEVİYELERİ
+  html += '<div class="slabel">Kariyer Basamakları</div>';
+  html += '<div class="kart"><div style="padding:0 14px 14px">';
+  var seviyeler = [
+    {min:90,max:100,unvan:'👑 Depo Efsanesi',renk:'rgba(255,214,0,.2)',txtRenk:'var(--gold)'},
+    {min:70,max:89,unvan:'💎 Uzman Depo Personeli',renk:'rgba(156,39,176,.2)',txtRenk:'#ce93d8'},
+    {min:50,max:69,unvan:'🥇 Kıdemli Uzman',renk:'rgba(100,100,255,.2)',txtRenk:'#90caf9'},
+    {min:20,max:49,unvan:'🥈 Kıdemli Personel',renk:'rgba(255,255,255,.05)',txtRenk:'var(--text2)'},
+    {min:10,max:19,unvan:'🥉 Deneyimli Personel',renk:'rgba(105,240,174,.05)',txtRenk:'var(--green)'},
+    {min:1,max:9,unvan:'🔰 Yeni Personel',renk:'var(--bg3)',txtRenk:'var(--text3)'}
+  ];
+  seviyeler.forEach(function(s){
+    var aktif = basamak >= s.min && basamak <= s.max;
+    var tamamlandi = basamak > s.max;
+    html += '<div class="kariyer-basamak-item"' + (aktif?' style="background:rgba(255,214,0,.05);border-radius:var(--r-sm);margin:0 -4px;padding:9px 4px"':'') + '>';
+    html += '<div class="kariyer-basamak-no" style="background:'+s.renk+';color:'+s.txtRenk+'">'+s.min+'</div>';
+    html += '<div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">'+s.unvan;
+    if(aktif) html += ' <span style="font-size:10px;color:var(--accent);font-weight:700">← Sen buradasın</span>';
+    html += '</div><div style="font-size:10px;color:var(--text3)">Seviye '+s.min+'–'+s.max+'</div></div>';
+    html += '<div style="font-family:var(--mono);font-size:12px;color:'+(tamamlandi?'var(--green)':'var(--text3)')+'">'+( tamamlandi?'✓':(aktif?basamak:'🔒'))+'</div>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  // GÖREV GEÇMİŞİ (son değerlendirmeler)
+  html += '<div class="slabel">Son Değerlendirmeler</div>';
+  var gorevler = [];
+  try{
+    var snap2 = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    snap2.forEach(function(d){
+      var g = d.data();
+      if(normTel(g.atananTel||'') === telNorm && g.degerlendirme) gorevler.push(g);
+    });
+    gorevler.sort(function(a,b){ return (b.tamamlamaTs||0)-(a.tamamlamaTs||0); });
+    gorevler = gorevler.slice(0,10);
+  }catch(e){}
+
+  if(!gorevler.length){
+    html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz değerlendirme yok</div>';
+  } else {
+    html += '<div class="kart" style="padding:14px">';
+    gorevler.forEach(function(g){
+      var degClass = {mukemmel:'gdeg-mukemmel',olumlu:'gdeg-olumlu',olumsuz:'gdeg-olumsuz'}[g.degerlendirme]||'gdeg-olumlu';
+      var degTxt = {mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[g.degerlendirme]||'';
+      var puan = {mukemmel:'+2 ↑',olumlu:'+1 ↑',olumsuz:'-1 ↓'}[g.degerlendirme]||'';
+      var puanRenk = {mukemmel:'var(--gold)',olumlu:'var(--green)',olumsuz:'var(--red)'}[g.degerlendirme]||'var(--text3)';
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
+      html += '<span class="gorev-deg '+degClass+'" style="padding:3px 8px;font-size:10px">'+degTxt+'</span>';
+      html += '<div style="flex:1;font-size:11px;color:var(--text2)">'+escHtml(g.baslik||'')+'</div>';
+      html += '<span style="font-family:var(--mono);font-size:10px;color:'+puanRenk+'">'+puan+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// Yönetici tüm personelin kariyerini görebilir
+async function renderKariyerTumPersonel(){
+  if(!isYonetici()) return '';
+  var html = '<div class="slabel">Personel Kariyer Durumu</div>';
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db,'kariyer_puanlar'));
+    var liste = [];
+    snap.forEach(function(d){ liste.push(d.data()); });
+    liste.sort(function(a,b){ return (b.basamak||1)-(a.basamak||1); });
+    html += '<div class="kart" style="padding:14px">';
+    liste.forEach(function(k){
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">';
+      html += '<div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--accent);width:32px;text-align:center">'+( k.basamak||1)+'</div>';
+      html += '<div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(k.tel||'')+'</div>';
+      html += '<div style="font-size:10px;color:var(--text3)">'+kariyerUnvan(k.basamak||1)+'</div></div>';
+      html += '<div style="font-size:10px;font-family:var(--mono);color:var(--text3)">⭐'+(k.mukemmelSayisi||0)+' ✅'+(k.olumluSayisi||0)+' ❌'+(k.olumsuzSayisi||0)+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }catch(e){ html += '<div style="font-size:12px;color:var(--text3);padding:10px">Yüklenemedi</div>'; }
+  return html;
+}
 function rehberToggle(id){
   var el = document.getElementById(id);
   if(el) el.classList.toggle('acik');
