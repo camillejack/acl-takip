@@ -883,15 +883,15 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
       <div class="slabel">1. Barkod</div>
       <div class="pair-card">
         <div class="pair-hint">Önce orijinal veya muadil — sıra önemli değil. Okuttuktan sonra tipini seç.</div>
-        <div class="cam-wrap" id="cam-a">
-          <video id="vid-a" playsinline autoplay muted></video>
-          <div class="sf"><span></span><span></span><span></span><span></span></div>
-          <div class="sl" id="sl-a"></div>
-          <div class="cam-ph" id="ph-a"><div class="cam-ph-ico">⬛</div><div>Kamera ile okut</div></div>
+        <div style="background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:28px;flex-shrink:0">🔴</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">Okutmak için barkoda lazer tut</div>
+            <div style="font-size:11px;color:var(--text3)">Terminal tuşuna bas → barkodu okut → otomatik eklenir</div>
+          </div>
         </div>
-        <button class="cam-btn" id="cbtn-a" onclick="toggleCam('a')">📷 Kamerayı Aç</button>
         <div class="manual-row">
-          <input class="m-input" id="mi-a" placeholder="Manuel barkod gir..." inputmode="numeric" onkeydown="if(event.key==='Enter')applyManual('a')">
+          <input class="m-input" id="mi-a" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="none" autocomplete="off" onkeydown="if(event.key==='Enter')applyManual('a')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('a')">Ekle</button>
         </div>
         <div class="bc-done" id="done-a">
@@ -907,15 +907,15 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 
       <div class="slabel">2. Barkod</div>
       <div class="pair-card">
-        <div class="cam-wrap" id="cam-b">
-          <video id="vid-b" playsinline autoplay muted></video>
-          <div class="sf"><span></span><span></span><span></span><span></span></div>
-          <div class="sl" id="sl-b"></div>
-          <div class="cam-ph" id="ph-b"><div class="cam-ph-ico">⬛</div><div>Kamera ile okut</div></div>
+        <div style="background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:28px;flex-shrink:0">🔴</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">Okutmak için barkoda lazer tut</div>
+            <div style="font-size:11px;color:var(--text3)">Terminal tuşuna bas → barkodu okut → otomatik eklenir</div>
+          </div>
         </div>
-        <button class="cam-btn" id="cbtn-b" onclick="toggleCam('b')">📷 Kamerayı Aç</button>
         <div class="manual-row">
-          <input class="m-input" id="mi-b" placeholder="Manuel barkod gir..." inputmode="numeric" onkeydown="if(event.key==='Enter')applyManual('b')">
+          <input class="m-input" id="mi-b" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="none" autocomplete="off" onkeydown="if(event.key==='Enter')applyManual('b')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('b')">Ekle</button>
         </div>
         <div class="bc-done" id="done-b">
@@ -1576,6 +1576,9 @@ function showScreen(name){
       if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
     }
   });
+  if(name==='kayit'){
+    setTimeout(function(){ var el=document.getElementById('mi-a'); if(el) el.focus(); },200);
+  }
   if(name==='liste') renderList();
   if(name==='isbasi') renderIsbasiEkrani();
   if(name==='mola') renderMolaEkrani();
@@ -1667,6 +1670,10 @@ function setBc(s,val){
   document.getElementById('t'+s+'-mua').className='tip-btn';
   checkSave();
   showBarkodOnay(val);
+  // Slot A okundu → Slot B input'una otomatik odaklan
+  if(s==='a' && !slots.b.bc){
+    setTimeout(function(){ var el=document.getElementById('mi-b'); if(el) el.focus(); },300);
+  }
 }
 
 function showBarkodOnay(kod){
@@ -1725,6 +1732,8 @@ function clearSlot(s){
   document.getElementById('t'+s+'-ori').className='tip-btn';
   document.getElementById('t'+s+'-mua').className='tip-btn';
   checkSave();
+  // Temizlenince o input'a odaklan
+  setTimeout(function(){ var el=document.getElementById('mi-'+s); if(el) el.focus(); },100);
 }
 function setTip(s,tip){
   slots[s].tip=tip;
