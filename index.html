@@ -719,7 +719,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .ozet-baslik { font-size:13px; font-weight:700; color:var(--metin); margin-bottom:3px; }
 .ozet-ac { font-size:11px; color:var(--metin2); line-height:1.5; }
 
-/* ─── GÖREV & KARİYER SİSTEMİ ─────────────────────────────── */
+/* GÖREV BİLDİRİM BANNER */
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 .gorev-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:8px;position:relative;overflow:hidden}
 .gorev-kart::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
 .gorev-kart.gk-bekliyor::before{background:var(--accent)}
@@ -1115,7 +1116,9 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 <!-- GÖREV MODAL OVERLAYLERİ — body seviyesinde (position:fixed için) -->
 <div class="gorev-modal-overlay" id="gmodal-tamamla">
   <div class="gorev-modal" onclick="event.stopPropagation()">
-    <div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gmodalKapat('tamamla')">×</button></div>
+    <div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gorevFotoSayacDurdur();gmodalKapat('tamamla')">×</button></div>
+    <!-- 3 DAKİKA SAYACI -->
+    <div id="gtm-sayac" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px"></div>
     <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--accent)">📸 3 farklı açıdan fotoğraf ve açıklama zorunludur</div>
     <div class="gorev-form-label">Fotoğraflar (3 adet zorunlu)</div>
     <div class="gorev-foto-grid" id="gtm-foto-grid">
@@ -3823,7 +3826,148 @@ var GENEL_SINAV_SORULAR = [
   {soru:'Kırmızı timer ne anlama gelir?', secenekler:['Normal hız','Süre aşıldı hızlan','Sipariş iptal','Mola zamanı'], dogru:1, aciklama:'Kırmızı timer belirlenen sipariş toplama süresinin dolduğunu gösterir. Hızlanmak ve tamamlamak gerekir.'}
 ];
 
-// ─── GÖREV & KARİYER SİSTEMİ ──────────────────────────────────────────────────
+// ─── GÖREV BİLDİRİM SESİ ─────────────────────────────────────
+function gorevBildirimSesiCal(){
+  try{
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Görev bildirimi: 2 uzun + 1 kısa bip — duyurudan farklı
+    function _gbip(bas, fq1, fq2, sure, vol){
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      var shaper = ctx.createWaveShaper();
+      var curve = new Float32Array(256);
+      for(var i=0;i<256;i++){ var x=(i*2)/256-1; curve[i]=(Math.PI+150)*x/(Math.PI+150*Math.abs(x)); }
+      shaper.curve = curve; shaper.oversample = '4x';
+      osc.connect(shaper); shaper.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(fq1, ctx.currentTime+bas);
+      osc.frequency.setValueAtTime(fq2, ctx.currentTime+bas+sure*0.5);
+      gain.gain.setValueAtTime(0, ctx.currentTime+bas);
+      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime+bas+0.015);
+      gain.gain.setValueAtTime(vol, ctx.currentTime+bas+sure-0.04);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime+bas+sure);
+      osc.start(ctx.currentTime+bas); osc.stop(ctx.currentTime+bas+sure);
+    }
+    _gbip(0.00, 700, 900, 0.25, 0.85);
+    _gbip(0.30, 700, 900, 0.25, 0.85);
+    _gbip(0.60, 1100, 800, 0.15, 0.95);
+    setTimeout(function(){ try{ ctx.close(); }catch(e){} }, 1500);
+  }catch(e){}
+}
+
+// ─── GÖREV REALTIME LİSTENER ──────────────────────────────────
+var _gorevRealtimeListener = null;
+
+function gorevRealtimeDinle(){
+  if(!user || !window._fbReady) return;
+  if(_gorevRealtimeListener){ try{ _gorevRealtimeListener(); }catch(e){} _gorevRealtimeListener = null; }
+
+  var _kulTelNorm = normTel(user.tel||'');
+  var _baslangicTs = Date.now();
+
+  try{
+    var _fb = window._fb;
+    var q = _fb.query(_fb.collection(_fb.db,'gorevler'), _fb.orderBy('olusturmaTs','desc'));
+    _gorevRealtimeListener = _fb.onSnapshot(q, function(snapshot){
+      snapshot.docChanges().forEach(function(change){
+        if(change.type !== 'added') return;
+        var g = change.doc.data();
+        if(!g || !g.olusturmaTs) return;
+        if(g.olusturmaTs <= _baslangicTs) return;
+        // Sadece bana atandıysa
+        if(normTel(g.atananTel||'') !== _kulTelNorm) return;
+
+        // Ses + bildirim
+        gorevBildirimSesiCal();
+
+        // Başlangıç ve bitiş saatlerini formatla
+        var baslangicStr = new Date(g.olusturmaTs).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+        var bitisStr = g.bitisTs ? new Date(g.bitisTs).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+        var bitisTarih = g.bitisTs ? new Date(g.bitisTs).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}) : '';
+
+        // In-app bildirim banner
+        _gorevBildirimBannerGoster(g.baslik||'', baslangicStr, bitisStr, bitisTarih, g.id);
+
+        // Sistem bildirimi
+        yerelBildirimGoster(
+          '📋 Yeni Görev Atandı',
+          (g.baslik||'') + ' — Başla: ' + baslangicStr + ' Bitir: ' + bitisStr + (bitisTarih?' ('+bitisTarih+')':'')
+        );
+      });
+    }, function(err){ console.warn('Görev listener hatası:', err); });
+  }catch(e){ console.warn('Görev listener başlatılamadı:', e); }
+}
+
+function _gorevBildirimBannerGoster(baslik, baslangicStr, bitisStr, bitisTarih, gorevId){
+  // Eski banner varsa kaldır
+  var eski = document.getElementById('gorev-bildirim-banner');
+  if(eski) eski.remove();
+
+  var banner = document.createElement('div');
+  banner.id = 'gorev-bildirim-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#6a1fc2,#4a0e8f);padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:slideDown .3s ease';
+  banner.innerHTML =
+    '<div style="font-size:24px;flex-shrink:0">📋</div>' +
+    '<div style="flex:1">' +
+      '<div style="font-size:13px;font-weight:700;color:#fff">Yeni Görev Atandı!</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">'+escHtml(baslik)+'</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;font-family:var(--mono)">'+
+        '▶ '+baslangicStr+' → ⏹ '+bitisStr+(bitisTarih?' ('+bitisTarih+')':'')+
+      '</div>' +
+    '</div>' +
+    '<button onclick="showScreen(\'gorev\');document.getElementById(\'gorev-bildirim-banner\').remove()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);flex-shrink:0">Göreve Git</button>' +
+    '<button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;flex-shrink:0">×</button>';
+
+  document.body.appendChild(banner);
+  // 10 saniye sonra otomatik kapat
+  setTimeout(function(){ if(banner.parentElement) banner.remove(); }, 10000);
+}
+
+// ─── 3 DAKİKA FOTOĞRAF YÜKLEME SAYACI ────────────────────────
+var _gorevFotoSayacInterval = null;
+var _gorevFotoSayacSaniye = 180; // 3 dakika
+
+function gorevFotoSayacBaslat(){
+  _gorevFotoSayacSaniye = 180;
+  if(_gorevFotoSayacInterval) clearInterval(_gorevFotoSayacInterval);
+
+  _gorevFotoSayacGuncelle();
+  _gorevFotoSayacInterval = setInterval(function(){
+    _gorevFotoSayacSaniye--;
+    _gorevFotoSayacGuncelle();
+    if(_gorevFotoSayacSaniye <= 0){
+      clearInterval(_gorevFotoSayacInterval);
+      _gorevFotoSayacInterval = null;
+      // Süre doldu — modalı kapat, görevi gecikti say
+      gmodalKapat('tamamla');
+      toast('⏰ 3 dakika doldu! Görev fotoğraf yükleme süresi geçti.','err');
+      duyuruSesiCal(); // uyarı sesi
+    }
+  }, 1000);
+}
+
+function _gorevFotoSayacGuncelle(){
+  var el = document.getElementById('gtm-sayac');
+  if(!el) return;
+  var dk = Math.floor(_gorevFotoSayacSaniye / 60);
+  var sn = _gorevFotoSayacSaniye % 60;
+  var renk = _gorevFotoSayacSaniye > 60 ? 'var(--green)' : (_gorevFotoSayacSaniye > 30 ? 'var(--orange)' : 'var(--red)');
+  var pct = (_gorevFotoSayacSaniye / 180) * 100;
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+      '<span style="font-size:11px;color:var(--text3)">⏰ Fotoğraf yükleme süresi</span>' +
+      '<span style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+renk+'">'+
+        String(dk).padStart(2,'0')+':'+String(sn).padStart(2,'0')+
+      '</span>' +
+    '</div>' +
+    '<div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">' +
+      '<div style="height:100%;width:'+pct+'%;background:'+renk+';border-radius:2px;transition:width 1s linear"></div>' +
+    '</div>';
+}
+
+function gorevFotoSayacDurdur(){
+  if(_gorevFotoSayacInterval){ clearInterval(_gorevFotoSayacInterval); _gorevFotoSayacInterval = null; }
+}
 
 // Görev veri yapısı
 // gorevler: { id, baslik, aciklama, atayanTel, atayanAd, atayanRol,
@@ -4253,6 +4397,8 @@ function gorevTamamlaModalAc(gorevId){
   }).catch(function(){});
 
   gmodalAc('tamamla');
+  // 3 dakika sayacını başlat
+  gorevFotoSayacBaslat();
 }
 
 function gorevFotoSec(index){
@@ -4303,6 +4449,7 @@ async function gorevTamamlaGonder(){
     // Kariyer puanını güncelle
     await _kariyerPuanGuncelle(normTel(user.tel||''), degerlendirme);
 
+    gorevFotoSayacDurdur(); // Sayacı durdur
     gmodalKapat('tamamla');
     toast('Görev tamamlandı! '+({mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[degerlendirme]),'ok');
     renderGorevEkrani();
@@ -5782,8 +5929,8 @@ function konumGuncelle(){
       if(m < enYakinMesafe){ enYakinMesafe=m; enYakin=d; }
     });
 
-    // 50m → depoda (giriş bölgesi)
-    if(enYakinMesafe <= 50){
+    // 150m → depoda (giriş bölgesi) — kapalı alan GPS sapması için genişletildi
+    if(enYakinMesafe <= 150){
       yakinDepo = {id:enYakin.id, ad:enYakin.ad, lat:enYakin.lat, lng:enYakin.lng, mesafe:Math.round(enYakinMesafe)};
 
       // Depo girişi tespit et - dışarıdan içeri geldi
@@ -5977,7 +6124,7 @@ function renderIsbasiEkrani(){
         <div class="isbasi-lokasyon-ico">${btnAktif?'🏢':'📍'}</div>
         <div class="isbasi-lokasyon-info">
           <div class="isbasi-lokasyon-name">${btnAktif?yakinDepo.ad:'Depo Tespit Ediliyor'}</div>
-          <div class="isbasi-lokasyon-sub">${btnAktif?yakinDepo.mesafe+'m yakınınızdasınız':'10m yakınına gelince buton aktif olur'}</div>
+          <div class="isbasi-lokasyon-sub">${btnAktif?yakinDepo.mesafe+'m yakınınızdasınız':'150m yakınına gelince buton aktif olur'}</div>
         </div>
         ${btnAktif?`<span class="isbasi-mesafe yakin">${yakinDepo.mesafe}m</span>`:''}
       </div>
@@ -6000,7 +6147,7 @@ function buildDepolerKartiHtml(depolar){
   return '<div class="slabel" style="margin-top:16px">Tüm Şubeler</div>'+
     depolar.map(d=>{
       const m = sonKonum && d.lat ? Math.round(mesafeHesapla(sonKonum.lat,sonKonum.lng,d.lat,d.lng)) : null;
-      const yakin = m !== null && m <= 50;
+      const yakin = m !== null && m <= 150;
       return `<div class="isbasi-kart" style="${yakin?'border-color:var(--green)':''}">
         <div class="isbasi-lokasyon">
           <div class="isbasi-lokasyon-ico">🏢</div>
@@ -6538,6 +6685,8 @@ function loginBasarili(){
   setInterval(function(){ bildirimDinle(); }, 3 * 60 * 1000); // Her 3 dakikada bir
   // Duyuru realtime listener — Firebase anlık dinleme
   setTimeout(function(){ duyuruRealtimeDinle(); }, 6000);
+  // Görev realtime listener — yeni görev atanınca ses + bildirim
+  setTimeout(function(){ gorevRealtimeDinle(); }, 7000);
   document.getElementById('brand-user').textContent = user.ad;
   var rolBadge = document.getElementById('rol-badge');
   if(rolBadge && ROLLER[user.rol]){
