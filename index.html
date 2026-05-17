@@ -3112,6 +3112,12 @@ function showMolaUyariBanner(tip, saat, sure){
 var _lbFotolar = [];
 var _lbIndex = 0;
 
+function fotoLightboxAcGorev(gorevId, index){
+  var harita = window._gorevFotoHarita || {};
+  var fotolar = harita[gorevId] || [];
+  fotoLightboxAc(fotolar, index || 0);
+}
+
 function fotoLightboxAc(fotolar, index){
   _lbFotolar = fotolar || [];
   _lbIndex = index || 0;
@@ -4355,9 +4361,12 @@ function _gorevKartHtml(g, yoneticiGorunumu){
 
     // Fotoğraflar
     if(g.fotolar && g.fotolar.length){
+      // Fotoları global haritaya kaydet — onclick'te base64 sorununu önler
+      window._gorevFotoHarita = window._gorevFotoHarita || {};
+      window._gorevFotoHarita[g.id] = g.fotolar;
       html += '<div class="gorev-foto-grid">';
       g.fotolar.forEach(function(f, i){
-        html += '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAc('+JSON.stringify(g.fotolar)+','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt=""></div>';
+        html += '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAcGorev(\''+escHtml(g.id)+'\','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt="" loading="lazy"></div>';
       });
       html += '</div>';
     }
