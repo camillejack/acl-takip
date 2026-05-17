@@ -4574,6 +4574,20 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     }
   }
 
+  // ── DETAY BİLGİLERİ ──
+  var fmtD = function(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); };
+  var verilenSure = g.bitisTs && g.olusturmaTs ? Math.round((g.bitisTs-g.olusturmaTs)/60000) : null;
+  var gercekSure  = g.tamamlamaTs && g.olusturmaTs ? Math.round((g.tamamlamaTs-g.olusturmaTs)/60000) : null;
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px">';
+  html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Atanma</div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:1px">'+fmtD(g.olusturmaTs)+'</div></div>';
+  html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Verilen Süre</div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:1px">'+(verilenSure!==null?verilenSure+'dk':'—')+'</div></div>';
+  if(g.tamamlamaTs){
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Bitirildi</div><div style="font-family:var(--mono);font-size:10px;color:var(--green);margin-top:1px">'+fmtD(g.tamamlamaTs)+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Gerçek Süre</div><div style="font-family:var(--mono);font-size:10px;color:'+(gercekSure&&verilenSure&&gercekSure>verilenSure?'var(--red)':'var(--green)')+';margin-top:1px">'+(gercekSure!==null?gercekSure+'dk':'—')+'</div></div>';
+  }
+  html += '</div>';
+
   // ── TAMAMLA BUTONU — sadece atanan kişi ──
   if(!yoneticiGorunumu && (durum === 'devam' || durum === 'gecikti' || durum === 'bekliyor')){
     var atananTelNorm = normTel(g.atananTel||'');
