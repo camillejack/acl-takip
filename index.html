@@ -3283,34 +3283,45 @@ function renderMolaEkrani(){
       _molaDepo = aktifDepoId ? _depolarM.find(function(d){return d.id===aktifDepoId;}) : _depolarM[0];
     }
   }
-  const sd=_molaDepo?_molaDepo.shift:null;
+  // Personel listesini doğru yapıdan al
+  const persons = (sd && sd.persons && sd.persons.length)
+    ? sd.persons
+    : (_molaDepo && _molaDepo.personeller && _molaDepo.personeller.length)
+      ? _molaDepo.personeller
+      : [];
+
   const myTelNorm=user?normTel(user.tel):'';
   const hakDk=60;
 
-  if(!sd||!sd.persons||!sd.persons.length){
+  if(!persons.length){
     el.innerHTML='<div class="empty-state"><div class="empty-ico">📅</div><div class="empty-txt">Vardiya tablosu girilmedi.<br>Yönetici vardiyaları tanımlamalı.</div></div>';
     return;
   }
 
   // Önce kendi kartını göster
-  const myP=sd.persons.find(p=>normTel(p.tel)===myTelNorm);
+  const myP=persons.find(p=>normTel(p.tel)===myTelNorm);
   let html='';
 
   if(myP){
-    html+='<div class="slabel" style="margin-top:0">Benim Molam</div>';
     html+=buildMolaKart(myP,true);
+  } else {
+    // Kendi kaydı yoksa boş mesaj
+    html+='<div class="empty-state"><div class="empty-ico">👤</div><div class="empty-txt">Bu vardiyada kaydınız bulunamadı.</div></div>';
   }
 
-  html+='<div class="slabel">Tüm Ekip</div>';
-  sd.persons.forEach(p=>{
-    if(normTel(p.tel)===myTelNorm) return;
-    html+=buildMolaKart(p,false);
-  });
+  // Yönetici ise ekip kartlarını da göster
+  if(isYonetici()){
+    html+='<div class="slabel" style="margin-top:14px">Ekip Mola Durumu</div>';
+    persons.forEach(p=>{
+      if(normTel(p.tel)===myTelNorm) return;
+      html+=buildMolaKart(p,false);
+    });
+  }
 
   el.innerHTML=html;
 
   // Sayaçları güncelle
-  sd.persons.forEach(p=>{
+  persons.forEach(p=>{
     const n=normTel(p.tel);
     const d=getMolaDurum(p.tel);
     if(d.aktif&&d.baslangic){
