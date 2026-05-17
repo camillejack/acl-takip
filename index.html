@@ -830,6 +830,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
           <div style="font-size:11px;color:rgba(255,255,255,.7)" id="duyuru-tarih"></div>
         </div>
       </div>
+      <div id="duyuru-acil-badge" style="display:none;background:var(--red);color:#fff;text-align:center;padding:8px;font-size:12px;font-weight:700;letter-spacing:.08em">⚠️ ACİL — HEMEN OKUYUN</div>
       <div style="padding:16px">
         <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px" id="duyuru-icerik"></div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px" id="duyuru-kimden"></div>
@@ -6622,22 +6623,49 @@ function bildirimTokenKaydet(){
   }).catch(function(){});
 }
 
-// Yerel bildirim göster (uygulama açıkken)
-function yerelBildirimGoster(baslik, icerik){
+// SW'dan gelen mesajları dinle (bildirim tıklaması)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(!e.data) return;
+    if(e.data.type === 'ACL_GOTO'){
+      var screen = e.data.screen || 'duyuru';
+      showScreen(screen);
+      // Acil duyuruyu otomatik aç
+      if(screen === 'duyuru' && _aktifDuyuru){
+        duyuruGoster(_aktifDuyuru, false);
+      }
+    }
+  });
+}
+
+// Push bildirimi — SW üzerinden Android native bildirim
+function yerelBildirimGoster(baslik, icerik, oncelik){
   if(!('Notification' in window)) return;
-  if(Notification.permission !== 'granted') return;
-  
-  navigator.serviceWorker.ready.then(function(reg){
-    reg.showNotification(baslik, {
-      body: icerik,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
-      tag: 'acl-duyuru-' + Date.now()
+  // İzin yoksa iste
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().then(function(p){
+      if(p === 'granted') yerelBildirimGoster(baslik, icerik, oncelik);
     });
+    return;
+  }
+  if(Notification.permission !== 'granted') return;
+
+  var isAcil = oncelik === 'acil';
+  var options = {
+    body: icerik,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'acl-duyuru-' + Date.now(),
+    vibrate: isAcil ? [300,100,300,100,300,100,500] : [200,100,200],
+    requireInteraction: isAcil, // acil: kapanmaz, tıklamak gerekir
+    silent: false,
+    data: { url: '/', oncelik: oncelik || 'normal' }
+  };
+
+  navigator.serviceWorker.ready.then(function(reg){
+    reg.showNotification(baslik, options);
   }).catch(function(){
-    // SW yoksa normal Notification kullan
-    new Notification(baslik, {body: icerik, icon: '/icon-192.png'});
+    try{ new Notification(baslik, options); }catch(e){}
   });
 }
 
@@ -6988,12 +7016,42 @@ function duyuruRealtimeDinle(){
         var okunanlar = JSON.parse(localStorage.getItem('acl_okunan_duyuru')||'[]');
         if(okunanlar.indexOf(d.id) !== -1) return;
 
-        // ✅ Ses çal + göster
-        duyuruSesiCal();
-        // Kısa gecikme — ses başladıktan sonra overlay aç
-        setTimeout(function(){ duyuruGoster(d); }, 300);
-        // Yerel bildirim de göster (uygulama arka plandaysa)
-        yerelBildirimGoster('📢 Yeni Duyuru', (d.icerik||'').substring(0, 80));
+        // ✅ Önceliğe göre ses + anons
+        if(d.oncelik === 'acil'){
+          // ACİL — güçlü ses + Türkçe sesli anons
+          duyuruSesiCal();
+          setTimeout(function(){
+            duyuruSesiCal(); // ikinci kez
+          }, 800);
+          // Türkçe sesli uyarı
+          setTimeout(function(){
+            if(window.speechSynthesis){
+              window.speechSynthesis.cancel();
+              var utt = new SpeechSynthesisUtterance('Acil duyuru var! Bildirimi açın ve okuyun!');
+              utt.lang = 'tr-TR';
+              utt.rate = 0.85;
+              utt.volume = 1.0;
+              utt.pitch = 1.1;
+              var voices = window.speechSynthesis.getVoices();
+              var trVoice = voices.find(function(v){ return v.lang === 'tr-TR'; }) ||
+                            voices.find(function(v){ return v.lang.startsWith('tr'); });
+              if(trVoice) utt.voice = trVoice;
+              setTimeout(function(){ window.speechSynthesis.speak(utt); }, 150);
+            }
+          }, 600);
+          // Acil duyuruyu hemen aç
+          setTimeout(function(){ duyuruGoster(d); }, 200);
+        } else {
+          // NORMAL — tek ses + overlay
+          duyuruSesiCal();
+          setTimeout(function(){ duyuruGoster(d); }, 300);
+        }
+        // Yerel bildirim (arka planda iken)
+        yerelBildirimGoster(
+          d.oncelik === 'acil' ? '🔴 ACİL DUYURU' : '📢 Yeni Duyuru',
+          (d.icerik||'').substring(0, 80),
+          d.oncelik || 'normal'
+        );
       });
     }, function(err){ console.warn('Duyuru realtime hata:', err); });
   }catch(e){ console.warn('Duyuru listener başlatılamadı:', e); }
@@ -7046,12 +7104,30 @@ async function duyuruKontrol(){
 
 function duyuruGoster(d, sesCal){
   _aktifDuyuru = d;
+  var isAcil = d.oncelik === 'acil';
+
+  // Overlay rengi ve başlık — acil kırmızı, normal mor
+  var box = document.getElementById('duyuru-box');
+  var header = box ? box.querySelector('div') : null;
+  if(header){
+    header.style.background = isAcil ? 'linear-gradient(135deg,#b71c1c,#e53935)' : 'var(--accent2)';
+  }
+  // İkon ve başlık
+  var ikonel = box ? box.querySelector('span') : null;
+  if(ikonel) ikonel.textContent = isAcil ? '🔴' : '📢';
+  var baslikEl = box ? box.querySelector('div > div > div:first-child') : null;
+  if(baslikEl) baslikEl.textContent = isAcil ? 'ACİL DUYURU!' : 'Yeni Duyuru';
+
+  // Acil badge
+  var acilBadge = document.getElementById('duyuru-acil-badge');
+  if(acilBadge) acilBadge.style.display = isAcil ? 'block' : 'none';
+
   document.getElementById('duyuru-tarih').textContent = d.tarih||'';
   document.getElementById('duyuru-icerik').textContent = d.icerik||'';
   document.getElementById('duyuru-kimden').textContent = 'Gönderen: '+(d.gonderen||'Yönetim');
+
   const ov = document.getElementById('duyuru-overlay');
   ov.style.display = 'flex';
-  // Ses — realtime listener zaten çalıyor, duyuruKontrol akışında da çal
   if(sesCal !== false) duyuruSesiCal();
 }
 
@@ -7149,6 +7225,17 @@ function renderDuyuruEkrani(){
         '</div>'+
         '<div class="mgr-label" style="margin-bottom:5px">Duyuru İçeriği</div>'+
         '<textarea id="duyuru-icerik-input" class="note-ta" rows="4" placeholder="Duyuru metni..." style="margin-bottom:10px;width:100%"></textarea>'+
+        '<div class="mgr-label" style="margin-bottom:5px">Öncelik</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+          '<label style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:2px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;transition:border-color .2s" id="oncelik-normal-lbl">'+
+            '<input type="radio" name="duyuru-oncelik" value="normal" checked onchange="duyuruOncelikDegisti()" style="accent-color:var(--accent2)">'+
+            '<span style="font-size:13px">🔵 Normal</span>'+
+          '</label>'+
+          '<label style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:2px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;transition:border-color .2s" id="oncelik-acil-lbl">'+
+            '<input type="radio" name="duyuru-oncelik" value="acil" onchange="duyuruOncelikDegisti()" style="accent-color:var(--red)">'+
+            '<span style="font-size:13px">🔴 ACİL</span>'+
+          '</label>'+
+        '</div>'+
         '<button class="mgr-btn" style="width:100%;padding:11px" onclick="duyuruYayinla()">📢 Yayınla</button>'+
       '</div>';
     el.appendChild(formDiv);
@@ -7226,6 +7313,15 @@ function duyuruFormAc(){
   if(f) f.classList.toggle('acik');
 }
 
+function duyuruOncelikDegisti(){
+  var acil = document.querySelector('input[name="duyuru-oncelik"][value="acil"]');
+  var isAcil = acil && acil.checked;
+  var normalLbl = document.getElementById('oncelik-normal-lbl');
+  var acilLbl = document.getElementById('oncelik-acil-lbl');
+  if(normalLbl) normalLbl.style.borderColor = isAcil ? 'var(--border)' : 'var(--accent2)';
+  if(acilLbl) acilLbl.style.borderColor = isAcil ? 'var(--red)' : 'var(--border)';
+}
+
 function duyuruYayinla(){
   const ta = document.getElementById('duyuru-icerik-input');
   const icerik = (ta ? ta.value : '').trim();
@@ -7254,9 +7350,13 @@ function duyuruYayinla(){
     hedefAd = depoSel ? (depoSel.options[depoSel.selectedIndex]||{}).text : '';
   }
 
+  const oncelikEl = document.querySelector('input[name="duyuru-oncelik"]:checked');
+  const oncelik = oncelikEl ? oncelikEl.value : 'normal';
+
   const duyuru = {
     id: Date.now()+'',
     icerik,
+    oncelik,
     hedef,
     hedefAd,
     hedefler: hedefler || null,
@@ -7276,7 +7376,9 @@ function duyuruYayinla(){
         toast('Duyuru yayınlandı ✓','ok');
         // FCM push gönder
         if(window._fcmPushGonder){
-          var pushBaslik = '📢 ACL Depo — Yeni Duyuru';
+          var pushBaslik = duyuru.oncelik === 'acil'
+            ? '🔴 ACİL DUYURU — ACL Depo'
+            : '📢 ACL Depo — Yeni Duyuru';
           var pushIcerik = (duyuru.icerik||'').substring(0,100);
           var pushHedefler = null; // genel = null
           if(duyuru.hedef === 'kisi_' + (duyuru.hedefAd||'')){

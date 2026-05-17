@@ -1,5 +1,5 @@
 // Service Worker - ACL Depo Yönetim Sistemi
-const CACHE = 'acl-takip-v33';
+const CACHE = 'acl-takip-v34';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', function(e) {
@@ -93,13 +93,22 @@ self.addEventListener('push', function(e) {
 self.addEventListener('notificationclick', function(e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) ? e.notification.data.url : '/';
+  var isAcil = e.notification.data && e.notification.data.oncelik === 'acil';
   e.waitUntil(
-    clients.matchAll({type: 'window'}).then(function(clientList) {
-      for(var i=0; i<clientList.length; i++) {
-        if(clientList[i].url === url && 'focus' in clientList[i]) {
-          return clientList[i].focus();
+    clients.matchAll({type: 'window', includeUncontrolled: true}).then(function(clientList) {
+      // Açık pencere varsa öne getir
+      for(var i = 0; i < clientList.length; i++){
+        var c = clientList[i];
+        if('focus' in c){
+          c.focus();
+          // Acil ise duyuru ekranına git
+          if(isAcil){
+            c.postMessage({ type: 'ACL_GOTO', screen: 'duyuru' });
+          }
+          return;
         }
       }
+      // Pencere yoksa aç
       if(clients.openWindow) return clients.openWindow(url);
     })
   );
