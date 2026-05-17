@@ -1186,7 +1186,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
       <div class="gorev-foto-box" onclick="gorevFotoSec(1)" id="gtm-foto-1"><span style="font-size:22px">📷</span><span>Fotoğraf 2</span></div>
       <div class="gorev-foto-box" onclick="gorevFotoSec(2)" id="gtm-foto-2"><span style="font-size:22px">📷</span><span>Fotoğraf 3</span></div>
     </div>
-    <input type="file" id="gtm-file-input" accept="image/*" style="display:none" onchange="gorevFotoYukle(this)">
+    <input type="file" id="gtm-file-input" accept="image/*" capture="environment" style="display:none" onchange="gorevFotoYukle(this)">
     <div class="gorev-form-label" style="margin-top:14px">Tamamlama Açıklaması</div>
     <textarea class="gorev-form-input" id="gtm-aciklama" rows="4" placeholder="Görev nasıl tamamlandı?..."></textarea>
     <div id="gtm-sure-bilgi" style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px"></div>

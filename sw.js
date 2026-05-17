@@ -1,5 +1,5 @@
 // Service Worker - ACL Depo Yönetim Sistemi
-const CACHE = 'acl-takip-v52';
+const CACHE = 'acl-takip-v53';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', function(e) {
