@@ -4221,28 +4221,60 @@ function gorevRealtimeDinle(){
 }
 
 function _gorevBildirimBannerGoster(baslik, baslangicStr, bitisStr, bitisTarih, gorevId){
-  // Eski banner varsa kaldır
+  // Eski varsa kaldır
   var eski = document.getElementById('gorev-bildirim-banner');
   if(eski) eski.remove();
 
-  var banner = document.createElement('div');
-  banner.id = 'gorev-bildirim-banner';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#6a1fc2,#4a0e8f);padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:slideDown .3s ease';
-  banner.innerHTML =
-    '<div style="font-size:24px;flex-shrink:0">📋</div>' +
-    '<div style="flex:1">' +
-      '<div style="font-size:13px;font-weight:700;color:#fff">Yeni Görev Atandı!</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">'+escHtml(baslik)+'</div>' +
-      '<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;font-family:var(--mono)">'+
-        '▶ '+baslangicStr+' → ⏹ '+bitisStr+(bitisTarih?' ('+bitisTarih+')':'')+
-      '</div>' +
-    '</div>' +
-    '<button onclick="showScreen(\'gorev\');document.getElementById(\'gorev-bildirim-banner\').remove()" style="background:var(--accent);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);flex-shrink:0">Göreve Git</button>' +
-    '<button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;flex-shrink:0">×</button>';
+  var overlay = document.createElement('div');
+  overlay.id = 'gorev-bildirim-banner';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s ease';
 
-  document.body.appendChild(banner);
-  // 10 saniye sonra otomatik kapat
-  setTimeout(function(){ if(banner.parentElement) banner.remove(); }, 10000);
+  overlay.innerHTML =
+    '<div onclick="event.stopPropagation()" style="background:var(--bg2);border:1px solid rgba(106,31,194,.5);border-radius:var(--r);width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)">' +
+      '<div style="background:linear-gradient(135deg,#6a1fc2,#4a0e8f);padding:16px 20px;display:flex;align-items:center;gap:12px">' +
+        '<div style="font-size:28px">📋</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:14px;font-weight:700;color:#fff">Yeni Görev Atandı!</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">Lütfen görevi inceleyin ve onaylayın</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:16px">' +
+        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">'+escHtml(baslik)+'</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">' +
+          '<div style="background:var(--bg3);border-radius:6px;padding:8px">' +
+            '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Başlangıç</div>' +
+            '<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);margin-top:2px">'+baslangicStr+'</div>' +
+          '</div>' +
+          '<div style="background:var(--bg3);border-radius:6px;padding:8px">' +
+            '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Bitiş'+(bitisTarih?' ('+bitisTarih+')':'')+'</div>' +
+            '<div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);margin-top:2px">'+bitisStr+'</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<button onclick="showScreen(\'gorev\');document.getElementById(\'gorev-bildirim-banner\').remove()" style="padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--sans)">👁 Göreve Git</button>' +
+          '<button onclick="gorevBildirimOnay(\''+gorevId+'\')" style="padding:11px;background:var(--green);border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;color:#000;cursor:pointer;font-family:var(--sans)">✓ Onaylıyorum</button>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'gorev-bildirim-banner\').remove()" style="width:100%;margin-top:8px;padding:8px;background:transparent;border:none;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--sans)">Şimdi değil</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function gorevBildirimOnay(gorevId){
+  // Onay flag'i Firebase'e yaz
+  if(window._fbReady && gorevId){
+    var _fb = window._fb;
+    _fb.setDoc(_fb.doc(_fb.db,'gorevler',gorevId), {
+      onaylandi: true,
+      onayTs: Date.now(),
+      onaylayanAd: user ? user.ad||'' : ''
+    }, {merge:true}).catch(function(){});
+  }
+  var banner = document.getElementById('gorev-bildirim-banner');
+  if(banner) banner.remove();
+  toast('Görev onaylandı ✓','ok');
+  showScreen('gorev');
 }
 
 // ─── 3 DAKİKA FOTOĞRAF YÜKLEME SAYACI ────────────────────────
@@ -4318,16 +4350,32 @@ function kariyerUnvan(basamak){
 function atanabilirRoller(){
   if(!user) return [];
   var rol = user.rol || 'personel';
+  // Müdür → Şef + Amir + Personel (Müdüre hiç kimse görev atayamaz)
   if(rol === 'mudur') return ['sef','amir','personel'];
+  // Şef → kendi deposundaki Amir + Personel (Müdür tarafından delege edilmişse)
   if(rol === 'sef') return ['amir','personel'];
+  // Amir → kendi deposundaki Personel
   if(rol === 'amir') return ['personel'];
+  // Personel → kimseye atayamaz
   return [];
+}
+
+// Müdür mü? — Müdüre görev atanamaz
+function isMudurKullanici(tel){
+  var _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  if(!_sd||!_sd.depolar) return false;
+  var tn = normTel(tel||'');
+  var bulundu = false;
+  (_sd.depolar||[]).forEach(function(d){
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      if(normTel(p.tel||'') === tn && (p.rol||'') === 'mudur') bulundu = true;
+    });
+  });
+  return bulundu;
 }
 
 // Görev atabiliyor muyuz?
 function gorevAtayabilir(){ return atanabilirRoller().length > 0; }
-
-// ─── GÖREV EKRANI RENDER ──────────────────────────────────────
 function renderGorevEkrani(){
   var el = document.getElementById('gorev-content');
   if(!el) return;
@@ -4492,22 +4540,21 @@ function _gorevAtaFormHtml(){
   var _isMudur = _rolSev >= 4;
   var depolar = getDepolar();
 
-  // Tüm personeli depo bazlı topla
-  // Rol alanı boş olsa bile tüm personeli dahil et (izin kontrolü atayan rolüne göre)
+  // Tüm personeli depo bazlı topla — MÜDÜRLERE GÖrev ATANAMAZ
   var tumPersonel = [];
   var gorulenTel = {};
   depolar.forEach(function(d){
     var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
     pers.forEach(function(p){
       var tn = normTel(p.tel||'');
-      var pRol = p.rol || 'personel'; // rol yoksa personel say
-      // Kendi dışındakileri göster; müdür herkesi atayabilir
+      var pRol = p.rol || 'personel';
       if(tn && !gorulenTel[tn] && tn !== normTel(user.tel||'')){
-        // Rol kısıtı: hedefRoller doluysa kontrol et, boşsa müdür herkesi görebilir
-        if(!hedefRoller.length || hedefRoller.indexOf(pRol) !== -1 || _isMudur){
-          gorulenTel[tn] = true;
-          tumPersonel.push({ad: p.name||'İsimsiz', tel: tn, rol: pRol, depo: d.ad||'', depoId: d.id||''});
-        }
+        // Müdürlere görev atanamaz
+        if(pRol === 'mudur') return;
+        // Rol kısıtı
+        if(hedefRoller.length && hedefRoller.indexOf(pRol) === -1 && !_isMudur) return;
+        gorulenTel[tn] = true;
+        tumPersonel.push({ad: p.name||'İsimsiz', tel: tn, rol: pRol, depo: d.ad||'', depoId: d.id||''});
       }
     });
   });
@@ -4574,8 +4621,19 @@ function _gorevAtaFormHtml(){
       '<option value="acil">🔴 Acil</option>' +
       '<option value="dusuk">🟢 Düşük</option>' +
     '</select>' +
+    '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:10px">' +
+      '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">' +
+        '<input type="checkbox" id="gf-delege-engel" style="width:16px;height:16px;accent-color:var(--red);flex-shrink:0;margin-top:2px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:600;color:var(--text)">🔒 Delege Etmeyi Engelle</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px">Atanan kişi bu görevi başkasına devredemez, bizzat yapması zorunludur</div>' +
+        '</div>' +
+      '</label>' +
+    '</div>' +
     '<button class="gorev-btn-primary" onclick="gorevAta()">📋 Görev(leri) Ata</button>' +
-  '</div>';
+  '</div>' +
+  // Hiyerarşi Ağacı
+  _gorevHiyerarsiKartHtml();
 }
 
 function gorevSureHesapla(){
@@ -4611,6 +4669,52 @@ function gorevHizliSure(val){
   if(!sureDk || !val) return;
   sureDk.value = val;
   gorevBitisHesapla();
+}
+
+function _gorevHiyerarsiKartHtml(){
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px">📊 Görev Atama Hiyerarşisi</div>' +
+    '<div style="display:flex;flex-direction:column;gap:6px">' +
+      // Müdür
+      '<div style="background:linear-gradient(135deg,rgba(251,211,12,.1),transparent);border:1px solid rgba(251,211,12,.25);border-radius:var(--r-sm);padding:8px 12px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:16px">👑</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:12px;font-weight:700;color:var(--accent)">Depo Müdürü</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">Şef · Amir · Personele atayabilir · Kimse müdüre atayamaz</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding-left:20px;color:var(--text3);font-size:14px">↓</div>' +
+      // Şef
+      '<div style="background:linear-gradient(135deg,rgba(167,139,250,.08),transparent);border:1px solid rgba(167,139,250,.2);border-radius:var(--r-sm);padding:8px 12px;display:flex;align-items:center;gap:8px;margin-left:16px">' +
+        '<span style="font-size:16px">🥇</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:12px;font-weight:700;color:#a78bfa">Depo Şefi</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">Müdür tarafından atanır · Kendi deposundaki Amir ve Personele atayabilir</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding-left:36px;color:var(--text3);font-size:14px">↓</div>' +
+      // Amir
+      '<div style="background:linear-gradient(135deg,rgba(91,141,239,.08),transparent);border:1px solid rgba(91,141,239,.2);border-radius:var(--r-sm);padding:8px 12px;display:flex;align-items:center;gap:8px;margin-left:32px">' +
+        '<span style="font-size:16px">🥈</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:12px;font-weight:700;color:#5b8def">Vardiya Amiri</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">Şef tarafından atanır · Kendi deposundaki Personele atayabilir</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding-left:52px;color:var(--text3);font-size:14px">↓</div>' +
+      // Personel
+      '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 12px;display:flex;align-items:center;gap:8px;margin-left:48px">' +
+        '<span style="font-size:16px">👤</span>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--text2)">Personel</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">Amir tarafından atanır · Görevi bizzat tamamlar</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="margin-top:10px;background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;font-size:10px;color:var(--text3);line-height:1.6">' +
+      '🔒 <strong style="color:var(--text2)">Delege Engeli:</strong> Atayan "Delege Etmeyi Engelle" seçerse, atanan kişi bu görevi başkasına devredemez.' +
+    '</div>' +
+  '</div>';
 }
 
 function gorevPersonelSayGuncelle(){
@@ -4699,14 +4803,34 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     var degEmoji = {mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'};
     html += '<div style="margin-bottom:8px"><span class="gorev-deg '+degMap[g.degerlendirme]+'">'+degEmoji[g.degerlendirme]+'</span></div>';
 
-    if(g.fotolar && g.fotolar.length){
-      window._gorevFotoHarita = window._gorevFotoHarita || {};
-      window._gorevFotoHarita[g.id] = g.fotolar;
-      html += '<div class="gorev-foto-grid">';
-      g.fotolar.forEach(function(f, i){
-        html += '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAcGorev(\''+escHtml(g.id)+'\','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt="" loading="lazy"></div>';
-      });
-      html += '</div>';
+    if((g.fotolar && g.fotolar.length) || g.fotoRef){
+      var fotoId = escHtml(g.id);
+      if(g.fotolar && g.fotolar.length){
+        // Eski kayıtlarda fotolar direkt belgede
+        window._gorevFotoHarita = window._gorevFotoHarita || {};
+        window._gorevFotoHarita[g.id] = g.fotolar;
+        html += '<div class="gorev-foto-grid" id="fgrid-'+fotoId+'">';
+        g.fotolar.forEach(function(f, i){
+          html += '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAcGorev(\''+fotoId+'\','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt="" loading="lazy"></div>';
+        });
+        html += '</div>';
+      } else if(g.fotoRef){
+        // Yeni kayıtlarda fotoğraflar gorev_fotolar koleksiyonunda
+        html += '<div class="gorev-foto-grid" id="fgrid-'+fotoId+'"><div style="padding:8px;font-size:11px;color:var(--text3)">⟳ Fotoğraflar yükleniyor...</div></div>';
+        // Async yükle
+        (function(gid, fref){
+          fbGet('gorev_fotolar', fref).then(function(fd){
+            if(!fd||!fd.fotolar) return;
+            window._gorevFotoHarita = window._gorevFotoHarita || {};
+            window._gorevFotoHarita[gid] = fd.fotolar;
+            var grid = document.getElementById('fgrid-'+gid);
+            if(!grid) return;
+            grid.innerHTML = fd.fotolar.map(function(f,i){
+              return '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAcGorev(\''+gid+'\','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt="" loading="lazy"></div>';
+            }).join('');
+          }).catch(function(){});
+        })(g.id, g.fotoRef);
+      }
     }
     if(g.tamamlamaAciklama){
       html += '<div style="background:var(--bg3);border-radius:var(--r-sm);padding:8px 10px;margin-top:8px;font-size:11px;color:var(--text2);line-height:1.6;border:1px solid var(--border)">'+escHtml(g.tamamlamaAciklama)+'</div>';
@@ -4726,6 +4850,16 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Gerçek Süre</div><div style="font-family:var(--mono);font-size:10px;color:'+(gercekSure&&verilenSure&&gercekSure>verilenSure?'var(--red)':'var(--green)')+';margin-top:1px">'+(gercekSure!==null?gercekSure+'dk':'—')+'</div></div>';
   }
   html += '</div>';
+
+  // ── ONAY ve DELEGE ENGEL durumu ──
+  if(g.onaylandi){
+    html += '<div style="font-size:10px;color:var(--green);margin-top:6px">✓ Onaylandı — '+escHtml(g.onaylayanAd||'')+'</div>';
+  } else if(durum === 'devam' || durum === 'bekliyor'){
+    html += '<div style="font-size:10px;color:var(--orange);margin-top:6px">⏳ Henüz onaylanmadı</div>';
+  }
+  if(g.delegeEngeli){
+    html += '<div style="font-size:10px;color:var(--red);margin-top:4px">🔒 Delege yasak — bizzat tamamlanmalı</div>';
+  }
 
   // ── TAMAMLA BUTONU — sadece atanan kişi ──
   if(!yoneticiGorunumu && (durum === 'devam' || durum === 'gecikti' || durum === 'bekliyor')){
@@ -4825,6 +4959,8 @@ async function gorevAta(){
   var oncelik  = (document.getElementById('gf-oncelik')||{}).value||'normal';
   var sureDkEl = document.getElementById('gf-sure-dk');
   var sureDk   = sureDkEl ? (parseInt(sureDkEl.value,10)||null) : null;
+  var delegeEngelEl = document.getElementById('gf-delege-engel');
+  var delegeEngeli  = delegeEngelEl ? delegeEngelEl.checked : false;
 
   if(!baslik.trim()){ toast('Görev başlığı zorunlu','err'); return; }
   if(!bitis && !sureDk){ toast('Bitiş tarihi veya görev süresi zorunlu','err'); return; }
@@ -4865,6 +5001,7 @@ async function gorevAta(){
         atananAd: atanan.ad,
         oncelik: oncelik,
         sureDk: sureDk,
+        delegeEngeli: delegeEngeli,
         bitisTs: bitisTs,
         durum: 'devam',
         olusturmaTs: baseTs+i,
@@ -5147,13 +5284,12 @@ async function gorevTamamlaGonder(){
       );
     }catch(e){ console.warn('Fotoğraf kayıt hatası:', e); }
 
-    // Görevi güncelle — sadece değişen alanlar, merge ile
+    // Görevi güncelle — fotoğraf görev belgesine yazılmıyor (1MB limit), sadece referans
     var _fb = window._fb;
     await _fb.setDoc(_fb.doc(_fb.db,'gorevler',_aktifGorevId), {
       durum: 'tamam',
       tamamlamaTs: tamamlamaTs,
       tamamlamaAciklama: aciklama.trim(),
-      fotolar: fotolar, // küçük fotoğraflar için tutuyoruz, büyükse gorev_fotolar'dan çekilir
       fotoRef: fotoRef,
       degerlendirme: degerlendirme
     }, {merge: true});
@@ -5189,7 +5325,10 @@ async function gorevTamamlaGonder(){
     gmodalKapat('tamamla');
     toast('Görev tamamlandı! '+({mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[degerlendirme]),'ok');
     renderGorevEkrani();
-  }catch(e){ toast('Görev kaydedilemedi','err'); }
+  }catch(e){
+    console.error('gorevTamamlaGonder hata:', e);
+    toast('Hata: '+(e&&e.message?e.message.substring(0,80):String(e).substring(0,80)),'err');
+  }
 }
 
 // Savunma modal
