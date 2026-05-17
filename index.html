@@ -1318,19 +1318,15 @@ const todayStr = today.toLocaleDateString('tr-TR');
 const PROJE = 'acl-takip';
 
 async function fbSet(koleksiyon, docId, data){
-  try{
-    const {db,doc,setDoc}=window._fb;
-    await setDoc(doc(db, koleksiyon, docId), data);
-    return true;
-  }catch(e){ console.warn('fbSet hata:', e); return false; }
+  const {db,doc,setDoc}=window._fb;
+  await setDoc(doc(db, koleksiyon, docId), data);
+  return true;
 }
 
 async function fbGet(koleksiyon, docId){
-  try{
-    const {db,doc,getDoc}=window._fb;
-    const snap=await getDoc(doc(db, koleksiyon, docId));
-    return snap.exists()?snap.data():null;
-  }catch(e){ console.warn('fbGet hata:', e); return null; }
+  const {db,doc,getDoc}=window._fb;
+  const snap=await getDoc(doc(db, koleksiyon, docId));
+  return snap.exists()?snap.data():null;
 }
 
 async function fbCollection(koleksiyon){
@@ -5379,7 +5375,10 @@ async function gorevSablonKaydet(){
     toast('Şablon kaydedildi ✓','ok');
     gorevTabGec('sablon');
     renderGorevEkrani();
-  }catch(e){ toast('Kaydedilemedi','err'); }
+  }catch(e){
+    console.error('Şablon kayıt hatası:', e);
+    toast('Hata: '+(e&&e.message?e.message.substring(0,80):String(e).substring(0,60)),'err');
+  }
 }
 
 var _aktifSablonId = null;
