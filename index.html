@@ -4416,27 +4416,33 @@ function gorevTabGec(tab){
 
 function _gorevAtaFormHtml(){
   var hedefRoller = atanabilirRoller();
-  var isMudur = isMudur ? isMudur() : (rolSeviye(user&&user.rol||'') >= 4);
+  var _rolSev = rolSeviye(user&&user.rol||'');
+  var _isMudur = _rolSev >= 4;
   var depolar = getDepolar();
 
   // Tüm personeli depo bazlı topla
-  var tumPersonel = []; // {ad, tel, rol, depo, depoId}
+  // Rol alanı boş olsa bile tüm personeli dahil et (izin kontrolü atayan rolüne göre)
+  var tumPersonel = [];
   var gorulenTel = {};
   depolar.forEach(function(d){
     var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
     pers.forEach(function(p){
       var tn = normTel(p.tel||'');
-      var pRol = p.rol || 'personel';
-      if(tn && !gorulenTel[tn] && hedefRoller.indexOf(pRol) !== -1 && tn !== normTel(user.tel||'')){
-        gorulenTel[tn] = true;
-        tumPersonel.push({ad: p.name||'', tel: tn, rol: pRol, depo: d.ad||'', depoId: d.id||''});
+      var pRol = p.rol || 'personel'; // rol yoksa personel say
+      // Kendi dışındakileri göster; müdür herkesi atayabilir
+      if(tn && !gorulenTel[tn] && tn !== normTel(user.tel||'')){
+        // Rol kısıtı: hedefRoller doluysa kontrol et, boşsa müdür herkesi görebilir
+        if(!hedefRoller.length || hedefRoller.indexOf(pRol) !== -1 || _isMudur){
+          gorulenTel[tn] = true;
+          tumPersonel.push({ad: p.name||'İsimsiz', tel: tn, rol: pRol, depo: d.ad||'', depoId: d.id||''});
+        }
       }
     });
   });
 
-  // Depo filtre select (sadece müdür için)
+  // Depo filtre select (birden fazla depo varsa)
   var depoFilterHtml = '';
-  if(isMudur && depolar.length > 1){
+  if(depolar.length > 1){
     depoFilterHtml = '<label class="gorev-form-label">Depo Filtresi</label>' +
       '<select class="gorev-form-input" id="gf-depo-filter" onchange="gorevDepoFiltrele()">' +
       '<option value="">Tüm Depolar</option>' +
@@ -4445,18 +4451,19 @@ function _gorevAtaFormHtml(){
   }
 
   // Çoklu personel checkbox listesi
-  var checkboxHtml = tumPersonel.map(function(p){
-    return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer" data-depo="'+escHtml(p.depoId)+'">' +
-      '<input type="checkbox" class="gf-personel-cb" value="'+escHtml(p.tel)+'|'+escHtml(p.ad)+'" style="width:16px;height:16px;accent-color:var(--accent2);flex-shrink:0" onchange="gorevPersonelSayGuncelle()">' +
-      '<div style="flex:1">' +
-        '<div style="font-size:13px;color:var(--tx,var(--text))">'+escHtml(p.ad)+'</div>' +
-        '<div style="font-size:10px;color:var(--text3)">'+rolLabel(p.rol)+(p.depo?' · '+escHtml(p.depo):'')+'</div>' +
-      '</div>' +
-    '</label>';
-  }).join('');
-
-  if(!checkboxHtml){
-    checkboxHtml = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text3)">Atanabilecek personel bulunamadı.</div>';
+  var checkboxHtml = '';
+  if(tumPersonel.length === 0){
+    checkboxHtml = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text3)">⚠️ Personel bulunamadı.<br><span style="font-size:11px">Yönetici → Vardiya ekranından personel ekleyin.</span></div>';
+  } else {
+    checkboxHtml = tumPersonel.map(function(p){
+      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" data-depo="'+escHtml(p.depoId)+'" onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\'\'">' +
+        '<input type="checkbox" class="gf-personel-cb" value="'+escHtml(p.tel)+'|'+escHtml(p.ad)+'" style="width:18px;height:18px;accent-color:var(--accent2);flex-shrink:0;cursor:pointer" onchange="gorevPersonelSayGuncelle()">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(p.ad)+'</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:1px">'+rolLabel(p.rol)+(p.depo?' · '+escHtml(p.depo):'')+'</div>' +
+        '</div>' +
+      '</label>';
+    }).join('');
   }
 
   return '<div class="kart" style="padding:16px;margin-bottom:10px">' +
@@ -4466,8 +4473,10 @@ function _gorevAtaFormHtml(){
     '<label class="gorev-form-label">Açıklama</label>' +
     '<textarea class="gorev-form-input" id="gf-aciklama" rows="2" placeholder="Görevin detayları..."></textarea>' +
     depoFilterHtml +
-    '<label class="gorev-form-label">Personel Seç <span id="gf-secilen-sayi" style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;margin-left:6px">0</span></label>' +
-    '<div id="gf-personel-liste" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);max-height:220px;overflow-y:auto;margin-bottom:10px">' +
+    '<label class="gorev-form-label" style="display:flex;align-items:center;gap:6px">Personel Seç <span id="gf-secilen-sayi" style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px">0</span>' +
+      (tumPersonel.length>0?'<span style="font-size:10px;color:var(--text3);margin-left:auto">'+tumPersonel.length+' kişi</span>':'') +
+    '</label>' +
+    '<div id="gf-personel-liste" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);max-height:240px;overflow-y:auto;margin-bottom:10px">' +
       checkboxHtml +
     '</div>' +
     '<label class="gorev-form-label">Bitiş Süresi</label>' +
