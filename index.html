@@ -4068,9 +4068,11 @@ async function _renderGorevEkrani(){
   if(yonetici){
     html += '<button class="gorev-tab active" onclick="gorevTabGec(\'ata\')">➕ Ata</button>';
     html += '<button class="gorev-tab" onclick="gorevTabGec(\'izle\')">👁 İzle</button>';
+    if(banaAtanan.length > 0){
+      html += '<button class="gorev-tab" onclick="gorevTabGec(\'benim\')">📋 Görevlerim' + (aktifBana.length > 0 ? ' <span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 6px;font-size:9px">'+aktifBana.length+'</span>' : '') + '</button>';
+    }
+    html += '<button class="gorev-tab" onclick="gorevTabGec(\'sablon\')">📌 Şablonlar</button>';
   }
-  html += '<button class="gorev-tab' + (yonetici?'':' active') + '" onclick="gorevTabGec(\'benim\')">📋 Görevlerim</button>';
-  html += '<button class="gorev-tab" onclick="gorevTabGec(\'sablon\')">📌 Şablonlar</button>';
   html += '</div>';
 
   // TAB: GÖREV ATA (yönetici)
@@ -4245,9 +4247,13 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     }
   }
 
-  // Tamamla butonu (personel, aktif görev)
+  // Tamamla butonu — sadece atanan kişi ve aktif görev
   if(!yoneticiGorunumu && (durum === 'devam' || durum === 'gecikti' || durum === 'bekliyor')){
-    html += '<button class="gorev-tamamla-btn" onclick="gorevTamamlaModalAc(\''+g.id+'\')">✅ Görevi Tamamla</button>';
+    var atananTelNorm = normTel(g.atananTel||'');
+    var benimGorevim = atananTelNorm === normTel(user ? user.tel||'' : '');
+    if(benimGorevim){
+      html += '<button class="gorev-tamamla-btn" onclick="gorevTamamlaModalAc(\''+g.id+'\')">✅ Görevi Tamamla</button>';
+    }
   }
 
   // Tarih bilgisi
