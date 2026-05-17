@@ -1107,6 +1107,8 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
       <div id="rapor-aylik-ozet"></div>
       <div class="slabel">Mola Kullanım Özeti</div>
       <div id="rapor-mola-ozet"></div>
+      <div class="slabel">Görev Raporu</div>
+      <div id="rapor-gorev-ozet"></div>
     </div>
 
     <!-- GÖREV ATAMA EKRANI -->
@@ -2025,6 +2027,113 @@ function renderRapor(){
       ${r.not?`<div class="rec-note">💬 ${r.not}</div>`:''}
     </div>
   `).join('');
+
+  // Görev raporunu async yükle
+  _renderGorevRaporu();
+}
+
+async function _renderGorevRaporu(){
+  var el = document.getElementById('rapor-gorev-ozet');
+  if(!el || !user) return;
+
+  var rolSev = rolSeviye(user.rol||'');
+  // Yalnızca amir ve üstü görev raporunu görebilir
+  if(rolSev < 2){ el.innerHTML=''; return; }
+
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">⟳ Yükleniyor...</div>';
+
+  // Kullanıcının hangi depolarını görebileceğini belirle
+  var _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  var tumDepolar = (_sd && _sd.depolar) || [];
+
+  // Müdür → tüm depolar | Şef/Amir → sadece kendi deposu
+  var izinliDepolar = [];
+  if(rolSev >= 4){ // Müdür
+    izinliDepolar = tumDepolar.map(function(d){ return d.id; });
+  } else { // Şef (3) veya Amir (2)
+    tumDepolar.forEach(function(d){
+      var icinde = (d.personeller||[]).some(function(p){ return normTel(p.tel||'') === normTel(user.tel||''); })
+                || ((d.shift&&d.shift.persons)||[]).some(function(p){ return normTel(p.tel||'') === normTel(user.tel||''); });
+      if(icinde) izinliDepolar.push(d.id);
+    });
+    // Kendi deposu yoksa atayanTel kontrolüyle kendi attıklarını göster
+    if(!izinliDepolar.length) izinliDepolar = ['_kendi_'];
+  }
+
+  // Depolardaki personel telefon listesi
+  var izinliTeller = {};
+  tumDepolar.forEach(function(d){
+    if(izinliDepolar.indexOf(d.id) === -1) return;
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      var tn = normTel(p.tel||'');
+      if(tn) izinliTeller[tn] = p.name||'';
+    });
+  });
+
+  // Firebase'den görevleri çek
+  var gorevler = [];
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    snap.forEach(function(d){
+      var g = d.data();
+      if(!g || !g.id) return;
+      var atananTelN = normTel(g.atananTel||'');
+      var atayanTelN = normTel(g.atayanTel||'');
+      // Müdür: tüm depolar → hepsini gör
+      if(rolSev >= 4){
+        gorevler.push(g);
+      } else if(izinliDepolar.indexOf('_kendi_') !== -1){
+        // Şef/Amir kendi deposu bulunamazsa kendi attıklarını göster
+        if(atayanTelN === normTel(user.tel||'') || izinliTeller[atananTelN]) gorevler.push(g);
+      } else {
+        // Atanan o depodaki biriyse göster
+        if(izinliTeller[atananTelN]) gorevler.push(g);
+      }
+    });
+    gorevler.sort(function(a,b){ return (b.olusturmaTs||0)-(a.olusturmaTs||0); });
+    gorevler = gorevler.slice(0,30);
+  }catch(e){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">Görev verisi yüklenemedi.</div>'; return; }
+
+  if(!gorevler.length){
+    el.innerHTML='<div style="text-align:center;padding:16px;font-size:12px;color:var(--text3)">Görev kaydı bulunamadı.</div>';
+    return;
+  }
+
+  function fmtTs(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); }
+
+  var html = '<div class="kart" style="padding:0;overflow:hidden">';
+  gorevler.forEach(function(g, idx){
+    var durum = g.durum||'bekliyor';
+    var degTxt = g.degerlendirme ? {mukemmel:'⭐',olumlu:'✅',olumsuz:'❌'}[g.degerlendirme]||'' : '';
+    var durumRenk = {bekliyor:'var(--accent)',devam:'var(--orange)',tamam:'var(--green)',gecikti:'var(--red)'}[durum]||'var(--text3)';
+    var durumAd = {bekliyor:'Bekliyor',devam:'Devam',tamam:'Tamamlandı',gecikti:'Gecikti'}[durum]||durum;
+
+    var verilen = g.bitisTs && g.olusturmaTs ? Math.round((g.bitisTs-g.olusturmaTs)/60000) : null;
+    var gercek  = g.tamamlamaTs && g.olusturmaTs ? Math.round((g.tamamlamaTs-g.olusturmaTs)/60000) : null;
+    var zamaninda = gercek !== null && verilen !== null && gercek <= verilen;
+
+    html += '<div style="padding:12px 14px;border-bottom:1px solid var(--border)'+(idx===gorevler.length-1?';border-bottom:none':'')+';">';
+
+    // Başlık + durum
+    html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:8px">';
+    html += '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+degTxt+' '+escHtml(g.baslik||'')+'</div></div>';
+    html += '<span style="font-size:10px;font-weight:700;color:'+durumRenk+';white-space:nowrap">'+durumAd+'</span>';
+    html += '</div>';
+
+    // Detay grid 2x3
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:0">';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">ATAYAN</div><div style="font-size:11px;color:var(--text2);margin-top:1px">'+escHtml(g.atayanAd||'?')+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">ATANAN</div><div style="font-size:11px;color:var(--text2);margin-top:1px">'+escHtml(g.atananAd||'?')+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">SÜRE</div><div style="font-family:var(--mono);font-size:11px;color:'+(zamaninda?'var(--green)':gercek?'var(--red)':'var(--text2)')+';margin-top:1px">'+(verilen!==null?verilen+'dk':'—')+(gercek!==null?' / '+gercek+'dk':'')+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">ATANMA</div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:1px">'+fmtTs(g.olusturmaTs)+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">BİTİŞ</div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:1px">'+fmtTs(g.bitisTs)+'</div></div>';
+    html += '<div style="background:var(--bg3);border-radius:5px;padding:5px 8px"><div style="font-size:9px;color:var(--text3)">TAMAMLANDI</div><div style="font-family:var(--mono);font-size:10px;color:'+(g.tamamlamaTs?'var(--green)':'var(--text3)')+';margin-top:1px">'+fmtTs(g.tamamlamaTs)+'</div></div>';
+    html += '</div>';
+
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function doExport(){
@@ -4881,7 +4990,7 @@ async function renderKariyerEkrani(){
   });
   html += '</div></div>';
 
-  // GÖREV GEÇMİŞİ (son değerlendirmeler)
+  // GÖREV GEÇMİŞİ — tam detay
   html += '<div class="slabel">Son Değerlendirmeler</div>';
   var gorevler = [];
   try{
@@ -4891,22 +5000,45 @@ async function renderKariyerEkrani(){
       if(normTel(g.atananTel||'') === telNorm && g.degerlendirme) gorevler.push(g);
     });
     gorevler.sort(function(a,b){ return (b.tamamlamaTs||0)-(a.tamamlamaTs||0); });
-    gorevler = gorevler.slice(0,10);
+    gorevler = gorevler.slice(0,15);
   }catch(e){}
 
   if(!gorevler.length){
     html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz değerlendirme yok</div>';
   } else {
-    html += '<div class="kart" style="padding:14px">';
-    gorevler.forEach(function(g){
+    html += '<div class="kart" style="padding:0;overflow:hidden">';
+    gorevler.forEach(function(g, idx){
       var degClass = {mukemmel:'gdeg-mukemmel',olumlu:'gdeg-olumlu',olumsuz:'gdeg-olumsuz'}[g.degerlendirme]||'gdeg-olumlu';
       var degTxt = {mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[g.degerlendirme]||'';
-      var puan = {mukemmel:'+2 ↑',olumlu:'+1 ↑',olumsuz:'-1 ↓'}[g.degerlendirme]||'';
+      var puan = {mukemmel:'+2',olumlu:'+1',olumsuz:'-1'}[g.degerlendirme]||'';
       var puanRenk = {mukemmel:'var(--gold)',olumlu:'var(--green)',olumsuz:'var(--red)'}[g.degerlendirme]||'var(--text3)';
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
-      html += '<span class="gorev-deg '+degClass+'" style="padding:3px 8px;font-size:10px">'+degTxt+'</span>';
-      html += '<div style="flex:1;font-size:11px;color:var(--text2)">'+escHtml(g.baslik||'')+'</div>';
-      html += '<span style="font-family:var(--mono);font-size:10px;color:'+puanRenk+'">'+puan+'</span>';
+
+      // Süre hesapla
+      var verilen = g.bitisTs && g.olusturmaTs ? Math.round((g.bitisTs - g.olusturmaTs)/60000) : null;
+      var gercek  = g.tamamlamaTs && g.olusturmaTs ? Math.round((g.tamamlamaTs - g.olusturmaTs)/60000) : null;
+
+      // Tarih formatlayıcı
+      function fmtTs(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); }
+
+      html += '<div style="padding:12px 14px;border-bottom:1px solid var(--border)'+(idx===gorevler.length-1?';border-bottom:none':'')+';">';
+
+      // Başlık + değerlendirme satırı
+      html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">';
+      html += '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(g.baslik||'')+'</div>';
+      html += '<div style="font-size:10px;color:var(--text3);margin-top:2px">📌 '+escHtml(g.atayanAd||'Yönetici')+' — '+rolLabel(g.atayanRol||'')+'</div></div>';
+      html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
+      html += '<span class="gorev-deg '+degClass+'" style="font-size:10px;padding:2px 8px">'+degTxt+'</span>';
+      html += '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:'+puanRenk+'">'+puan+' puan</span>';
+      html += '</div></div>';
+
+      // Detay grid
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">';
+      html += '<div style="background:var(--bg3);border-radius:5px;padding:6px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Atanma</div><div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:2px">'+fmtTs(g.olusturmaTs)+'</div></div>';
+      html += '<div style="background:var(--bg3);border-radius:5px;padding:6px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Bitirildi</div><div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:2px">'+fmtTs(g.tamamlamaTs)+'</div></div>';
+      html += '<div style="background:var(--bg3);border-radius:5px;padding:6px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Verilen Süre</div><div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-top:2px">'+(verilen!==null?verilen+'dk':'—')+'</div></div>';
+      html += '<div style="background:var(--bg3);border-radius:5px;padding:6px 8px"><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Gerçek Süre</div><div style="font-family:var(--mono);font-size:11px;color:'+(gercek&&verilen&&gercek>verilen?'var(--red)':'var(--green)')+';margin-top:2px">'+(gercek!==null?gercek+'dk':'—')+'</div></div>';
+      html += '</div>';
+
       html += '</div>';
     });
     html += '</div>';
