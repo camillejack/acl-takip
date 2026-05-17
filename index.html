@@ -3257,7 +3257,7 @@ function buildMolaKart(p,isMe){
   const ci=(p.name.charCodeAt(0)||0)%colors.length;
   const progColor=asiriKullanim?'var(--red)':kalanDk<15?'#ffb74d':'var(--green)';
 
-  // Personelin bugünkü mola saatleri
+  // Planlanan molalar
   const _dd2=JSON.parse(localStorage.getItem(SKEY)||'null');
   const _depolar2=(_dd2&&_dd2.depolar)||[];
   let pData=null;
@@ -3265,82 +3265,100 @@ function buildMolaKart(p,isMe){
   const bugunMolalar=pData?kisiMolaSaatleri(pData):[];
   let planlananHtml='';
   if(bugunMolalar.length){
-    planlananHtml='<div style="background:var(--bg3);border-radius:6px;padding:8px 10px;margin-bottom:8px">'+
-      '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Planlanan Molalar</div>'+
+    planlananHtml='<div style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;margin-top:10px">'+
+      '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Planlanan Mola</div>'+
       bugunMolalar.map(m=>{
         const mBas=saatToDk(m.saat);
         const mBit=mBas+(m.sure||30);
         const simdi=simdiDk();
         const durum=simdi<mBas?'bekliyor':simdi<mBit?'aktif':'tamamlandi';
-        const renkler={bekliyor:'#ffb74d',aktif:'var(--green)',tamamlandi:'var(--text3)'};
-        const ikonlar={bekliyor:'⏳',aktif:'☕',tamamlandi:'✓'};
-        return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0">'+
-          '<span>'+ikonlar[durum]+'</span>'+
-          '<span style="font-family:var(--mono);font-size:12px;color:'+renkler[durum]+'">'+
-            m.saat+' – '+molaEndSaat(m.saat,m.sure)+
-          '</span>'+
-          '<span style="font-size:10px;color:var(--text3)">'+m.sure+'dk</span>'+
+        const renkler={bekliyor:'var(--orange)',aktif:'var(--green)',tamamlandi:'var(--text3)'};
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">'+
+          '<span style="font-size:12px;color:'+renkler[durum]+'">'+(m.isim||m.saat)+'</span>'+
+          '<span style="font-family:var(--mono);font-size:12px;color:var(--text2)">'+m.saat+' · '+m.sure+'dk</span>'+
         '</div>';
       }).join('')+
     '</div>';
   }
 
-  // Aktif mola sayacı
-  let sayacHtml='';
-  if(isAktif&&d.baslangic){
-    const gecenDk=(Date.now()-d.baslangic)/60000;
-    const kalanSayac=Math.max(0,hakDk-kullanilanDk-gecenDk);
-    const asiriAktif=gecenDk>(hakDk-kullanilanDk);
-    const kalanSn=asiriAktif?
-      Math.round(gecenDk*60-(hakDk-kullanilanDk)*60):
-      Math.round(kalanSayac*60);
-    const mm=Math.floor(Math.abs(kalanSn)/60), ss=Math.abs(kalanSn)%60;
-    const sayacStr=(asiriAktif?'+':'')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
-    sayacHtml=`<div class="mola-sayac">
-      <div class="mola-sayac-sure${asiriAktif?' red':kalanSayac<5?' warn':''}" id="sayac-${n}">${sayacStr}</div>
-      <div class="mola-sayac-lbl">${asiriAktif?'MOLA SURESİ AŞILDI!':'Kalan mola süresi'}</div>
+  // KENDİ KARTI — Demo tasarımı
+  if(isMe){
+    let sayacStr='00:00', sayacRenk='var(--orange)', asiriAktif=false;
+    if(isAktif&&d.baslangic){
+      const gecenDk=(Date.now()-d.baslangic)/60000;
+      const kalanSayac=Math.max(0,hakDk-kullanilanDk-gecenDk);
+      asiriAktif=gecenDk>(hakDk-kullanilanDk);
+      const kalanSn=asiriAktif?Math.round(gecenDk*60-(hakDk-kullanilanDk)*60):Math.round(kalanSayac*60);
+      const mm=Math.floor(Math.abs(kalanSn)/60), ss=Math.abs(kalanSn)%60;
+      sayacStr=(asiriAktif?'+':'')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+      sayacRenk=asiriAktif||kalanSayac<5?'var(--red)':'var(--orange)';
+    }
+    const molaHakSayisi=4;
+    const kullanilanHakSayisi=(d.kayitlar||[]).length+(isAktif?1:0);
+    const kalanHakSayisi=Math.max(0,molaHakSayisi-kullanilanHakSayisi);
+    const kalanKart=Math.round(kalanDk);
+    const kalanRenk=kalanKart<10?'var(--red)':kalanKart<20?'var(--orange)':'var(--accent)';
+
+    const btnHtml=isAktif
+      ?`<button onclick="molaBit('${p.tel}')" style="width:100%;padding:14px;background:var(--green);color:#000;border:none;border-radius:var(--r-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans)">☕ Molayı Bitir</button>`
+      :`<button onclick="molayaCik('${p.tel}')" ${kalanDk<=0||kalanHakSayisi<=0?'disabled':''}
+          style="width:100%;padding:14px;background:${kalanDk<=0||kalanHakSayisi<=0?'var(--bg3)':'var(--green)'};color:${kalanDk<=0||kalanHakSayisi<=0?'var(--text3)':'#000'};border:2px solid ${kalanDk<=0||kalanHakSayisi<=0?'var(--border)':'var(--green)'};border-radius:var(--r-sm);font-size:15px;font-weight:700;cursor:${kalanDk<=0||kalanHakSayisi<=0?'not-allowed':'pointer'};font-family:var(--sans)">
+          ☕ ${kalanDk<=0||kalanHakSayisi<=0?'Mola Hakkı Bitti':'Molaya Çık'}
+        </button>`;
+
+    return `<div style="background:var(--bg2);border:1px solid ${isAktif?'rgba(255,150,50,.4)':'var(--border)'};border-radius:var(--r);padding:16px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Mola <span style="color:var(--accent)">Takibi</span></div>
+        ${isAktif?'<div style="background:rgba(255,150,50,.15);border:1px solid rgba(255,150,50,.4);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--orange)">☕ Molada</div>':'<div style="background:var(--green-dim);border:1px solid var(--green-b);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--green)">⚫ Çalışıyor</div>'}
+      </div>
+
+      ${isAktif?`<div style="background:var(--bg3);border-radius:var(--r-sm);padding:18px;text-align:center;margin-bottom:12px">
+        <div class="mola-sayac-sure" id="sayac-${n}" style="font-size:40px;font-family:var(--mono);font-weight:700;color:${sayacRenk};line-height:1">${sayacStr}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Mola sayacı (dk:sn)</div>
+        <div style="height:3px;background:var(--bg4,#252540);border-radius:2px;margin-top:10px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${progColor};border-radius:2px;transition:width .3s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:5px">
+          <span>Kullanılan: ${Math.round(kullanilanDk)}dk</span><span>Hak: ${hakDk}dk</span>
+        </div>
+      </div>`:`<div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:12px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${progColor};border-radius:2px"></div>
+      </div>`}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text)">${kullanilanHakSayisi}/${molaHakSayisi}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Mola hakkı</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:${kalanRenk}">${kalanKart}dk</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Kalan süre</div>
+        </div>
+      </div>
+
+      ${btnHtml}
+      ${planlananHtml}
     </div>`;
   }
 
-  // Geçmiş molalar
-  let gecmisHtml='';
-  if(d.kayitlar&&d.kayitlar.length){
-    gecmisHtml='<div class="mola-gecmis"><div class="mola-gecmis-title">Bugünkü Molalar</div>'+
-    d.kayitlar.map((k,i)=>`<div class="mola-gecmis-item">
-      <span>${i+1}.</span>
-      <span>${k.bas} – ${k.bit}</span>
-      <span class="mola-gecmis-sure${k.asiri?' mola-gecmis-asiri':''}">${k.sure}dk${k.asiri?' ⚠️':''}</span>
-    </div>`).join('')+'</div>';
-  }
-
-  // Kendi kartında buton, diğerlerinde sadece bilgi
-  const btnHtml=isMe?`<div class="mola-btn-row">
-    ${isAktif
-      ?`<button class="mola-cik-btn stop" onclick="molaBit('${p.tel}')">⏹ Molayı Bitir</button>`
-      :`<button class="mola-cik-btn start" onclick="molayaCik('${p.tel}')" ${kalanDk<=0?'disabled style="opacity:.4;cursor:not-allowed"':''}>☕ Molaya Çık ${kalanDk<=0?'(Hak Kalmadı)':''}</button>`
-    }
-  </div>`:'';
+  // DİĞER PERSONEL KARTI (kompakt)
+  const gecmisStr=d.kayitlar&&d.kayitlar.length?
+    d.kayitlar.map(k=>`${k.bas}–${k.bit}(${k.sure}dk${k.asiri?'⚠️':''})`).join(' '):'';
 
   return `<div class="mola-kart${isAktif?' aktif':''}${asiriKullanim?' asiri':''}">
     <div class="mola-kart-top">
       <div class="mola-avatar" style="background:${colors[ci]}">${initial}</div>
-      <div>
-        <div class="mola-isim">${escHtml(p.name)}${isMe?' 👤':''}</div>
+      <div style="flex:1">
+        <div class="mola-isim">${escHtml(p.name)}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">${isAktif?'🟢 Molada':'⚫ Çalışıyor'}</div>
+        ${gecmisStr?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${gecmisStr}</div>`:''}
       </div>
-      <span class="mola-kalan-badge${kalanDk<=0?' red':kalanDk<15?' warn':' ok'}">${kalanDk<=0?'Hak Bitti':Math.round(kalanDk)+'dk kalan'}</span>
+      <span class="mola-kalan-badge${kalanDk<=0?' red':kalanDk<15?' warn':' ok'}">${kalanDk<=0?'Bitti':Math.round(kalanDk)+'dk'}</span>
     </div>
     <div class="mola-progress">
       <div class="mola-progress-fill" style="width:${pct}%;background:${progColor}"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:10px">
-      <span>Kullanılan: ${Math.round(kullanilanDk)}dk</span>
-      <span>Toplam hak: ${hakDk}dk</span>
-    </div>
-    ${planlananHtml}
-    ${sayacHtml}
-    ${btnHtml}
-    ${gecmisHtml}
+    ${isAktif&&d.baslangic?`<div class="mola-sayac"><div class="mola-sayac-sure" id="sayac-${n}">--:--</div><div class="mola-sayac-lbl">Mola süresi</div></div>`:''}
   </div>`;
 }
 
