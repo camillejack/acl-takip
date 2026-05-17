@@ -6084,102 +6084,147 @@ function renderIsbasiEkrani(){
   const _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
   const depolar = (_dd&&_dd.depolar)||[];
   const myTelNorm = user ? normTel(user.tel) : '';
-  // Aktif depodaki personel bilgisini al
   const aktifD = depolar.find(d=>(d.personeller||[]).some(p=>normTel(p.tel)===myTelNorm));
   const myP = aktifD ? (aktifD.shift&&aktifD.shift.persons||aktifD.personeller||[]).find(p=>normTel(p.tel)===myTelNorm) : null;
   const bugunKayit = isBasiData[todayStr];
 
-  // Konum durumu
-  let konumDurumHtml = '';
-  if(!navigator.geolocation){
-    konumDurumHtml = '<div class="konum-durum"><div class="konum-dot hata"></div><span>Bu cihaz konum desteği sunmuyor</span></div>';
-  } else if(!sonKonum){
-    konumDurumHtml = '<div class="konum-durum"><div class="konum-dot bekle"></div><span>Konum alınıyor...</span></div>';
-  } else {
-    konumDurumHtml = '<div class="konum-durum"><div class="konum-dot aktif"></div><span>Konum aktif · Hassasiyet: ±'+Math.round(sonKonum.acc||0)+'m</span></div>';
-  }
+  // Vardiya durumu badge
+  var vardiyaBadge = myP
+    ? '<div style="background:var(--green-dim);border:1px solid var(--green-b);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--green)">✓ Aktif Vardiya</div>'
+    : '';
 
-  // Bugünkü çalışma verisi
+  // Bugünkü çalışma istatistikleri
   var bugunCalisma = calismaData[todayStr];
-  var calismaOzetHtml = '';
+  var girisSaati = '—';
+  var toplamCalismaStr = '—';
+  var toplamMolaDk = 0;
+  var molaStr = '—';
+
   if(bugunCalisma && (bugunCalisma.girisler||[]).length > 0){
+    girisSaati = (bugunCalisma.girisler[0]||{}).saat || '—';
     var toplamDk = bugunCalisma.toplamDk || 0;
     var saat = Math.floor(toplamDk/60);
     var dk = toplamDk % 60;
-    calismaOzetHtml = '<div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px 14px;margin-top:10px">' +
-      '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Bugünkü Çalışma</div>' +
-      (bugunCalisma.girisler||[]).map(function(g,i){
-        var c = (bugunCalisma.cikislar||[])[i];
-        return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">' +
-          '<span style="color:var(--green)">▶ Giriş: '+g.saat+'</span>' +
-          '<span style="color:var(--text3);font-size:10px">'+g.depo+'</span>' +
-          (c ? '<span style="color:var(--red)">◼ Çıkış: '+c.saat+'</span>' : '<span style="color:var(--text3)">— devam ediyor</span>') +
-        '</div>';
-      }).join('') +
-      '<div style="margin-top:8px;font-size:13px;font-weight:600;color:var(--accent)">Toplam: '+saat+'sa '+dk+'dk</div>' +
-    '</div>';
+    toplamCalismaStr = saat+'s '+dk+'dk';
+    // Mola toplamı Firebase'den
+    toplamMolaDk = bugunCalisma.toplamMolaDk || 0;
+    if(toplamMolaDk > 0) molaStr = toplamMolaDk+'dk';
+  }
+
+  var calismaKartHtml = (bugunCalisma && (bugunCalisma.girisler||[]).length > 0) ? `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px">Bugünkü Çalışma</div>
+      <div style="display:flex;align-items:center;justify-content:space-around;gap:8px">
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)">${girisSaati}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">Giriş</div>
+        </div>
+        <div style="width:1px;height:32px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)">${toplamCalismaStr}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">Çalışma</div>
+        </div>
+        <div style="width:1px;height:32px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--orange)">${molaStr}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">Mola</div>
+        </div>
+      </div>
+    </div>` : '';
+
+  // Son kayıtlar (önceki günler)
+  var sonKayitlarHtml = '';
+  var gecmisGunler = [];
+  Object.keys(calismaData).sort().reverse().forEach(function(gun){
+    if(gun === todayStr) return;
+    var d = calismaData[gun];
+    if(d && (d.girisler||[]).length > 0) gecmisGunler.push({gun:gun, data:d});
+  });
+  if(gecmisGunler.length > 0){
+    sonKayitlarHtml = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px"><div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Son Kayıtlar</div>';
+    gecmisGunler.slice(0,3).forEach(function(item){
+      var giris = (item.data.girisler||[])[0];
+      var cikis = (item.data.cikislar||[])[0];
+      var dk = item.data.toplamDk||0;
+      var s = Math.floor(dk/60); var m = dk%60;
+      var bugun = new Date(); var tarih = new Date(item.gun);
+      var fark = Math.round((bugun - tarih) / 86400000);
+      var gunAdi = fark === 1 ? 'Dün' : fark === 2 ? '2 gün önce' : item.gun;
+      sonKayitlarHtml += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">' +
+        '<div style="font-size:11px;color:var(--text3);min-width:70px">' + gunAdi + '</div>' +
+        '<div style="font-size:11px;color:var(--text2);flex:1;font-family:var(--mono)">' +
+          (giris?giris.saat:'—') + ' → ' + (cikis?cikis.saat:'devam') +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono)">' + s + 's ' + m + 'dk</div>' +
+      '</div>';
+    });
+    sonKayitlarHtml += '</div>';
   }
 
   // İş başı yapıldıysa
   if(bugunKayit){
     var gecDk = bugunKayit.gecDk||0;
-    el.innerHTML = konumDurumHtml + calismaOzetHtml + `
-      <div class="isbasi-kart aktif-depo">
-        <div class="isbasi-lokasyon">
-          <div class="isbasi-lokasyon-ico">✅</div>
-          <div class="isbasi-lokasyon-info">
-            <div class="isbasi-lokasyon-name">İş Başı Yapıldı</div>
-            <div class="isbasi-lokasyon-sub">${bugunKayit.depo||'Manuel'}</div>
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="slabel" style="margin:0">İş Başı</div>
+        ${vardiyaBadge}
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--green-b);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:10px">
+        <div style="font-size:40px;margin-bottom:8px">✅</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">İş Başı Yapıldı</div>
+        <div style="font-size:12px;color:var(--text3)">${bugunKayit.depo||'Manuel'}</div>
+        <div style="display:flex;justify-content:center;gap:16px;margin-top:12px">
+          <div style="text-align:center">
+            <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text)">${bugunKayit.saat}</div>
+            <div style="font-size:10px;color:var(--text3)">Geliş</div>
           </div>
-        </div>
-        <div class="isbasi-kayit">
-          <div class="isbasi-kayit-satir">
-            <span class="isbasi-kayit-label">Geliş Saati</span>
-            <span class="isbasi-kayit-val ok">${bugunKayit.saat}</span>
+          <div style="width:1px;background:var(--border)"></div>
+          <div style="text-align:center">
+            <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:${gecDk>0?'var(--red)':'var(--green)'}">${gecDk>0?gecDk+' dk GEÇ':'Zamanında ✓'}</div>
+            <div style="font-size:10px;color:var(--text3)">Durum</div>
           </div>
-          <div class="isbasi-kayit-satir">
-            <span class="isbasi-kayit-label">Vardiya Başlangıcı</span>
-            <span class="isbasi-kayit-val">${bugunKayit.vardiyaBas||'—'}</span>
-          </div>
-          <div class="isbasi-kayit-satir">
-            <span class="isbasi-kayit-label">Durum</span>
-            <span class="isbasi-kayit-val ${gecDk>0?'gec':'ok'}">
-              ${gecDk>0 ? gecDk+' dk GEÇ' : 'Zamanında ✓'}
-            </span>
-          </div>
-          ${bugunKayit.depoAdi?`<div class="isbasi-kayit-satir"><span class="isbasi-kayit-label">Konum</span><span class="isbasi-kayit-val">${bugunKayit.depoAdi}</span></div>`:''}
         </div>
       </div>
+      ${calismaKartHtml}
+      ${sonKayitlarHtml}
       ${buildDepolerKartiHtml(depolar)}
     `;
     return;
   }
 
-  // Depo listesi + iş başı butonu
+  // İş başı yapılmadıysa
   const btnAktif = !!yakinDepo;
-  const btnText = btnAktif
-    ? '📍 İş Başı Yaptım — '+yakinDepo.ad+' ('+yakinDepo.mesafe+'m)'
-    : '🔒 Depoya Yaklaşmanız Gerekiyor';
 
-  el.innerHTML = konumDurumHtml + `
-    <div class="isbasi-kart ${btnAktif?'aktif-depo':''}">
-      <div class="isbasi-lokasyon">
-        <div class="isbasi-lokasyon-ico">${btnAktif?'🏢':'📍'}</div>
-        <div class="isbasi-lokasyon-info">
-          <div class="isbasi-lokasyon-name">${btnAktif?yakinDepo.ad:'Depo Tespit Ediliyor'}</div>
-          <div class="isbasi-lokasyon-sub">${btnAktif?yakinDepo.mesafe+'m yakınınızdasınız':'150m yakınına gelince buton aktif olur'}</div>
-        </div>
-        ${btnAktif?`<span class="isbasi-mesafe yakin">${yakinDepo.mesafe}m</span>`:''}
-      </div>
-      <button class="isbasi-btn ${btnAktif?'aktif':'pasif'}"
-        onclick="${btnAktif?'isBasiYap()':''}"
-        ${btnAktif?'':'disabled'}>
-        ${btnText}
-      </button>
-      ${myP?`<div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">
-        Vardiya: ${myP.days&&myP.days[today.getDay()===0?6:today.getDay()-1]||'—'}
-      </div>`:''}
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="slabel" style="margin:0">İş Başı</div>
+      ${vardiyaBadge}
     </div>
+
+    <div style="background:var(--bg2);border:1px solid ${btnAktif?'var(--green-b)':'var(--border)'};border-radius:var(--r);padding:24px 16px;text-align:center;margin-bottom:10px">
+      <div style="font-size:44px;margin-bottom:12px">${btnAktif?'📍':'🔍'}</div>
+      <div style="font-size:15px;font-weight:700;color:${btnAktif?'var(--green)':'var(--text2)'};margin-bottom:4px">
+        ${btnAktif?'Depo Konumundasınız':'Konum Tespit Ediliyor...'}
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:20px">
+        ${btnAktif?(yakinDepo.ad+' · '+yakinDepo.mesafe+'m mesafe'):'150m yakınına gelince buton aktif olur'}
+      </div>
+      <button
+        class="isbasi-btn ${btnAktif?'aktif':'pasif'}"
+        onclick="${btnAktif?'isBasiYap()':''}"
+        ${btnAktif?'':'disabled'}
+        style="width:100%;padding:16px;border:none;border-radius:var(--r-sm);font-family:var(--sans);font-size:15px;font-weight:700;cursor:${btnAktif?'pointer':'not-allowed'};background:${btnAktif?'var(--green)':'var(--bg3)'};color:${btnAktif?'#000':'var(--text3)'};border:2px solid ${btnAktif?'var(--green)':'var(--border)'}">
+        ${btnAktif?'📍 İş Başı Yap':'🔒 Depoya Yaklaşın'}
+      </button>
+    </div>
+
+    <div style="background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${sonKonum?'var(--green)':'var(--orange)'};flex-shrink:0"></div>
+      <div style="font-size:11px;color:var(--text3)">${sonKonum?'Konum aktif · ±'+Math.round(sonKonum.acc||0)+'m hassasiyet':'Konum alınıyor...'}</div>
+    </div>
+
+    ${calismaKartHtml}
+    ${sonKayitlarHtml}
     ${buildDepolerKartiHtml(depolar)}
   `;
 }
