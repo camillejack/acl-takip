@@ -4351,13 +4351,37 @@ async function _renderGorevEkrani(){
   }catch(e){ tumGorevler = []; }
 
   // Personel: SADECE kendine atanan görevler (silindiler hariç)
-  // Yönetici: Kendi atadıkları + kendine atananlar (silindiler hariç)
+  // Yönetici: Kendi atadıkları + kendi deposundaki tüm görevler
   var banaAtanan = tumGorevler.filter(function(g){
     return normTel(g.atananTel||'') === telNorm && g.durum !== 'silindi';
   });
-  var benimAtadim = yonetici ? tumGorevler.filter(function(g){
-    return normTel(g.atayanTel||'') === telNorm && g.durum !== 'silindi';
-  }) : [];
+
+  var benimAtadim = [];
+  if(yonetici){
+    var _rolSevGorev = rolSeviye(user.rol||'');
+    if(_rolSevGorev >= 4){
+      // Müdür: tüm görevleri görür
+      benimAtadim = tumGorevler.filter(function(g){ return g.durum !== 'silindi'; });
+    } else {
+      // Şef/Amir: kendi attıkları + deposundaki personele atananlar
+      var _depolarGorev = getDepolar();
+      var _depoTelleri = {};
+      _depolarGorev.forEach(function(d){
+        var icinde = (d.personeller||[]).some(function(p){ return normTel(p.tel||'')=== telNorm; })
+                  || ((d.shift&&d.shift.persons)||[]).some(function(p){ return normTel(p.tel||'')=== telNorm; });
+        if(icinde){
+          (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+            var tn = normTel(p.tel||'');
+            if(tn) _depoTelleri[tn] = true;
+          });
+        }
+      });
+      benimAtadim = tumGorevler.filter(function(g){
+        return g.durum !== 'silindi' &&
+          (normTel(g.atayanTel||'') === telNorm || _depoTelleri[normTel(g.atananTel||'')]);
+      });
+    }
+  }
 
   // Aktif (bitmemiş) / biten ayrımı
   var aktifBana = banaAtanan.filter(function(g){ return g.durum !== 'tamam'; });
@@ -4826,10 +4850,12 @@ async function gorevAta(){
 
   try{
     var baseTs = Date.now();
+    var grupId = atananlar.length > 1 ? 'grup_'+baseTs : null; // Çoklu atamada grup ID
     for(var i = 0; i < atananlar.length; i++){
       var atanan = atananlar[i];
       var gorev = {
         id: 'g_'+(baseTs+i),
+        grupId: grupId, // null ise tekil görev
         baslik: baslik.trim(),
         aciklama: aciklama.trim(),
         atayanTel: normTel(user.tel||''),
@@ -5122,6 +5148,28 @@ async function gorevTamamlaGonder(){
 
     // Kariyer puanını güncelle
     await _kariyerPuanGuncelle(normTel(user.tel||''), degerlendirme);
+
+    // Grup görevi varsa — aynı gruptaki diğer görevleri de tamamlandı say
+    if(g.grupId){
+      try{
+        var tumSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+        var guncellemePromises = [];
+        tumSnap.forEach(function(d){
+          var dg = d.data();
+          if(dg.grupId === g.grupId && dg.id !== g.id && dg.durum !== 'tamam' && dg.durum !== 'silindi'){
+            guncellemePromises.push(fbSet('gorevler', dg.id, Object.assign({}, dg, {
+              durum: 'tamam',
+              tamamlamaTs: tamamlamaTs,
+              tamamlamaAciklama: aciklama.trim()+' ('+user.ad+' tarafından tamamlandı)',
+              fotolar: fotolar,
+              degerlendirme: degerlendirme,
+              grupTamamlayan: user.ad||''
+            })));
+          }
+        });
+        if(guncellemePromises.length) await Promise.all(guncellemePromises);
+      }catch(e){ /* grup güncelleme hatası sessiz geç */ }
+    }
 
     gorevFotoSayacDurdur(); // Sayacı durdur
     gmodalKapat('tamamla');
