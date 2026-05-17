@@ -1082,16 +1082,40 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 
     <!-- RAPOR -->
     <div class="screen hidden" id="screen-rapor">
+      <!-- RAPOR SEÇİM KARTLARI -->
+      <div class="slabel" style="margin-top:0">Detaylı Raporlar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="kart" onclick="raporAc('gunluk')" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">📅</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Günlük Rapor</div>
+          <div style="font-size:11px;color:var(--text3)">Bugünkü çalışma, görev ve mola özeti</div>
+        </div>
+        <div class="kart" onclick="raporAc('haftalik')" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">📊</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Haftalık Rapor</div>
+          <div style="font-size:11px;color:var(--text3)">Bu haftanın performans özeti</div>
+        </div>
+        <div class="kart" onclick="raporAc('aylik')" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">📈</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Aylık Rapor</div>
+          <div style="font-size:11px;color:var(--text3)">Bu ayın detaylı analizi</div>
+        </div>
+        <div class="kart" onclick="raporAc('gorev')" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">📋</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Görev Raporu</div>
+          <div style="font-size:11px;color:var(--text3)">Tüm görevlerin analizi</div>
+        </div>
+      </div>
+
+      <!-- CSV EXPORT -->
       <div class="rapor-card">
         <div class="rapor-ico">📊</div>
-        <div class="rapor-title">Gün Sonu Raporu</div>
-        <div class="rapor-sub">
-          Bugünkü tüm muadil eşleşmelerini dışa aktar.<br>
-          Dosyada ad soyad, telefon, orijinal barkod, muadil barkod, adet, saat ve açıklama yer alır.
-        </div>
+        <div class="rapor-title">Excel / CSV İndir</div>
+        <div class="rapor-sub">Tüm verileri Excel'de açılabilir CSV formatında indir.</div>
         <button class="rapor-btn csv" id="exp-btn" onclick="doExport()">⬇ CSV İndir (Excel'de Aç)</button>
         <div class="rapor-info" id="rapor-info"></div>
       </div>
+
       <div class="slabel">Arşiv Filtresi</div>
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="arsiv-btn active" id="arsiv-bugun" onclick="arsivFiltre('bugun')">Bugün</button>
@@ -1109,6 +1133,15 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
       <div id="rapor-mola-ozet"></div>
       <div class="slabel">Görev Raporu</div>
       <div id="rapor-gorev-ozet"></div>
+    </div>
+
+    <!-- TAM EKRAN RAPOR PANELİ -->
+    <div id="rapor-panel" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto">
+      <div style="position:sticky;top:0;z-index:10;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+        <div id="rapor-panel-baslik" style="font-size:14px;font-weight:700;color:var(--text)">📊 Rapor</div>
+        <button onclick="raporKapat()" style="background:rgba(255,100,100,.15);border:1px solid rgba(255,100,100,.3);border-radius:var(--r-sm);padding:6px 14px;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans)">✕ Kapat</button>
+      </div>
+      <div id="rapor-panel-icerik" style="padding:16px;max-width:800px;margin:0 auto"></div>
     </div>
 
     <!-- GÖREV ATAMA EKRANI -->
@@ -2430,7 +2463,427 @@ async function doExport(){
 }
 
 
-// ─── YÖNETİCİ DEPO YÖNETİMİ ──────────────────────────────────
+// ─── TAM EKRAN RAPOR SİSTEMİ ─────────────────────────────────
+
+function raporKapat(){
+  var panel = document.getElementById('rapor-panel');
+  if(panel) panel.style.display = 'none';
+}
+
+async function raporAc(tip){
+  var panel   = document.getElementById('rapor-panel');
+  var baslik  = document.getElementById('rapor-panel-baslik');
+  var icerik  = document.getElementById('rapor-panel-icerik');
+  if(!panel||!icerik) return;
+
+  var basliklar = {gunluk:'📅 Günlük Rapor',haftalik:'📊 Haftalık Rapor',aylik:'📈 Aylık Rapor',gorev:'📋 Görev Raporu'};
+  baslik.textContent = basliklar[tip]||'📊 Rapor';
+  icerik.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">⟳ Yükleniyor...</div>';
+  panel.style.display = 'block';
+  panel.scrollTop = 0;
+
+  try{
+    if(tip==='gunluk')   icerik.innerHTML = await _raporGunlukHtml();
+    if(tip==='haftalik') icerik.innerHTML = await _raporHaftalikHtml();
+    if(tip==='aylik')    icerik.innerHTML = await _raporAylikHtml();
+    if(tip==='gorev')    icerik.innerHTML = await _raporGorevDetayHtml();
+  }catch(e){
+    icerik.innerHTML = '<div style="color:var(--red);padding:20px">Rapor yüklenemedi: '+e.message+'</div>';
+  }
+}
+
+// ── YARDIMCI FONKSİYONLAR ──────────────────────────────────
+function _rFmtTs(ts){ if(!ts) return '—'; var d=new Date(ts); return d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); }
+function _rFmtSure(dk){ if(!dk&&dk!==0) return '—'; var s=Math.floor(dk/60),m=dk%60; return s>0?s+'sa '+(m>0?m+'dk':''):m+'dk'; }
+function _rKart(ust,alt,renk){ return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;text-align:center"><div style="font-family:var(--mono);font-size:22px;font-weight:700;color:'+(renk||'var(--text)')+'">'+ust+'</div><div style="font-size:10px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em">'+alt+'</div></div>'; }
+function _rBlok(baslikStr, icerikHtml){ return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">'+baslikStr+'</div>'+icerikHtml+'</div>'; }
+
+// ── GÜNLÜK RAPOR ───────────────────────────────────────────
+async function _raporGunlukHtml(){
+  var simdi = new Date();
+  var bugun = todayStr;
+  var html  = '';
+
+  // ÖZET BAŞLIK
+  html += '<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
+  html += '<div style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--accent2);margin-bottom:4px">'+bugun+'</div>';
+  html += '<div style="font-size:12px;color:var(--text3)">'+simdi.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  html += '</div>';
+
+  // ÇALIŞMA VERİSİ
+  var gCal = calismaData[bugun]||{};
+  var toplamDk = gCal.toplamDk||0;
+  var molaDk   = gCal.toplamMolaDk||0;
+  var girisler = gCal.girisler||[];
+  var cikislar = gCal.cikislar||[];
+
+  html += _rBlok('⏱️ Çalışma Özeti',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    _rKart(_rFmtSure(toplamDk),'Toplam Çalışma','var(--green)')+
+    _rKart(_rFmtSure(molaDk),'Toplam Mola','var(--orange)')+
+    _rKart(girisler.length>0?girisler[0].saat:'—','Giriş Saati','var(--accent)')+
+    _rKart(cikislar.length>0?cikislar[cikislar.length-1].saat:'Devam','Çıkış','var(--text2)')+
+    '</div>'
+  );
+
+  // İŞ BAŞI DURUMU
+  var isbasiLocal = JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
+  var bugunIsbasi = Object.values(isbasiLocal).filter(function(k){ return k&&k.tarih===bugun; });
+  if(bugunIsbasi.length){
+    var ibHtml = '<div style="display:flex;flex-direction:column;gap:6px">';
+    bugunIsbasi.forEach(function(k){
+      var gec = k.gecDk||0;
+      ibHtml += '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:6px;padding:8px 12px">';
+      ibHtml += '<div><div style="font-size:12px;font-weight:600;color:var(--text)">'+(k.personel||k.ad||'—')+'</div>';
+      ibHtml += '<div style="font-size:10px;color:var(--text3)">'+(k.depoAdi||'Manuel')+'</div></div>';
+      ibHtml += '<div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;color:var(--text)">'+( k.saat||'—')+'</div>';
+      ibHtml += '<div style="font-size:10px;color:'+(gec>0?'var(--red)':'var(--green)')+'">'+( gec>0?gec+'dk GEÇ':'Zamanında')+'</div></div>';
+      ibHtml += '</div>';
+    });
+    ibHtml += '</div>';
+    html += _rBlok('📍 İş Başı Kayıtları', ibHtml);
+  }
+
+  // MOLA DURUMU
+  var _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  var depolar = (_sd&&_sd.depolar)||[];
+  var molaKisiler = [];
+  var gorulen = {};
+  depolar.forEach(function(d){
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      var tn=normTel(p.tel||'');
+      if(tn&&!gorulen[tn]){gorulen[tn]=true;molaKisiler.push({...p,depo:d.ad||''});}
+    });
+  });
+  if(!molaKisiler.length && user) molaKisiler=[{name:user.ad,tel:user.tel}];
+
+  if(molaKisiler.length){
+    var molaHtml = '';
+    molaKisiler.forEach(function(p){
+      var d=getMolaDurum(p.tel);
+      var kull=Math.round(d.kullanilanDk||0);
+      var pct=Math.min(100,(kull/60)*100);
+      var renk=kull>60?'var(--red)':kull>45?'#ffb74d':'var(--green)';
+      molaHtml+='<div style="margin-bottom:10px">';
+      molaHtml+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--text)">'+escHtml(p.name||'')+'</span><span style="font-family:var(--mono);font-size:11px;color:'+renk+'">'+kull+'/60dk</span></div>';
+      molaHtml+='<div style="height:4px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+renk+'"></div></div>';
+      if((d.kayitlar||[]).length) molaHtml+='<div style="font-size:10px;color:var(--text3);margin-top:3px">'+d.kayitlar.map(function(k){return k.bas+'–'+(k.bit||'devam')+'('+k.sure+'dk)';}).join(' · ')+'</div>';
+      molaHtml+='</div>';
+    });
+    html += _rBlok('☕ Mola Durumu', molaHtml);
+  }
+
+  // BUGÜNKÜ GÖREVLER
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    var bugunGorevler = [];
+    snap.forEach(function(doc){
+      var g=doc.data();
+      if(!g||g.durum==='silindi') return;
+      var ts=g.olusturmaTs||0;
+      var d=new Date(ts);
+      var tarih=d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear();
+      if(tarih===bugun || (g.tamamlamaTs && new Date(g.tamamlamaTs).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}).split('.').join('.')===bugun)){
+        bugunGorevler.push(g);
+      }
+    });
+    if(bugunGorevler.length){
+      var gHtml='<div style="display:flex;flex-direction:column;gap:6px">';
+      var tamam=bugunGorevler.filter(function(g){return g.durum==='tamam';}).length;
+      var devam=bugunGorevler.filter(function(g){return g.durum==='devam';}).length;
+      gHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'+
+        _rKart(bugunGorevler.length,'Toplam Görev','var(--text)')+
+        _rKart(tamam,'Tamamlandı','var(--green)')+
+        _rKart(devam,'Devam','var(--orange)')+
+      '</div>';
+      bugunGorevler.forEach(function(g){
+        var durumRenk={devam:'var(--orange)',tamam:'var(--green)',bekliyor:'var(--accent)',gecikti:'var(--red)'}[g.durum]||'var(--text3)';
+        gHtml+='<div style="background:var(--bg3);border-radius:6px;padding:8px 12px;border-left:3px solid '+durumRenk+'">';
+        gHtml+='<div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(g.baslik||'')+'</span><span style="font-size:10px;color:'+durumRenk+'">'+({devam:'Devam',tamam:'✅ Tamam',bekliyor:'Bekliyor',gecikti:'⚠️ Gecikti'}[g.durum]||g.durum)+'</span></div>';
+        gHtml+='<div style="font-size:10px;color:var(--text3);margin-top:2px">'+escHtml(g.atananAd||'')+(g.degerlendirme?' · '+({mukemmel:'⭐ Mükemmel',olumlu:'✅ Olumlu',olumsuz:'❌ Olumsuz'}[g.degerlendirme]||''):'')+'</div>';
+        gHtml+='</div>';
+      });
+      gHtml+='</div>';
+      html += _rBlok('📋 Bugünkü Görevler', gHtml);
+    }
+  }catch(e){}
+
+  return html || '<div style="color:var(--text3);padding:20px;text-align:center">Bu güne ait veri bulunamadı</div>';
+}
+
+// ── HAFTALIK RAPOR ─────────────────────────────────────────
+async function _raporHaftalikHtml(){
+  var bugun = new Date();
+  var pazartesi = new Date(bugun);
+  pazartesi.setDate(bugun.getDate() - (bugun.getDay()===0?6:bugun.getDay()-1));
+  var html = '';
+
+  // Hafta tarihleri
+  var gunler = [];
+  for(var i=0;i<7;i++){
+    var g=new Date(pazartesi); g.setDate(pazartesi.getDate()+i);
+    var tarih=g.getDate().toString().padStart(2,'0')+'.'+(g.getMonth()+1).toString().padStart(2,'0')+'.'+g.getFullYear();
+    gunler.push({tarih:tarih,gun:g,gunAdi:g.toLocaleDateString('tr-TR',{weekday:'short'})});
+  }
+
+  var haftaBasStr = gunler[0].tarih;
+  var haftaBitStr = gunler[6].tarih;
+
+  html += '<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
+  html += '<div style="font-size:18px;font-weight:800;color:var(--accent2);margin-bottom:4px">Bu Hafta</div>';
+  html += '<div style="font-size:12px;color:var(--text3)">'+haftaBasStr+' – '+haftaBitStr+'</div>';
+  html += '</div>';
+
+  // Haftalık çalışma toplamı
+  var toplamHaftaDk=0, calisilnGun=0, toplamMolaDk=0;
+  gunler.forEach(function(g){
+    var cal=calismaData[g.tarih]||{};
+    if(cal.toplamDk>0){toplamHaftaDk+=cal.toplamDk;calisilnGun++;}
+    toplamMolaDk+=(cal.toplamMolaDk||0);
+  });
+
+  html += _rBlok('📊 Hafta Özeti',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    _rKart(_rFmtSure(toplamHaftaDk),'Toplam Çalışma','var(--green)')+
+    _rKart(calisilnGun+' gün','Çalışılan Gün','var(--accent)')+
+    _rKart(calisilnGun>0?_rFmtSure(Math.round(toplamHaftaDk/calisilnGun)):'—','Günlük Ortalama','var(--text2)')+
+    _rKart(_rFmtSure(toplamMolaDk),'Toplam Mola','var(--orange)')+
+    '</div>'
+  );
+
+  // Günlük çalışma takvimi
+  var takHtml='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  takHtml+='<tr>';
+  takHtml+='<th style="padding:6px 8px;text-align:left;color:var(--text3);border-bottom:1px solid var(--border)">Gün</th>';
+  takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Giriş</th>';
+  takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Çıkış</th>';
+  takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Süre</th>';
+  takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Mola</th>';
+  takHtml+='</tr>';
+  gunler.forEach(function(g,idx){
+    var cal=calismaData[g.tarih]||{};
+    var girisler=cal.girisler||[];
+    var cikislar=cal.cikislar||[];
+    var dk=cal.toplamDk||0;
+    var bugundemu=g.tarih===todayStr;
+    var renk=dk===0?'var(--text3)':dk>480?'var(--green)':dk>240?'var(--accent2)':'var(--text)';
+    takHtml+='<tr style="background:'+(bugundemu?'rgba(124,109,240,.06)':'')+';">';
+    takHtml+='<td style="padding:8px;border-bottom:1px solid var(--border);color:var(--text);font-weight:'+(bugundemu?'700':'400')+'">'+g.gunAdi+'<span style="font-size:9px;color:var(--text3);margin-left:4px">'+g.tarih.slice(0,5)+'</span></td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">'+(girisler[0]?girisler[0].saat:'—')+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">'+(cikislar.length?cikislar[cikislar.length-1].saat:(girisler.length?'Devam':'—'))+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+renk+'">'+( dk?_rFmtSure(dk):'—')+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">'+(cal.toplamMolaDk?(cal.toplamMolaDk+'dk'):'—')+'</td>';
+    takHtml+='</tr>';
+  });
+  takHtml+='</table></div>';
+  html += _rBlok('📅 Günlük Çalışma Takvimi', takHtml);
+
+  // Haftalık görev özeti
+  try{
+    var snap=await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    var haftaGorevler=[];
+    var haftaTarihleri=gunler.map(function(g){return g.tarih;});
+    snap.forEach(function(doc){
+      var g=doc.data();
+      if(!g||g.durum==='silindi') return;
+      var ts=g.olusturmaTs||0;
+      var d=new Date(ts);
+      var tarih=d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear();
+      if(haftaTarihleri.indexOf(tarih)!==-1) haftaGorevler.push(g);
+    });
+    if(haftaGorevler.length){
+      var tamam=haftaGorevler.filter(function(g){return g.durum==='tamam';}).length;
+      var devam=haftaGorevler.filter(function(g){return g.durum==='devam';}).length;
+      var mukemmel=haftaGorevler.filter(function(g){return g.degerlendirme==='mukemmel';}).length;
+      html+=_rBlok('📋 Haftalık Görev Özeti',
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
+        _rKart(haftaGorevler.length,'Toplam','var(--text)')+
+        _rKart(tamam,'Tamamlandı','var(--green)')+
+        _rKart(mukemmel,'Mükemmel','var(--accent)')+
+        '</div>'
+      );
+    }
+  }catch(e){}
+
+  return html;
+}
+
+// ── AYLIK RAPOR ────────────────────────────────────────────
+async function _raporAylikHtml(){
+  var simdi=new Date();
+  var ayAd=simdi.toLocaleDateString('tr-TR',{month:'long',year:'numeric'});
+  var buAyAy=simdi.getMonth()+1;
+  var buAyYil=simdi.getFullYear();
+  var html='';
+
+  html+='<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
+  html+='<div style="font-size:22px;font-weight:800;color:var(--accent2);margin-bottom:4px">'+ayAd+'</div>';
+  html+='<div style="font-size:12px;color:var(--text3)">Aylık Detaylı Analiz</div></div>';
+
+  // Aylık çalışma toplamı
+  var aylikToplam=0,gunSayisi=0,ayMola=0,enUzunDk=0,enKisaDk=Infinity;
+  var gunVerileri=[];
+  Object.keys(calismaData).sort().forEach(function(tarih){
+    var parca=tarih.split('.');
+    if(parca.length===3&&parseInt(parca[1])===buAyAy&&parseInt(parca[2])===buAyYil){
+      var g=calismaData[tarih];
+      if(g&&g.toplamDk>0){
+        aylikToplam+=g.toplamDk; gunSayisi++;
+        ayMola+=(g.toplamMolaDk||0);
+        if(g.toplamDk>enUzunDk) enUzunDk=g.toplamDk;
+        if(g.toplamDk<enKisaDk) enKisaDk=g.toplamDk;
+        gunVerileri.push({tarih:tarih,dk:g.toplamDk,mola:g.toplamMolaDk||0});
+      }
+    }
+  });
+
+  var ort=gunSayisi>0?Math.round(aylikToplam/gunSayisi):0;
+
+  html+=_rBlok('📊 Ay Özeti',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    _rKart(_rFmtSure(aylikToplam),'Aylık Toplam','var(--green)')+
+    _rKart(gunSayisi+' gün','Çalışılan Gün','var(--accent)')+
+    _rKart(_rFmtSure(ort),'Günlük Ortalama','var(--text2)')+
+    _rKart(_rFmtSure(ayMola),'Toplam Mola','var(--orange)')+
+    (enUzunDk>0?_rKart(_rFmtSure(enUzunDk),'En Uzun Gün','var(--accent2)'):'')+ 
+    (enKisaDk<Infinity?_rKart(_rFmtSure(enKisaDk),'En Kısa Gün','var(--text3)'):'')+
+    '</div>'
+  );
+
+  // Günlük dağılım grafiği
+  if(gunVerileri.length){
+    var maxDk=Math.max.apply(null,gunVerileri.map(function(g){return g.dk;}));
+    var barHtml='<div style="display:flex;flex-direction:column;gap:6px">';
+    gunVerileri.forEach(function(g){
+      var pct=maxDk>0?Math.round((g.dk/maxDk)*100):0;
+      var renk=g.dk>480?'var(--green)':g.dk>300?'var(--accent2)':'var(--orange)';
+      barHtml+='<div style="display:flex;align-items:center;gap:8px">';
+      barHtml+='<div style="font-family:var(--mono);font-size:10px;color:var(--text3);min-width:60px">'+g.tarih.slice(0,5)+'</div>';
+      barHtml+='<div style="flex:1;height:16px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+renk+';border-radius:3px"></div></div>';
+      barHtml+='<div style="font-family:var(--mono);font-size:10px;color:var(--text2);min-width:44px;text-align:right">'+_rFmtSure(g.dk)+'</div>';
+      barHtml+='</div>';
+    });
+    barHtml+='</div>';
+    html+=_rBlok('📅 Günlük Dağılım', barHtml);
+  }
+
+  // Aylık görev analizi
+  try{
+    var snap=await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    var ayGorevler=[];
+    snap.forEach(function(doc){
+      var g=doc.data();
+      if(!g||g.durum==='silindi') return;
+      var d=new Date(g.olusturmaTs||0);
+      if(d.getMonth()+1===buAyAy&&d.getFullYear()===buAyYil) ayGorevler.push(g);
+    });
+    var tamam=ayGorevler.filter(function(g){return g.durum==='tamam';}).length;
+    var mukemmel=ayGorevler.filter(function(g){return g.degerlendirme==='mukemmel';}).length;
+    var olumlu=ayGorevler.filter(function(g){return g.degerlendirme==='olumlu';}).length;
+    var olumsuz=ayGorevler.filter(function(g){return g.degerlendirme==='olumsuz';}).length;
+    var tamamOran=ayGorevler.length>0?Math.round((tamam/ayGorevler.length)*100):0;
+
+    if(ayGorevler.length){
+      html+=_rBlok('📋 Aylık Görev Analizi',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+        _rKart(ayGorevler.length,'Toplam Görev','var(--text)')+
+        _rKart(tamam+'/'+ayGorevler.length+' (%'+tamamOran+')','Tamamlanma','var(--green)')+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
+        _rKart('⭐ '+mukemmel,'Mükemmel','var(--accent)')+
+        _rKart('✅ '+olumlu,'Olumlu','var(--green)')+
+        _rKart('❌ '+olumsuz,'Olumsuz','var(--red)')+
+        '</div>'
+      );
+    }
+  }catch(e){}
+
+  return html;
+}
+
+// ── GÖREV DETAY RAPORU ─────────────────────────────────────
+async function _raporGorevDetayHtml(){
+  var html='';
+  html+='<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
+  html+='<div style="font-size:18px;font-weight:800;color:var(--accent2);margin-bottom:4px">Görev Analizi</div>';
+  html+='<div style="font-size:12px;color:var(--text3)">Tüm zamanlar</div></div>';
+
+  try{
+    var snap=await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    var gorevler=[];
+    snap.forEach(function(doc){
+      var g=doc.data();
+      if(!g||g.durum==='silindi') return;
+      // Yetki filtresi
+      var rolSev=rolSeviye(user?user.rol||'':'');
+      if(rolSev>=4){
+        gorevler.push(g);
+      } else {
+        var myTel=normTel(user?user.tel||'':'');
+        if(normTel(g.atayanTel||'')===myTel||normTel(g.atananTel||'')===myTel) gorevler.push(g);
+      }
+    });
+    window._raporGorevler=gorevler;
+
+    var tamam=gorevler.filter(function(g){return g.durum==='tamam';});
+    var devam=gorevler.filter(function(g){return g.durum==='devam';});
+    var bekliyor=gorevler.filter(function(g){return g.durum==='bekliyor';});
+    var mukemmel=gorevler.filter(function(g){return g.degerlendirme==='mukemmel';}).length;
+    var olumlu=gorevler.filter(function(g){return g.degerlendirme==='olumlu';}).length;
+    var olumsuz=gorevler.filter(function(g){return g.degerlendirme==='olumsuz';}).length;
+
+    // Ortalama tamamlama süresi
+    var sureler=tamam.filter(function(g){return g.tamamlamaTs&&g.olusturmaTs;}).map(function(g){return Math.round((g.tamamlamaTs-g.olusturmaTs)/60000);});
+    var ortSure=sureler.length?Math.round(sureler.reduce(function(a,b){return a+b;},0)/sureler.length):0;
+
+    html+=_rBlok('📊 Genel Özet',
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      _rKart(gorevler.length,'Toplam Görev','var(--text)')+
+      _rKart(tamam.length,'Tamamlandı','var(--green)')+
+      _rKart(devam.length,'Devam','var(--orange)')+
+      _rKart(ortSure?ortSure+'dk':'—','Ort. Tamamlama','var(--accent)')+
+      '</div>'
+    );
+
+    html+=_rBlok('🏅 Değerlendirme Dağılımı',
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
+      _rKart('⭐ '+mukemmel,'Mükemmel','var(--accent)')+
+      _rKart('✅ '+olumlu,'Olumlu','var(--green)')+
+      _rKart('❌ '+olumsuz,'Olumsuz','var(--red)')+
+      '</div>'
+    );
+
+    // Son 10 görev listesi
+    var son10=gorevler.sort(function(a,b){return (b.olusturmaTs||0)-(a.olusturmaTs||0);}).slice(0,10);
+    var listeHtml='<div style="display:flex;flex-direction:column;gap:6px">';
+    son10.forEach(function(g){
+      var durumRenk={devam:'var(--orange)',tamam:'var(--green)',bekliyor:'var(--accent)',gecikti:'var(--red)'}[g.durum]||'var(--text3)';
+      var deg={mukemmel:'⭐',olumlu:'✅',olumsuz:'❌'}[g.degerlendirme||'']||'';
+      var verilen=g.sureDk||(g.bitisTs&&g.olusturmaTs?Math.round((g.bitisTs-g.olusturmaTs)/60000):null);
+      var gercek=g.tamamlamaTs&&g.olusturmaTs?Math.round((g.tamamlamaTs-g.olusturmaTs)/60000):null;
+      listeHtml+='<div style="background:var(--bg3);border-radius:var(--r-sm);padding:10px 12px;border-left:3px solid '+durumRenk+'">';
+      listeHtml+='<div style="display:flex;justify-content:space-between;margin-bottom:4px">';
+      listeHtml+='<span style="font-size:12px;font-weight:600;color:var(--text)">'+deg+' '+escHtml(g.baslik||'')+'</span>';
+      listeHtml+='<span style="font-size:10px;color:'+durumRenk+'">'+({devam:'Devam',tamam:'Tamam',bekliyor:'Bekliyor',gecikti:'Gecikti'}[g.durum]||g.durum)+'</span>';
+      listeHtml+='</div>';
+      listeHtml+='<div style="display:flex;gap:12px;font-size:10px;color:var(--text3)">';
+      listeHtml+='<span>👤 '+escHtml(g.atananAd||'—')+'</span>';
+      listeHtml+='<span>📌 '+escHtml(g.atayanAd||'—')+'</span>';
+      if(verilen) listeHtml+='<span>⏱ '+verilen+'dk'+(gercek?' / '+gercek+'dk':'')+'</span>';
+      listeHtml+='</div>';
+      listeHtml+='</div>';
+    });
+    listeHtml+='</div>';
+    html+=_rBlok('📋 Son Görevler', listeHtml);
+
+  }catch(e){
+    html+='<div style="color:var(--red);padding:20px">Görev verisi yüklenemedi: '+e.message+'</div>';
+  }
+
+  return html;
+}
+
+// ─── TAM EKRAN RAPOR SİSTEMİ SONU ───────────────────────────
 let aktifDepoId = null;
 
 function mgr_depoListesiniGuncelle(){
