@@ -2268,10 +2268,166 @@ async function _renderGorevRaporu(){
   el.innerHTML = html;
 }
 
-function doExport(){
+async function doExport(){
+  toast('Rapor hazırlanıyor, lütfen bekleyin...','ok');
   const rows = [];
-  const pad2 = n => String(n).padStart(2,'0');
   const fmtTs = ts => { if(!ts) return '—'; const d=new Date(ts); return d.toLocaleDateString('tr-TR')+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); };
+  const durumTr = {bekliyor:'Bekliyor',devam:'Devam',tamam:'Tamamlandı',gecikti:'Gecikti',silindi:'Silindi'};
+  const degTr   = {mukemmel:'Mükemmel',olumlu:'Olumlu',olumsuz:'Olumsuz'};
+  const oncelikTr = {normal:'Normal',acil:'Acil',dusuk:'Düşük'};
+  const rolTr   = {mudur:'Depo Müdürü',sef:'Depo Şefi',amir:'Vardiya Amiri',personel:'Personel'};
+
+  // Personel listesini doğru yapıdan al
+  const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  const depolar = (_sd&&_sd.depolar)||[];
+  var tumPersonel = [];
+  var gorulenTel = {};
+  depolar.forEach(function(d){
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      const tn = normTel(p.tel||'');
+      if(tn && !gorulenTel[tn]){ gorulenTel[tn]=true; tumPersonel.push({...p, depo:d.ad||''}); }
+    });
+  });
+
+  // Firebase'den güncel çalışma verisini çek
+  var fbCalismaData = {...calismaData}; // localStorage cache ile başla
+  try{
+    const calSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
+    calSnap.forEach(function(doc){
+      const d = doc.data();
+      if(d && d.tarih) fbCalismaData[d.tarih] = d;
+    });
+  }catch(e){ console.warn('Firebase calisma_kayitlar okunamadı, localStorage kullanılıyor'); }
+
+  // Firebase'den güncel iş başı verisini çek
+  var fbIsbasiData = JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
+  try{
+    const ibSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'isbasi_kayitlar'));
+    ibSnap.forEach(function(doc){
+      const d = doc.data();
+      if(d && d.tarih) fbIsbasiData[d.tel+'_'+d.tarih] = d;
+    });
+  }catch(e){ console.warn('Firebase isbasi_kayitlar okunamadı'); }
+
+  // ── 1) İŞ BAŞI RAPORU ──────────────────────────────────────
+  rows.push(['=== İŞ BAŞI RAPORU ===']);
+  rows.push(['Tarih','Ad Soyad','Telefon','Depo','Geliş Saati','Vardiya Başlangıcı','Gecikme(dk)','Durum']);
+  const isbasiKayitlar = Object.values(fbIsbasiData).filter(k=>k&&k.tarih);
+  isbasiKayitlar.sort((a,b)=>((b.tarih||'')<(a.tarih||''))?-1:1);
+  if(isbasiKayitlar.length){
+    isbasiKayitlar.forEach(k=>{
+      rows.push([k.tarih||'—', k.personel||k.ad||k.name||'—', k.tel||'—', k.depoAdi||k.depo||'Manuel', k.saat||'—', k.vardiyaBas||'—', k.gecDk||0, (k.gecDk||0)>0?'GEÇ':'Zamanında']);
+    });
+  } else { rows.push(['Kayıt bulunamadı']); }
+
+  // ── 2) ÇALIŞMA SÜRESİ RAPORU ───────────────────────────────
+  rows.push([]); rows.push(['=== ÇALIŞMA SÜRESİ RAPORU ===']);
+  rows.push(['Tarih','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Çalışılan(sa:dk)','Depo','Mesafe(m)','Toplam Mola(dk)']);
+  const calKeys = Object.keys(fbCalismaData).sort().reverse();
+  if(calKeys.length){
+    calKeys.forEach(function(tarih){
+      const g = fbCalismaData[tarih];
+      const girisler = g.girisler||[];
+      const cikislar = g.cikislar||[];
+      const molaDk = g.toplamMolaDk||0;
+      const topDk = g.toplamDk||0;
+      const topSa = Math.floor(topDk/60)+':'+(String(topDk%60).padStart(2,'0'));
+      for(var i=0; i<Math.max(girisler.length,1); i++){
+        rows.push([
+          tarih,
+          girisler[i]?girisler[i].saat:'—',
+          cikislar[i]?cikislar[i].saat:'Devam ediyor',
+          i===0?topDk:'',
+          i===0?topSa:'',
+          girisler[i]?girisler[i].depo||'Manuel':'—',
+          girisler[i]?girisler[i].mesafe||'—':'—',
+          i===0?molaDk:''
+        ]);
+      }
+    });
+  } else { rows.push(['Kayıt bulunamadı']); }
+
+  // ── 3) MUADİL ÜRÜN KAYITLARI ───────────────────────────────
+  rows.push([]); rows.push(['=== MUADİL ÜRÜN KAYITLARI ===']);
+  rows.push(['Tarih','Saat','Ad Soyad','Telefon','Orijinal Barkod','Muadil Barkod','Adet','Açıklama']);
+  const tr = filtreliKayitlar();
+  if(tr.length){ tr.forEach(r=>rows.push([r.tarih,r.saat,r.ad||'',r.tel||'',r.ori,r.mua,r.adet,r.not||''])); }
+  else { rows.push(['Bu filtre için kayıt bulunamadı']); }
+
+  // ── 4) MOLA KULLANIM RAPORU ─────────────────────────────────
+  rows.push([]); rows.push(['=== MOLA KULLANIM RAPORU (BUGÜN) ===']);
+  rows.push(['Ad Soyad','Telefon','Depo','Mola No','Başlangıç','Bitiş','Süre(dk)','Aşım','Toplam(dk)','Kalan(dk)']);
+  if(tumPersonel.length){
+    tumPersonel.forEach(function(p){
+      const d = getMolaDurum(p.tel);
+      const kullanilan = Math.round(d.kullanilanDk||0);
+      const kalan = Math.max(0,60-kullanilan);
+      const kayitlar = d.kayitlar||[];
+      if(!kayitlar.length){
+        rows.push([p.name||'',p.tel||'',p.depo||'','—','—','—','—','',kullanilan,kalan]);
+      } else {
+        kayitlar.forEach((k,i)=>{
+          rows.push([i===0?p.name||'':'', i===0?p.tel||'':'', i===0?p.depo||'':'', (i+1)+'.', k.bas||'—', k.bit||'—', k.sure||0, k.asiri?'AŞIM':'', i===0?kullanilan:'', i===0?kalan:'']);
+        });
+      }
+    });
+  } else { rows.push(['Vardiya tanımlanmamış']); }
+
+  // ── 5) GÖREV RAPORU ─────────────────────────────────────────
+  rows.push([]); rows.push(['=== GÖREV RAPORU ===']);
+  rows.push(['Görev Başlığı','Atayan','Atayan Ünvanı','Atanan','Öncelik','Durum','Değerlendirme','Atanma Tarihi','Bitiş Planı','Tamamlanma','Verilen Süre(dk)','Gerçek Süre(dk)','Tamamlama Notu']);
+  var gorevRapor = [];
+  try{
+    const gSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    gSnap.forEach(function(doc){
+      const g = doc.data();
+      if(!g || g.durum==='silindi') return; // Silindileri dahil etme
+      // Yetki filtresi
+      const rolSev = rolSeviye(user?user.rol||'':'');
+      if(rolSev < 2) return; // Personel görev raporu göremez
+      if(rolSev < 4){ // Müdür değilse kendi deposunu göster
+        const atananTelN = normTel(g.atananTel||'');
+        const atayanTelN = normTel(g.atayanTel||'');
+        if(atayanTelN !== normTel(user.tel||'') && !gorulenTel[atananTelN]) return;
+      }
+      gorevRapor.push(g);
+    });
+    gorevRapor.sort((a,b)=>(b.olusturmaTs||0)-(a.olusturmaTs||0));
+    window._raporGorevler = gorevRapor;
+  }catch(e){ gorevRapor = window._raporGorevler||[]; }
+
+  if(gorevRapor.length){
+    gorevRapor.forEach(function(g){
+      const verilen = g.sureDk || (g.bitisTs&&g.olusturmaTs?Math.round((g.bitisTs-g.olusturmaTs)/60000):null);
+      const gercek  = g.tamamlamaTs&&g.olusturmaTs?Math.round((g.tamamlamaTs-g.olusturmaTs)/60000):null;
+      rows.push([
+        g.baslik||'',
+        g.atayanAd||'Yönetici',
+        rolTr[g.atayanRol||'']||g.atayanRol||'',
+        g.atananAd||'',
+        oncelikTr[g.oncelik||'normal']||g.oncelik||'',
+        durumTr[g.durum||'']||g.durum||'',
+        degTr[g.degerlendirme||'']||g.degerlendirme||'',
+        fmtTs(g.olusturmaTs),
+        fmtTs(g.bitisTs),
+        fmtTs(g.tamamlamaTs),
+        verilen!==null?verilen:'—',
+        gercek!==null?gercek:'—',
+        g.tamamlamaAciklama||''
+      ]);
+    });
+  } else { rows.push(['Görev kaydı bulunamadı']); }
+
+  const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v===null||v===undefined?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'acl_rapor_' + todayStr.replace(/\./g,'-') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Rapor indirildi ✓ — '+rows.length+' satır, '+gorevRapor.length+' görev','ok');
+}
 
   // Personel listesini doğru yapıdan al
   const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
