@@ -821,6 +821,15 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
   </div>
 
   <!-- DUYURU POPUP -->
+  <!-- FOTO LİGHTBOX -->
+  <div id="foto-lightbox" onclick="fotoLightboxKapat()" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.95);align-items:center;justify-content:center;flex-direction:column;padding:16px">
+    <button onclick="fotoLightboxKapat(event)" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;border-radius:50%;width:40px;height:40px;font-size:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1000">✕</button>
+    <button id="lb-prev" onclick="fotoLightboxGec(-1,event)" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;border-radius:50%;width:44px;height:44px;font-size:22px;color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:1000">‹</button>
+    <button id="lb-next" onclick="fotoLightboxGec(1,event)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;border-radius:50%;width:44px;height:44px;font-size:22px;color:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:1000">›</button>
+    <img id="lb-img" src="" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px;box-shadow:0 0 60px rgba(0,0,0,.8)" onclick="event.stopPropagation()">
+    <div id="lb-sayac" style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.5);font-family:var(--mono)"></div>
+  </div>
+
   <div id="duyuru-overlay" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px">
     <div id="duyuru-box" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);width:100%;max-width:400px;overflow:hidden">
       <div style="background:var(--accent2);padding:14px 16px;display:flex;align-items:center;gap:10px">
@@ -3099,7 +3108,66 @@ function showMolaUyariBanner(tip, saat, sure){
   }
 }
 
-// ─── MOLA SİSTEMİ ────────────────────────────────────────────
+// ── FOTO LİGHTBOX ─────────────────────────────────────────────
+var _lbFotolar = [];
+var _lbIndex = 0;
+
+function fotoLightboxAc(fotolar, index){
+  _lbFotolar = fotolar || [];
+  _lbIndex = index || 0;
+  var lb = document.getElementById('foto-lightbox');
+  if(!lb) return;
+  lb.style.display = 'flex';
+  _lbGuncelle();
+  // Swipe desteği — dokunmatik ekran için
+  lb.addEventListener('touchstart', _lbTouchStart, {passive:true});
+  lb.addEventListener('touchend', _lbTouchEnd, {passive:true});
+}
+
+function fotoLightboxKapat(e){
+  if(e) e.stopPropagation();
+  var lb = document.getElementById('foto-lightbox');
+  if(lb){
+    lb.style.display = 'none';
+    lb.removeEventListener('touchstart', _lbTouchStart);
+    lb.removeEventListener('touchend', _lbTouchEnd);
+  }
+  _lbFotolar = [];
+}
+
+function fotoLightboxGec(yon, e){
+  if(e) e.stopPropagation();
+  _lbIndex = (_lbIndex + yon + _lbFotolar.length) % _lbFotolar.length;
+  _lbGuncelle();
+}
+
+function _lbGuncelle(){
+  var img = document.getElementById('lb-img');
+  var sayac = document.getElementById('lb-sayac');
+  var prev = document.getElementById('lb-prev');
+  var next = document.getElementById('lb-next');
+  if(img) img.src = _lbFotolar[_lbIndex] || '';
+  if(sayac) sayac.textContent = _lbFotolar.length > 1 ? (_lbIndex+1)+' / '+_lbFotolar.length : '';
+  var cok = _lbFotolar.length > 1;
+  if(prev) prev.style.display = cok ? 'flex' : 'none';
+  if(next) next.style.display = cok ? 'flex' : 'none';
+}
+
+var _lbTouchX = 0;
+function _lbTouchStart(e){ _lbTouchX = e.touches[0].clientX; }
+function _lbTouchEnd(e){
+  var dx = e.changedTouches[0].clientX - _lbTouchX;
+  if(Math.abs(dx) > 50) fotoLightboxGec(dx < 0 ? 1 : -1, null);
+}
+
+// Klavye desteği (ESC / ok tuşları)
+document.addEventListener('keydown', function(e){
+  var lb = document.getElementById('foto-lightbox');
+  if(!lb || lb.style.display === 'none') return;
+  if(e.key === 'Escape') fotoLightboxKapat();
+  else if(e.key === 'ArrowRight') fotoLightboxGec(1, null);
+  else if(e.key === 'ArrowLeft') fotoLightboxGec(-1, null);
+});
 const MOLA_DB   = 'acl_mola_v1';
 let molaDurumlar = JSON.parse(localStorage.getItem(MOLA_DB)||'{}');
 // {tel: {aktif:bool, baslangic:timestamp, kullanilanDk:number, kayitlar:[{bas,bit,sure,asiri}]}}
@@ -4288,8 +4356,8 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     // Fotoğraflar
     if(g.fotolar && g.fotolar.length){
       html += '<div class="gorev-foto-grid">';
-      g.fotolar.forEach(function(f){
-        html += '<div class="gorev-foto-box gf-dolu"><img src="'+f+'" alt=""></div>';
+      g.fotolar.forEach(function(f, i){
+        html += '<div class="gorev-foto-box gf-dolu" onclick="fotoLightboxAc('+JSON.stringify(g.fotolar)+','+i+')" style="cursor:zoom-in"><img src="'+f+'" alt=""></div>';
       });
       html += '</div>';
     }
