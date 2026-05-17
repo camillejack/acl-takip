@@ -5362,6 +5362,15 @@ async function gorevSavunmaGonder(){
 }
 
 // Şablon kaydet
+function gorevYeniSablonModalAc(){
+  // Formu temizle
+  ['gs-baslik','gs-aciklama','gs-sure','gs-ikon'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  gmodalAc('yeni-sablon');
+}
+
 async function gorevSablonKaydet(){
   var baslik = (document.getElementById('gs-baslik')||{}).value||'';
   var aciklama = (document.getElementById('gs-aciklama')||{}).value||'';
