@@ -1126,6 +1126,54 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 <div class="toast" id="toast"></div>
 
 <!-- GÖREV MODAL OVERLAYLERİ — body seviyesinde (position:fixed için) -->
+<div class="gorev-modal-overlay" id="gmodal-revize">
+  <div class="gorev-modal" onclick="event.stopPropagation()">
+    <div class="gorev-modal-baslik">Görevi Düzenle <button class="gorev-modal-kapat" onclick="gmodalKapat('revize')">×</button></div>
+    <input type="hidden" id="gr-id">
+    <div class="gorev-form-label">Görev Başlığı</div>
+    <input class="gorev-form-input" id="gr-baslik" type="text" placeholder="Görev başlığı...">
+    <div class="gorev-form-label">Açıklama</div>
+    <textarea class="gorev-form-input" id="gr-aciklama" rows="3" placeholder="Görev detayları..."></textarea>
+    <div class="gorev-form-label">Atanan Personel</div>
+    <select class="gorev-form-input" id="gr-personel"></select>
+    <div class="gorev-form-label">Bitiş Tarihi & Saati</div>
+    <input class="gorev-form-input" id="gr-bitis" type="datetime-local" oninput="grSureHesapla()">
+    <div class="gorev-form-label">Görev Süresi (dk)</div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px">
+      <input class="gorev-form-input" id="gr-sure-dk" type="number" min="5" step="5" placeholder="Dakika..." style="margin-bottom:0" oninput="grBitisHesapla()">
+      <select class="gorev-form-input" id="gr-sure-hizli" style="margin-bottom:0;font-size:12px" onchange="grHizliSure(this.value)">
+        <option value="">Hızlı</option>
+        <option value="15">15dk</option>
+        <option value="30">30dk</option>
+        <option value="60">1sa</option>
+        <option value="120">2sa</option>
+        <option value="180">3sa</option>
+        <option value="240">4sa</option>
+      </select>
+    </div>
+    <div class="gorev-form-label">Öncelik</div>
+    <select class="gorev-form-input" id="gr-oncelik">
+      <option value="normal">🟡 Normal</option>
+      <option value="acil">🔴 Acil</option>
+      <option value="dusuk">🟢 Düşük</option>
+    </select>
+    <!-- Müdür: Revizyonu dondur seçeneği -->
+    <div id="gr-dondur-wrap" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" id="gr-dondur" style="width:16px;height:16px;accent-color:var(--red)">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">🔒 Revizyonu Dondur</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Diğer yöneticiler bu görevi düzenleyemez veya silemez</div>
+        </div>
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="gorev-btn-primary" onclick="gorevRevizeKaydet()" style="background:var(--accent2)">💾 Kaydet</button>
+      <button onclick="gorevSilOnay()" style="background:var(--re2,rgba(224,85,85,.15));color:var(--red);border:1px solid var(--re3,rgba(224,85,85,.3));border-radius:var(--r-sm);padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)">🗑 Sil</button>
+    </div>
+  </div>
+</div>
+
 <div class="gorev-modal-overlay" id="gmodal-tamamla">
   <div class="gorev-modal" onclick="event.stopPropagation()">
     <div class="gorev-modal-baslik">Görevi Tamamla <button class="gorev-modal-kapat" onclick="gorevFotoSayacDurdur();gmodalKapat('tamamla')">×</button></div>
@@ -4302,13 +4350,13 @@ async function _renderGorevEkrani(){
     snap.forEach(function(d){ tumGorevler.push(d.data()); });
   }catch(e){ tumGorevler = []; }
 
-  // Personel: SADECE kendine atanan görevler
-  // Yönetici: Kendi atadıkları + kendine atananlar
+  // Personel: SADECE kendine atanan görevler (silindiler hariç)
+  // Yönetici: Kendi atadıkları + kendine atananlar (silindiler hariç)
   var banaAtanan = tumGorevler.filter(function(g){
-    return normTel(g.atananTel||'') === telNorm;
+    return normTel(g.atananTel||'') === telNorm && g.durum !== 'silindi';
   });
   var benimAtadim = yonetici ? tumGorevler.filter(function(g){
-    return normTel(g.atayanTel||'') === telNorm;
+    return normTel(g.atayanTel||'') === telNorm && g.durum !== 'silindi';
   }) : [];
 
   // Aktif (bitmemiş) / biten ayrımı
@@ -4659,6 +4707,22 @@ function _gorevKartHtml(g, yoneticiGorunumu){
     }
   }
 
+  // ── YÖNETİCİ: DÜZENLE / SİL ──
+  if(yoneticiGorunumu && durum !== 'tamam'){
+    var _rolSevKart = rolSeviye(user ? user.rol||'' : '');
+    var _dondurulmus = g.revizeDondur && _rolSevKart < 4;
+    if(!_dondurulmus){
+      html += '<div style="display:flex;gap:6px;margin-top:10px">';
+      html += '<button onclick="gorevRevizeAc(\''+escHtml(g.id)+'\')" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--sans)">✏️ Düzenle</button>';
+      if(_rolSevKart >= 4){
+        html += '<button onclick="gorevRevizeAc(\''+escHtml(g.id)+'\',true)" style="padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--sans)" title="Dondur/Yönet">🔒</button>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div style="margin-top:10px;font-size:10px;color:var(--text3);text-align:center;padding:6px;background:var(--bg3);border-radius:var(--r-sm)">🔒 Müdür tarafından donduruldu</div>';
+    }
+  }
+
   html += '</div>';
   return html;
 }
@@ -4793,8 +4857,172 @@ async function gorevAta(){
   }catch(e){ toast('Görev kaydedilemedi','err'); }
 }
 
-// Görev tamamlama
-var _aktifGorevId = null;
+// ── GÖREV REVİZE SİSTEMİ ──────────────────────────────────────
+var _revizeGorevId = null;
+
+async function gorevRevizeAc(gorevId, dondurModu){
+  _revizeGorevId = gorevId;
+  var g = null;
+  try{
+    g = await fbGet('gorevler', gorevId);
+  }catch(e){}
+  if(!g){ toast('Görev bulunamadı','err'); return; }
+
+  // Alanları doldur
+  document.getElementById('gr-id').value = gorevId;
+  document.getElementById('gr-baslik').value = g.baslik||'';
+  document.getElementById('gr-aciklama').value = g.aciklama||'';
+  document.getElementById('gr-oncelik').value = g.oncelik||'normal';
+
+  // Bitiş tarihi
+  if(g.bitisTs){
+    var d = new Date(g.bitisTs);
+    var pad = function(n){ return String(n).padStart(2,'0'); };
+    document.getElementById('gr-bitis').value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  // Süre
+  if(g.sureDk) document.getElementById('gr-sure-dk').value = g.sureDk;
+
+  // Personel listesi — atanabilenler
+  var personelSel = document.getElementById('gr-personel');
+  personelSel.innerHTML = '';
+  var tumDepolar = getDepolar();
+  var gorulen = {};
+  tumDepolar.forEach(function(dep){
+    var pers = (dep.personeller||[]).concat((dep.shift&&dep.shift.persons)||[]);
+    pers.forEach(function(p){
+      var tn = normTel(p.tel||'');
+      if(tn && !gorulen[tn] && tn !== normTel(user.tel||'')){
+        gorulen[tn] = true;
+        var opt = document.createElement('option');
+        opt.value = tn+'|'+(p.name||'');
+        opt.textContent = (p.name||'?')+' — '+rolLabel(p.rol||'personel')+(dep.ad?' ('+dep.ad+')':'');
+        if(tn === normTel(g.atananTel||'')) opt.selected = true;
+        personelSel.appendChild(opt);
+      }
+    });
+  });
+
+  // Müdür dondurma seçeneği
+  var dondurWrap = document.getElementById('gr-dondur-wrap');
+  var dondurCb   = document.getElementById('gr-dondur');
+  var rolSev = rolSeviye(user ? user.rol||'' : '');
+  if(dondurWrap) dondurWrap.style.display = rolSev >= 4 ? 'block' : 'none';
+  if(dondurCb) dondurCb.checked = !!g.revizeDondur;
+
+  gmodalAc('revize');
+}
+
+function grSureHesapla(){
+  var bitis = document.getElementById('gr-bitis');
+  var sureDk = document.getElementById('gr-sure-dk');
+  if(!bitis||!sureDk||!bitis.value) return;
+  var farkDk = Math.round((new Date(bitis.value).getTime() - Date.now()) / 60000);
+  if(farkDk > 0) sureDk.value = farkDk;
+}
+
+function grBitisHesapla(){
+  var bitis = document.getElementById('gr-bitis');
+  var sureDk = document.getElementById('gr-sure-dk');
+  if(!bitis||!sureDk) return;
+  var dk = parseInt(sureDk.value,10);
+  if(!dk||dk<1) return;
+  var d = new Date(Date.now() + dk*60000);
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  bitis.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  var hizli = document.getElementById('gr-sure-hizli'); if(hizli) hizli.value='';
+}
+
+function grHizliSure(val){
+  var sureDk = document.getElementById('gr-sure-dk');
+  if(!sureDk||!val) return;
+  sureDk.value = val;
+  grBitisHesapla();
+}
+
+async function gorevRevizeKaydet(){
+  var gorevId  = (document.getElementById('gr-id')||{}).value||'';
+  var baslik   = (document.getElementById('gr-baslik')||{}).value||'';
+  var aciklama = (document.getElementById('gr-aciklama')||{}).value||'';
+  var bitisVal = (document.getElementById('gr-bitis')||{}).value||'';
+  var sureDk   = parseInt((document.getElementById('gr-sure-dk')||{}).value||'0',10)||null;
+  var oncelik  = (document.getElementById('gr-oncelik')||{}).value||'normal';
+  var personelVal = (document.getElementById('gr-personel')||{}).value||'';
+  var dondurCb = document.getElementById('gr-dondur');
+  var revizeDondur = dondurCb ? dondurCb.checked : false;
+
+  if(!gorevId){ toast('Görev ID bulunamadı','err'); return; }
+  if(!baslik.trim()){ toast('Başlık boş olamaz','err'); return; }
+  if(!bitisVal && !sureDk){ toast('Bitiş tarihi veya süre zorunlu','err'); return; }
+
+  var bitisTs;
+  if(bitisVal){
+    bitisTs = new Date(bitisVal).getTime();
+  } else {
+    bitisTs = Date.now() + sureDk*60000;
+  }
+  if(bitisTs <= Date.now()){ toast('Bitiş tarihi geçmişte olamaz','err'); return; }
+  if(!sureDk) sureDk = Math.round((bitisTs - Date.now())/60000);
+
+  var parcalar = personelVal.split('|');
+  var atananTel = parcalar[0]||'';
+  var atananAd  = parcalar[1]||'';
+
+  // Müdür değilse dondurulmuş görevi kontrol et
+  var rolSev = rolSeviye(user ? user.rol||'' : '');
+  var mevcutG = null;
+  try{ mevcutG = await fbGet('gorevler', gorevId); }catch(e){}
+  if(mevcutG && mevcutG.revizeDondur && rolSev < 4){
+    toast('Bu görev müdür tarafından donduruldu','err'); return;
+  }
+
+  var guncelleme = {
+    baslik: baslik.trim(),
+    aciklama: aciklama.trim(),
+    atananTel: atananTel,
+    atananAd: atananAd,
+    oncelik: oncelik,
+    sureDk: sureDk,
+    bitisTs: bitisTs,
+    revizeDondur: revizeDondur,
+    sonRevize: Date.now(),
+    revizyonYapan: user ? user.ad||'' : ''
+  };
+
+  try{
+    var _fb = window._fb;
+    await _fb.setDoc(_fb.doc(_fb.db,'gorevler',gorevId), guncelleme, {merge:true});
+    toast('Görev güncellendi ✓','ok');
+    gmodalKapat('revize');
+    renderGorevEkrani();
+  }catch(e){ toast('Güncelleme başarısız','err'); }
+}
+
+function gorevSilOnay(){
+  var gorevId = (document.getElementById('gr-id')||{}).value||'';
+  if(!gorevId) return;
+  if(!confirm('Bu görevi silmek istediğinizden emin misiniz?')) return;
+  gorevSil(gorevId);
+}
+
+async function gorevSil(gorevId){
+  var rolSev = rolSeviye(user ? user.rol||'' : '');
+  try{
+    var mevcutG = await fbGet('gorevler', gorevId);
+    if(mevcutG && mevcutG.revizeDondur && rolSev < 4){
+      toast('Bu görev müdür tarafından donduruldu — silinemiyor','err'); return;
+    }
+    var _fb = window._fb;
+    await _fb.setDoc(_fb.doc(_fb.db,'gorevler',gorevId), {durum:'silindi', silinmeTs:Date.now(), silenKisi: user?user.ad:''}, {merge:true});
+    toast('Görev silindi','ok');
+    gmodalKapat('revize');
+    renderGorevEkrani();
+  }catch(e){ toast('Silme başarısız','err'); }
+}
+
+// gmodalAc yardımcı (gmodalKapat zaten var, gmodalAc aşağıda tanımlı)
+
+// ── GÖREV REVİZE SİSTEMİ SONU ────────────────────────────────
 var _gorevFotolar = [null, null, null];
 var _aktifFotoIndex = 0;
 
