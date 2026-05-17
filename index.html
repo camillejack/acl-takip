@@ -5240,12 +5240,25 @@ function gorevFotoYukle(input){
   if(!file) return;
   var reader = new FileReader();
   reader.onload = function(e){
-    _gorevFotolar[_aktifFotoIndex] = e.target.result;
-    var el = document.getElementById('gtm-foto-'+_aktifFotoIndex);
-    if(el){
-      el.className = 'gorev-foto-box gf-dolu';
-      el.innerHTML = '<img src="'+e.target.result+'" alt=""><span style="position:absolute;bottom:4px;right:4px;background:var(--green);color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700">✓ '+(++_aktifFotoIndex>3?3:_aktifFotoIndex)+'</span>';
-    }
+    // Canvas ile sıkıştır — max 600px, %60 kalite → ~40-80KB/fotoğraf
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var maxW = 600, maxH = 600;
+      var w = img.width, h = img.height;
+      if(w > h){ if(w > maxW){ h = Math.round(h*maxW/w); w = maxW; } }
+      else { if(h > maxH){ w = Math.round(w*maxH/h); h = maxH; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var kucuk = canvas.toDataURL('image/jpeg', 0.6);
+      _gorevFotolar[_aktifFotoIndex] = kucuk;
+      var el = document.getElementById('gtm-foto-'+_aktifFotoIndex);
+      if(el){
+        el.className = 'gorev-foto-box gf-dolu';
+        el.innerHTML = '<img src="'+kucuk+'" alt=""><span style="position:absolute;bottom:4px;right:4px;background:var(--green);color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700">✓</span>';
+      }
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -5284,12 +5297,13 @@ async function gorevTamamlaGonder(){
       );
     }catch(e){ console.warn('Fotoğraf kayıt hatası:', e); }
 
-    // Görevi güncelle — fotoğraf görev belgesine yazılmıyor (1MB limit), sadece referans
+    // Görevi güncelle — sıkıştırılmış fotoğraflar artık güvenle yazılabilir (~240KB max)
     var _fb = window._fb;
     await _fb.setDoc(_fb.doc(_fb.db,'gorevler',_aktifGorevId), {
       durum: 'tamam',
       tamamlamaTs: tamamlamaTs,
       tamamlamaAciklama: aciklama.trim(),
+      fotolar: fotolar,
       fotoRef: fotoRef,
       degerlendirme: degerlendirme
     }, {merge: true});
