@@ -2000,118 +2000,163 @@ function filtreliKayitlar(){
 function renderRapor(){
   const tr = filtreliKayitlar();
   const filtreLbl = {bugun:'Bugün',hafta:'Bu Hafta',ay:'Bu Ay',tumu:'Tüm Kayıtlar'}[aktifFiltreStr]||'';
-  document.getElementById('exp-btn').disabled = tr.length===0;
+  document.getElementById('exp-btn').disabled = false; // CSV her zaman indirilebilir
   document.getElementById('rapor-info').textContent =
-    tr.length ? filtreLbl+': '+tr.length+' eşleşme — toplam '+tr.reduce((s,r)=>s+r.adet,0)+' adet' : filtreLbl+': Kayıt bulunamadı';
-  const oz=document.getElementById('rapor-ozet');
-  if(!tr.length){oz.innerHTML='';return;}
-  // İş başı özeti
-  const isbasiOzetEl=document.getElementById('rapor-isbasi-ozet');
-  if(isbasiOzetEl){
-    const sdRapor2=JSON.parse(localStorage.getItem(SKEY)||'null');
-    const isbasiDataLocal=JSON.parse(localStorage.getItem(ISBASI_KEY)||'{}');
-    if(sdRapor2&&sdRapor2.persons&&sdRapor2.persons.length){
-      isbasiOzetEl.innerHTML=sdRapor2.persons.map(p=>{
-        const k=isbasiDataLocal[todayStr];
-        if(!k||normTel(k.tel)!==normTel(p.tel)) return '';
-        const gec=k.gecDk||0;
-        return `<div class="rec-item" style="margin-bottom:8px">
-          <div class="rec-top">
-            <span class="rec-person">${escHtml(p.name)}</span>
-            <span style="font-family:var(--mono);font-size:12px;color:${gec>0?'var(--red)':'var(--green)'}">${k.saat}</span>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-            <span style="font-size:10px;color:var(--text3)">Vardiya: ${k.vardiyaBas||'—'}</span>
-            <span style="font-size:10px;color:var(--text3)">Konum: ${k.depoAdi||'Manuel'}</span>
-            ${gec>0?`<span style="font-size:10px;font-weight:600;color:var(--red)">⚠️ ${gec} dk geç</span>`:`<span style="font-size:10px;color:var(--green)">✓ Zamanında</span>`}
-          </div>
-        </div>`;
-      }).filter(Boolean).join('')||'<div style="font-size:12px;color:var(--text3);padding:8px 0">Bugün iş başı kaydı yok</div>';
-    }
+    tr.length ? filtreLbl+': '+tr.length+' eşleşme — toplam '+tr.reduce((s,r)=>s+r.adet,0)+' adet' : filtreLbl+': Muadil kayıt bulunamadı';
+
+  const oz = document.getElementById('rapor-ozet');
+  if(!tr.length){ oz.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0">Bu filtre için kayıt yok</div>'; }
+  else {
+    oz.innerHTML = tr.map(r=>`
+      <div class="rec-item">
+        <div class="rec-top">
+          <span class="rec-time">${r.tarih} ${r.saat}</span>
+          <span class="rec-person">${r.ad} · ${r.tel}</span>
+          <span class="rec-adet">${r.adet}×</span>
+        </div>
+        <div class="rec-pair">
+          <div class="rec-bc-box ori"><div class="rec-bc-tag">Orijinal</div><div class="rec-bc-val">${r.ori}</div></div>
+          <div class="rec-arrow">→</div>
+          <div class="rec-bc-box mua"><div class="rec-bc-tag">Muadil</div><div class="rec-bc-val">${r.mua}</div></div>
+        </div>
+        ${r.not?`<div class="rec-note">💬 ${r.not}</div>`:''}
+      </div>`).join('');
   }
 
-  // Aylık çalışma özeti
+  // ── İŞ BAŞI & ÇALIŞMA KAYITLARI ─────────────────────────────
+  var isbasiOzetEl = document.getElementById('rapor-isbasi-ozet');
+  if(isbasiOzetEl){
+    var isbasiHtml = '';
+    // Çalışma datası — son 7 gün
+    var gunler = Object.keys(calismaData).sort().reverse().slice(0,7);
+    if(gunler.length){
+      isbasiHtml += '<div class="kart" style="padding:0;overflow:hidden">';
+      gunler.forEach(function(tarih,idx){
+        var g = calismaData[tarih];
+        var girisler = g.girisler||[];
+        var cikislar = g.cikislar||[];
+        var toplamDk = g.toplamDk||0;
+        var ss = Math.floor(toplamDk/60); var dd = toplamDk%60;
+        var bugunu = new Date(); var td = new Date(tarih.split('.').reverse().join('-'));
+        var fark = Math.round((bugunu-td)/86400000);
+        var gunAdi = fark===0?'Bugün':fark===1?'Dün':tarih;
+        isbasiHtml += '<div style="padding:10px 14px;border-bottom:'+(idx<gunler.length-1?'1px solid var(--border)':'none')+'">';
+        isbasiHtml += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+        isbasiHtml += '<span style="font-size:12px;font-weight:600;color:var(--text)">'+gunAdi+'</span>';
+        isbasiHtml += '<span style="font-family:var(--mono);font-size:12px;color:var(--green)">'+ss+'sa '+dd+'dk</span>';
+        isbasiHtml += '</div>';
+        if(girisler.length){
+          isbasiHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+          for(var i=0;i<girisler.length;i++){
+            var gSaat = girisler[i]?girisler[i].saat:'—';
+            var cSaat = cikislar[i]?cikislar[i].saat:'devam';
+            var depoAdi = girisler[i]?girisler[i].depo||'Manuel':'—';
+            isbasiHtml += '<span style="font-family:var(--mono);font-size:10px;background:var(--bg3);border-radius:5px;padding:3px 8px;color:var(--text2)">'+gSaat+' → '+cSaat+' · '+depoAdi+'</span>';
+          }
+          isbasiHtml += '</div>';
+        } else {
+          isbasiHtml += '<span style="font-size:11px;color:var(--text3)">Kayıt yok</span>';
+        }
+        isbasiHtml += '</div>';
+      });
+      isbasiHtml += '</div>';
+    } else {
+      isbasiHtml = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Çalışma kaydı bulunamadı</div>';
+    }
+    isbasiOzetEl.innerHTML = isbasiHtml;
+  }
+
+  // ── AYLIK ÇALIŞMA ÖZETİ ──────────────────────────────────────
   var aylikEl = document.getElementById('rapor-aylik-ozet');
   if(aylikEl){
-    var aylikHtml = '';
     var simdi2 = new Date();
-    var buAyStr = ('0'+( simdi2.getMonth()+1)).slice(-2)+'.'+simdi2.getFullYear();
-    var aylikToplam = 0;
-    var gunSayisi = 0;
+    var buAyYil = simdi2.getFullYear();
+    var buAyAy  = simdi2.getMonth()+1;
+    var aylikToplam = 0; var gunSayisi = 0; var molaToplam = 0;
     Object.keys(calismaData).forEach(function(tarih){
-      if(tarih.indexOf('.'+buAyStr.split('.')[0]+'.'+buAyStr.split('.')[1]) > -1 ||
-         tarih.endsWith('.'+simdi2.getFullYear())){
+      // tarih formatı: DD.MM.YYYY
+      var parca = tarih.split('.');
+      if(parca.length===3 && parseInt(parca[1])===buAyAy && parseInt(parca[2])===buAyYil){
         var g = calismaData[tarih];
-        if(g && g.toplamDk > 0){
-          aylikToplam += g.toplamDk;
-          gunSayisi++;
-        }
+        if(g && g.toplamDk > 0){ aylikToplam += g.toplamDk; gunSayisi++; }
+        if(g && g.toplamMolaDk) molaToplam += g.toplamMolaDk;
       }
     });
-    var aySaat = Math.floor(aylikToplam/60);
-    var ayDk = aylikToplam%60;
-    aylikHtml = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px">' +
-        '<span style="font-size:13px;color:var(--text2)">Bu Ay Toplam Çalışma</span>' +
-        '<span style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green)">'+aySaat+'sa '+ayDk+'dk</span>' +
-      '</div>' +
-      '<div style="display:flex;justify-content:space-between">' +
-        '<span style="font-size:13px;color:var(--text2)">Çalışılan Gün</span>' +
-        '<span style="font-family:var(--mono);font-size:14px;font-weight:600">'+gunSayisi+' gün</span>' +
-      '</div>' +
-    '</div>';
-    aylikEl.innerHTML = aylikHtml;
+    var aySaat = Math.floor(aylikToplam/60); var ayDk = aylikToplam%60;
+    var ortalamaGun = gunSayisi>0 ? Math.round(aylikToplam/gunSayisi) : 0;
+    var ortSaat = Math.floor(ortalamaGun/60); var ortDk = ortalamaGun%60;
+    aylikEl.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center">' +
+          '<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">'+aySaat+'sa '+ayDk+'dk</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:3px">Aylık Toplam</div>' +
+        '</div>' +
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center">' +
+          '<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent)">'+gunSayisi+' gün</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:3px">Çalışılan Gün</div>' +
+        '</div>' +
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center">' +
+          '<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text2)">'+ortSaat+'sa '+ortDk+'dk</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:3px">Günlük Ortalama</div>' +
+        '</div>' +
+        '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center">' +
+          '<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--orange)">'+molaToplam+'dk</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:3px">Toplam Mola</div>' +
+        '</div>' +
+      '</div>';
   }
 
-  // Mola ozeti
-  const molaOzetEl=document.getElementById('rapor-mola-ozet');
+  // ── MOLA KULLANIM ÖZETİ ───────────────────────────────────────
+  var molaOzetEl = document.getElementById('rapor-mola-ozet');
   if(molaOzetEl){
-    const sdRapor=JSON.parse(localStorage.getItem(SKEY)||'null');
-    if(sdRapor&&sdRapor.persons&&sdRapor.persons.length){
-      molaOzetEl.innerHTML=sdRapor.persons.map(p=>{
-        const d=getMolaDurum(p.tel);
-        const kullanilan=Math.round(d.kullanilanDk||0);
-        const kalan=Math.max(0,60-kullanilan);
-        const asiri=kullanilan>60;
-        const pct=Math.min(100,(kullanilan/60)*100);
-        const progColor=asiri?'var(--red)':kalan<15?'#ffb74d':'var(--green)';
-        const kayitSatirlari=(d.kayitlar||[]).map((k,i)=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
-            <span style="font-family:var(--mono);color:var(--text3);min-width:16px">${i+1}.</span>
-            <span style="font-family:var(--mono);color:var(--text)">${k.bas||'—'}</span>
-            <span style="color:var(--text3)">→</span>
-            <span style="font-family:var(--mono);color:var(--text)">${k.bit||'—'}</span>
-            <span style="font-family:var(--mono);font-size:10px;color:${k.asiri?'var(--red)':'#ffb74d'};background:${k.asiri?'var(--red-dim)':'#2a1800'};padding:2px 7px;border-radius:10px;margin-left:auto">${k.sure}dk${k.asiri?' ⚠️':''}</span>
-          </div>`).join('');
-        return `<div class="rec-item" style="margin-bottom:8px">
-          <div class="rec-top">
-            <span class="rec-person">${escHtml(p.name)}</span>
-            <span style="font-family:var(--mono);font-size:12px;color:${asiri?'var(--red)':kalan<15?'#ffb74d':'var(--green)'}">${kullanilan}/60dk</span>
-          </div>
-          <div style="height:4px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:8px">
-            <div style="width:${pct}%;height:100%;background:${progColor};border-radius:4px"></div>
-          </div>
-          ${kayitSatirlari||'<div style="font-size:11px;color:var(--text3)">Mola kullanılmadı</div>'}
-        </div>`;
-      }).join('');
-    } else { molaOzetEl.innerHTML='<div class="empty-state" style="padding:20px 0"><div style="font-size:12px;color:var(--text3)">Vardiya tanimlanmamis</div></div>'; }
-  }
+    var _sd2 = JSON.parse(localStorage.getItem(SKEY)||'null');
+    var depolar2 = (_sd2&&_sd2.depolar)||[];
+    var molaPersoneller = [];
+    var gorulenTel2 = {};
+    depolar2.forEach(function(d){
+      (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+        var tn = normTel(p.tel||'');
+        if(tn && !gorulenTel2[tn]){ gorulenTel2[tn]=true; molaPersoneller.push(p); }
+      });
+    });
+    // Yönetici değilse sadece kendini göster
+    if(!isYonetici() && user) molaPersoneller = [{name:user.ad||'',tel:user.tel||''}];
 
-  oz.innerHTML=tr.map(r=>`
-    <div class="rec-item">
-      <div class="rec-top">
-        <span class="rec-time">${r.tarih} ${r.saat}</span>
-        <span class="rec-person">${r.ad} · ${r.tel}</span>
-        <span class="rec-adet">${r.adet}×</span>
-      </div>
-      <div class="rec-pair">
-        <div class="rec-bc-box ori"><div class="rec-bc-tag">Orijinal</div><div class="rec-bc-val">${r.ori}</div></div>
-        <div class="rec-arrow">→</div>
-        <div class="rec-bc-box mua"><div class="rec-bc-tag">Muadil</div><div class="rec-bc-val">${r.mua}</div></div>
-      </div>
-      ${r.not?`<div class="rec-note">💬 ${r.not}</div>`:''}
-    </div>
-  `).join('');
+    if(molaPersoneller.length){
+      var molaHtml = '<div class="kart" style="padding:0;overflow:hidden">';
+      molaPersoneller.forEach(function(p,idx){
+        var d = getMolaDurum(p.tel);
+        var kullanilan = Math.round(d.kullanilanDk||0);
+        var kalan = Math.max(0,60-kullanilan);
+        var asiri = kullanilan>60;
+        var pct = Math.min(100,(kullanilan/60)*100);
+        var progColor = asiri?'var(--red)':kalan<15?'#ffb74d':'var(--green)';
+        var kayitlar = d.kayitlar||[];
+        molaHtml += '<div style="padding:10px 14px;border-bottom:'+(idx<molaPersoneller.length-1?'1px solid var(--border)':'none')+'">';
+        molaHtml += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+        molaHtml += '<span style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(p.name||'?')+'</span>';
+        molaHtml += '<span style="font-family:var(--mono);font-size:11px;color:'+(asiri?'var(--red)':kalan<15?'#ffb74d':'var(--green)')+'">'+kullanilan+'/60dk</span>';
+        molaHtml += '</div>';
+        molaHtml += '<div style="height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="width:'+pct+'%;height:100%;background:'+progColor+';border-radius:3px"></div></div>';
+        if(kayitlar.length){
+          kayitlar.forEach(function(k,i){
+            molaHtml += '<div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:2px 0;color:var(--text2)">';
+            molaHtml += '<span style="font-family:var(--mono);color:var(--text3);min-width:14px">'+(i+1)+'.</span>';
+            molaHtml += '<span style="font-family:var(--mono)">'+(k.bas||'—')+' → '+(k.bit||'—')+'</span>';
+            molaHtml += '<span style="font-family:var(--mono);margin-left:auto;color:'+(k.asiri?'var(--red)':'var(--text3)')+'">'+k.sure+'dk'+(k.asiri?' ⚠️':'')+'</span>';
+            molaHtml += '</div>';
+          });
+        } else {
+          molaHtml += '<span style="font-size:11px;color:var(--text3)">Mola kullanılmadı</span>';
+        }
+        molaHtml += '</div>';
+      });
+      molaHtml += '</div>';
+      molaOzetEl.innerHTML = molaHtml;
+    } else {
+      molaOzetEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Vardiya tanımlanmamış</div>';
+    }
+  }
 
   // Görev raporunu async yükle
   _renderGorevRaporu();
@@ -2176,7 +2221,9 @@ async function _renderGorevRaporu(){
       }
     });
     gorevler.sort(function(a,b){ return (b.olusturmaTs||0)-(a.olusturmaTs||0); });
-    gorevler = gorevler.slice(0,30);
+    gorevler = gorevler.slice(0,50);
+    // CSV için önbelleğe al
+    window._raporGorevler = gorevler;
   }catch(e){ el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px">Görev verisi yüklenemedi.</div>'; return; }
 
   if(!gorevler.length){
@@ -2223,93 +2270,109 @@ async function _renderGorevRaporu(){
 
 function doExport(){
   const rows = [];
+  const pad2 = n => String(n).padStart(2,'0');
+  const fmtTs = ts => { if(!ts) return '—'; const d=new Date(ts); return d.toLocaleDateString('tr-TR')+' '+d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}); };
 
-  // ── 1) İş Başı Raporu ──────────────────────────────
-  const isbasiLocal = JSON.parse(localStorage.getItem(ISBASI_KEY)||'{}');
+  // Personel listesini doğru yapıdan al
+  const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  const depolar = (_sd&&_sd.depolar)||[];
+  var tumPersonel = [];
+  var gorulenTel = {};
+  depolar.forEach(function(d){
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      const tn = normTel(p.tel||'');
+      if(tn && !gorulenTel[tn]){ gorulenTel[tn]=true; tumPersonel.push({...p, depo:d.ad||''}); }
+    });
+  });
+
+  // ── 1) İŞ BAŞI RAPORU ──────────────────────────────────────
   rows.push(['=== IS BASI RAPORU ===']);
-  rows.push(['Tarih','Ad Soyad','Telefon','Gelis Saati','Vardiya Baslangici','Gec(dk)','Konum']);
-  const sd2 = JSON.parse(localStorage.getItem(SKEY)||'null');
-  if(sd2 && sd2.persons){
-    sd2.persons.forEach(p=>{
-      const k = Object.values(isbasiLocal).find(v=>normTel(v.tel)===normTel(p.tel) && v.tarih===todayStr);
-      if(k){
-        rows.push([k.tarih,k.personel||p.name,k.tel,k.saat,k.vardiyaBas||'—',k.gecDk||0,k.depoAdi||'Manuel']);
-      } else {
-        rows.push([todayStr, p.name, p.tel, 'Giris yok','—','—','—']);
+  rows.push(['Tarih','Ad Soyad','Telefon','Depo','Gelis Saati','Vardiya Bas','Gec(dk)','Durum']);
+  const isbasiLocal = JSON.parse(localStorage.getItem(ISBASI_KEY)||'{}');
+  // Tüm kayıtlar — bugün değil, tüm tarihler
+  const isbasiKayitlar = Object.values(isbasiLocal);
+  isbasiKayitlar.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(isbasiKayitlar.length){
+    isbasiKayitlar.forEach(k=>{
+      rows.push([k.tarih||'—', k.personel||k.ad||'—', k.tel||'—', k.depoAdi||'Manuel', k.saat||'—', k.vardiyaBas||'—', k.gecDk||0, (k.gecDk||0)>0?'GEÇ':'Zamanında']);
+    });
+  } else { rows.push(['Kayıt yok']); }
+
+  // ── 2) ÇALIŞMA SÜRESİ RAPORU ───────────────────────────────
+  rows.push([]); rows.push(['=== ÇALIŞMA SÜRESİ RAPORU ===']);
+  rows.push(['Tarih','Giriş','Çıkış','Çalışılan(dk)','Depo','Mesafe(m)','Toplam Mola(dk)']);
+  const calKeys = Object.keys(calismaData).sort().reverse();
+  if(calKeys.length){
+    calKeys.forEach(function(tarih){
+      const g = calismaData[tarih];
+      const girisler = g.girisler||[];
+      const cikislar = g.cikislar||[];
+      const molaDk = g.toplamMolaDk||0;
+      for(var i=0; i<Math.max(girisler.length,1); i++){
+        rows.push([
+          tarih,
+          girisler[i]?girisler[i].saat:'—',
+          cikislar[i]?cikislar[i].saat:'Devam',
+          cikislar[i]?cikislar[i].calisilanDk||g.toplamDk||0:'—',
+          girisler[i]?girisler[i].depo||'Manuel':'—',
+          girisler[i]?girisler[i].mesafe||'—':'—',
+          i===0?molaDk:''
+        ]);
       }
     });
-  }
+  } else { rows.push(['Kayıt yok']); }
 
-  // ── 2) Mola Raporu ──────────────────────────────────
-  rows.push([]);
-  rows.push(['=== MOLA KULLANIM RAPORU ===']);
-  rows.push(['Ad Soyad','Telefon','Mola No','Molaya Cikis','Donus Saati','Sure(dk)','Asiri','Toplam(dk)','Kalan(dk)']);
-  if(sd2 && sd2.persons){
-    sd2.persons.forEach(p=>{
+  // ── 3) MUADİL ÜRÜN KAYITLARI ───────────────────────────────
+  rows.push([]); rows.push(['=== MUADİL URUN KAYITLARI ===']);
+  rows.push(['Tarih','Saat','Ad Soyad','Telefon','Orijinal Barkod','Muadil Barkod','Adet','Aciklama']);
+  const tr = filtreliKayitlar();
+  if(tr.length){ tr.forEach(r=>rows.push([r.tarih,r.saat,r.ad||'',r.tel||'',r.ori,r.mua,r.adet,r.not||''])); }
+  else { rows.push(['Bu filtre icin kayit yok']); }
+
+  // ── 4) MOLA RAPORU ──────────────────────────────────────────
+  rows.push([]); rows.push(['=== MOLA KULLANIM RAPORU (BUGUN) ===']);
+  rows.push(['Ad Soyad','Telefon','Depo','Mola No','Baslangic','Bitis','Sure(dk)','Asiri','Toplam(dk)','Kalan(dk)']);
+  if(tumPersonel.length){
+    tumPersonel.forEach(function(p){
       const d = getMolaDurum(p.tel);
       const kullanilan = Math.round(d.kullanilanDk||0);
-      const kalan = Math.max(0, 60-kullanilan);
+      const kalan = Math.max(0,60-kullanilan);
       const kayitlar = d.kayitlar||[];
-      if(kayitlar.length === 0){
-        rows.push([p.name, p.tel, '—','—','—','—','', kullanilan, kalan]);
+      if(!kayitlar.length){
+        rows.push([p.name||'',p.tel||'',p.depo||'','—','—','—','—','',kullanilan,kalan]);
       } else {
         kayitlar.forEach((k,i)=>{
-          rows.push([
-            i===0 ? p.name : '',
-            i===0 ? p.tel  : '',
-            (i+1)+'.',
-            k.bas || '—',
-            k.bit || '—',
-            k.sure || 0,
-            k.asiri ? 'ASIRI' : '',
-            i===0 ? kullanilan : '',
-            i===0 ? kalan : ''
-          ]);
+          rows.push([i===0?p.name||'':'', i===0?p.tel||'':'', i===0?p.depo||'':'', (i+1)+'.', k.bas||'—', k.bit||'—', k.sure||0, k.asiri?'ASIRI':'', i===0?kullanilan:'', i===0?kalan:'']);
         });
       }
     });
-  }
+  } else { rows.push(['Vardiya tanimlanmamis']); }
 
-  // ── 3) Muadil Kayıtlar ──────────────────────────────
-  const tr = [...recs.filter(r=>r.tarih===todayStr)].reverse();
-  rows.push([]);
-  rows.push(['=== MUADİL URUN KAYITLARI ===']);
-  rows.push(['Tarih','Saat','Ad Soyad','Telefon','Orijinal Barkod','Muadil Barkod','Adet','Aciklama']);
-  if(tr.length){
-    tr.forEach(r=>rows.push([r.tarih,r.saat,r.ad||'',r.tel||'',r.ori,r.mua,r.adet,r.not||'']));
-  } else {
-    rows.push(['Bugün kayıt yok']);
-  }
-
-  // Çalışma kayıtları
-  if(Object.keys(calismaData).length > 0){
-    rows.push([]);
-    rows.push(['=== ÇALIŞMA KAYITLARI ===']);
-    rows.push(['Tarih','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Depo','Mesafe(m)']);
-    Object.keys(calismaData).sort().forEach(function(tarih){
-      var g = calismaData[tarih];
-      var girisler = g.girisler||[];
-      var cikislar = g.cikislar||[];
-      for(var i=0; i<Math.max(girisler.length,1); i++){
-        var girisSat = girisler[i] ? girisler[i].saat : '—';
-        var cikisSat = cikislar[i] ? cikislar[i].saat : '—';
-        var calDk = cikislar[i] ? cikislar[i].calisilanDk : '—';
-        var depoAdi = girisler[i] ? girisler[i].depo : '—';
-        var mes = girisler[i] ? girisler[i].mesafe : '—';
-        rows.push([tarih, girisSat, cikisSat, calDk, depoAdi, mes]);
-      }
+  // ── 5) GÖREV RAPORU ─────────────────────────────────────────
+  rows.push([]); rows.push(['=== GOREV RAPORU ===']);
+  rows.push(['ID','Baslik','Atayan','Atayan Rol','Atanan','Oncelik','Durum','Degerlendirme','Atanma','Bitis Plani','Tamamlandi','Verilen(dk)','Gercek(dk)','Aciklama']);
+  // tumGorevler localStorage cache'den veya bellekten
+  const gorevKeys = Object.keys(localStorage).filter(k=>k.startsWith('gorev_'));
+  // Belleğe alınan gorevler varsa kullan — yoksa notu ekle
+  if(window._raporGorevler && window._raporGorevler.length){
+    window._raporGorevler.forEach(function(g){
+      const verilen = g.bitisTs && g.olusturmaTs ? Math.round((g.bitisTs-g.olusturmaTs)/60000) : '';
+      const gercek  = g.tamamlamaTs && g.olusturmaTs ? Math.round((g.tamamlamaTs-g.olusturmaTs)/60000) : '';
+      rows.push([g.id||'', g.baslik||'', g.atayanAd||'', g.atayanRol||'', g.atananAd||'', g.oncelik||'', g.durum||'', g.degerlendirme||'', fmtTs(g.olusturmaTs), fmtTs(g.bitisTs), fmtTs(g.tamamlamaTs), verilen, gercek, g.tamamlamaAciklama||'']);
     });
+  } else {
+    rows.push(['Gorev raporu icin once Rapor ekranini acin (Firebase verisi yüklenir)']);
   }
 
-  const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csv = '\uFEFF' + rows.map(r=>r.map(v=>`"${String(v===null||v===undefined?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url;
-  a.download = 'acl_gunluk_rapor_' + todayStr.replace(/\./g,'-') + '.csv';
+  a.download = 'acl_rapor_' + todayStr.replace(/\./g,'-') + '.csv';
   a.click();
   URL.revokeObjectURL(url);
-  toast('Günlük rapor indirildi ✓','ok');
+  toast('Rapor indirildi ✓ ('+rows.length+' satır)','ok');
 }
 
 
