@@ -4479,8 +4479,23 @@ function _gorevAtaFormHtml(){
     '<div id="gf-personel-liste" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);max-height:240px;overflow-y:auto;margin-bottom:10px">' +
       checkboxHtml +
     '</div>' +
-    '<label class="gorev-form-label">Bitiş Süresi</label>' +
-    '<input class="gorev-form-input" id="gf-bitis" type="datetime-local">' +
+    '<label class="gorev-form-label">Bitiş Tarihi & Saati</label>' +
+    '<input class="gorev-form-input" id="gf-bitis" type="datetime-local" oninput="gorevSureHesapla()">' +
+    '<label class="gorev-form-label">Görev Süresi</label>' +
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px">' +
+      '<input class="gorev-form-input" id="gf-sure-dk" type="number" min="5" max="480" step="5" placeholder="Dakika girin..." style="margin-bottom:0" oninput="gorevBitisHesapla()">' +
+      '<select class="gorev-form-input" id="gf-sure-hizli" style="margin-bottom:0;font-size:12px" onchange="gorevHizliSure(this.value)">' +
+        '<option value="">Hızlı seç</option>' +
+        '<option value="15">15 dk</option>' +
+        '<option value="30">30 dk</option>' +
+        '<option value="45">45 dk</option>' +
+        '<option value="60">1 saat</option>' +
+        '<option value="90">1,5 saat</option>' +
+        '<option value="120">2 saat</option>' +
+        '<option value="180">3 saat</option>' +
+        '<option value="240">4 saat</option>' +
+      '</select>' +
+    '</div>' +
     '<label class="gorev-form-label">Öncelik</label>' +
     '<select class="gorev-form-input" id="gf-oncelik">' +
       '<option value="normal">🟡 Normal</option>' +
@@ -4489,6 +4504,41 @@ function _gorevAtaFormHtml(){
     '</select>' +
     '<button class="gorev-btn-primary" onclick="gorevAta()">📋 Görev(leri) Ata</button>' +
   '</div>';
+}
+
+function gorevSureHesapla(){
+  // Bitiş tarihi girilince → süreyi hesapla
+  var bitis = document.getElementById('gf-bitis');
+  var sureDk = document.getElementById('gf-sure-dk');
+  if(!bitis || !sureDk || !bitis.value) return;
+  var bitisTs = new Date(bitis.value).getTime();
+  var simdi = Date.now();
+  var farkDk = Math.round((bitisTs - simdi) / 60000);
+  if(farkDk > 0) sureDk.value = farkDk;
+}
+
+function gorevBitisHesapla(){
+  // Süre girilince → bitiş tarihini hesapla
+  var bitis = document.getElementById('gf-bitis');
+  var sureDk = document.getElementById('gf-sure-dk');
+  var hizli = document.getElementById('gf-sure-hizli');
+  if(!bitis || !sureDk) return;
+  var dk = parseInt(sureDk.value, 10);
+  if(!dk || dk < 1) return;
+  var bitisTs = Date.now() + dk * 60000;
+  var d = new Date(bitisTs);
+  // datetime-local formatı: YYYY-MM-DDTHH:MM
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  bitis.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+  if(hizli) hizli.value = '';
+}
+
+function gorevHizliSure(val){
+  // Hızlı seçimden süre seç → her ikisini güncelle
+  var sureDk = document.getElementById('gf-sure-dk');
+  if(!sureDk || !val) return;
+  sureDk.value = val;
+  gorevBitisHesapla();
 }
 
 function gorevPersonelSayGuncelle(){
@@ -4680,11 +4730,21 @@ async function gorevAta(){
   var aciklama = (document.getElementById('gf-aciklama')||{}).value||'';
   var bitis    = (document.getElementById('gf-bitis')||{}).value||'';
   var oncelik  = (document.getElementById('gf-oncelik')||{}).value||'normal';
+  var sureDkEl = document.getElementById('gf-sure-dk');
+  var sureDk   = sureDkEl ? (parseInt(sureDkEl.value,10)||null) : null;
 
   if(!baslik.trim()){ toast('Görev başlığı zorunlu','err'); return; }
-  if(!bitis){ toast('Bitiş süresi zorunlu','err'); return; }
-  var bitisTs = new Date(bitis).getTime();
+  if(!bitis && !sureDk){ toast('Bitiş tarihi veya görev süresi zorunlu','err'); return; }
+
+  // Bitiş tarihi yoksa süreden hesapla
+  var bitisTs;
+  if(bitis){
+    bitisTs = new Date(bitis).getTime();
+  } else {
+    bitisTs = Date.now() + sureDk * 60000;
+  }
   if(bitisTs <= Date.now()){ toast('Bitiş süresi geçmişte olamaz','err'); return; }
+  if(!sureDk) sureDk = Math.round((bitisTs - Date.now()) / 60000);
 
   // Seçili personelleri topla
   var secilen = Array.from(document.querySelectorAll('.gf-personel-cb:checked'));
@@ -4709,6 +4769,7 @@ async function gorevAta(){
         atananTel: atanan.tel,
         atananAd: atanan.ad,
         oncelik: oncelik,
+        sureDk: sureDk,
         bitisTs: bitisTs,
         durum: 'devam',
         olusturmaTs: baseTs+i,
@@ -4724,7 +4785,8 @@ async function gorevAta(){
     toast(atananlar.length > 1 ? atananlar.length+' personele görev atandı ✓' : 'Görev atandı ✓', 'ok');
 
     // Formu temizle
-    ['gf-baslik','gf-aciklama','gf-bitis'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    ['gf-baslik','gf-aciklama','gf-bitis','gf-sure-dk'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    var hizli = document.getElementById('gf-sure-hizli'); if(hizli) hizli.value='';
     document.querySelectorAll('.gf-personel-cb:checked').forEach(function(cb){ cb.checked=false; });
     gorevPersonelSayGuncelle();
     renderGorevEkrani();
