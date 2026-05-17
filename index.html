@@ -5138,13 +5138,25 @@ async function gorevTamamlaGonder(){
     var beklenDk = ((g.bitisTs||tamamlamaTs) - (g.olusturmaTs||tamamlamaTs)) / 60000;
     var degerlendirme = gecenDk <= beklenDk * 0.9 ? 'mukemmel' : (gecenDk <= beklenDk ? 'olumlu' : 'olumsuz');
 
-    await fbSet('gorevler', _aktifGorevId, Object.assign({}, g, {
+    // Fotoğrafları ayrı koleksiyona kaydet (1MB limitini aşmamak için)
+    var fotoRef = 'gf_'+_aktifGorevId;
+    try{
+      await window._fb.setDoc(
+        window._fb.doc(window._fb.db, 'gorev_fotolar', fotoRef),
+        { gorevId: _aktifGorevId, fotolar: fotolar, ts: tamamlamaTs }
+      );
+    }catch(e){ console.warn('Fotoğraf kayıt hatası:', e); }
+
+    // Görevi güncelle — sadece değişen alanlar, merge ile
+    var _fb = window._fb;
+    await _fb.setDoc(_fb.doc(_fb.db,'gorevler',_aktifGorevId), {
       durum: 'tamam',
       tamamlamaTs: tamamlamaTs,
       tamamlamaAciklama: aciklama.trim(),
-      fotolar: fotolar,
+      fotolar: fotolar, // küçük fotoğraflar için tutuyoruz, büyükse gorev_fotolar'dan çekilir
+      fotoRef: fotoRef,
       degerlendirme: degerlendirme
-    }));
+    }, {merge: true});
 
     // Kariyer puanını güncelle
     await _kariyerPuanGuncelle(normTel(user.tel||''), degerlendirme);
@@ -5152,23 +5164,25 @@ async function gorevTamamlaGonder(){
     // Grup görevi varsa — aynı gruptaki diğer görevleri de tamamlandı say
     if(g.grupId){
       try{
-        var tumSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+        var tumSnap = await _fb.getDocs(_fb.collection(_fb.db,'gorevler'));
         var guncellemePromises = [];
         tumSnap.forEach(function(d){
           var dg = d.data();
           if(dg.grupId === g.grupId && dg.id !== g.id && dg.durum !== 'tamam' && dg.durum !== 'silindi'){
-            guncellemePromises.push(fbSet('gorevler', dg.id, Object.assign({}, dg, {
-              durum: 'tamam',
-              tamamlamaTs: tamamlamaTs,
-              tamamlamaAciklama: aciklama.trim()+' ('+user.ad+' tarafından tamamlandı)',
-              fotolar: fotolar,
-              degerlendirme: degerlendirme,
-              grupTamamlayan: user.ad||''
-            })));
+            guncellemePromises.push(
+              _fb.setDoc(_fb.doc(_fb.db,'gorevler',dg.id), {
+                durum: 'tamam',
+                tamamlamaTs: tamamlamaTs,
+                tamamlamaAciklama: aciklama.trim()+' ('+user.ad+' tarafından tamamlandı)',
+                fotoRef: fotoRef,
+                degerlendirme: degerlendirme,
+                grupTamamlayan: user.ad||''
+              }, {merge: true})
+            );
           }
         });
         if(guncellemePromises.length) await Promise.all(guncellemePromises);
-      }catch(e){ /* grup güncelleme hatası sessiz geç */ }
+      }catch(e){ console.warn('Grup güncelleme hatası:', e); }
     }
 
     gorevFotoSayacDurdur(); // Sayacı durdur
