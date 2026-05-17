@@ -3283,18 +3283,41 @@ function renderMolaEkrani(){
       _molaDepo = aktifDepoId ? _depolarM.find(function(d){return d.id===aktifDepoId;}) : _depolarM[0];
     }
   }
-  // Personel listesini doğru yapıdan al
-  const persons = (sd && sd.persons && sd.persons.length)
-    ? sd.persons
-    : (_molaDepo && _molaDepo.personeller && _molaDepo.personeller.length)
-      ? _molaDepo.personeller
-      : [];
+  // Personel listesini tüm olası yapılardan al
+  var persons = [];
+  if(_molaDepo){
+    var fromPersoneller = _molaDepo.personeller || [];
+    var fromShift = (_molaDepo.shift && _molaDepo.shift.persons) || [];
+    // Tekrarsız birleştir
+    var gorulen = {};
+    fromPersoneller.concat(fromShift).forEach(function(p){
+      var tn = normTel(p.tel||'');
+      if(tn && !gorulen[tn]){ gorulen[tn]=true; persons.push(p); }
+    });
+  }
+  // Hiç depo bulunamadıysa tüm depolardan dene (yönetici)
+  if(!persons.length && isYonetici()){
+    var gorulen2 = {};
+    _depolarM.forEach(function(d){
+      var all = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+      all.forEach(function(p){
+        var tn = normTel(p.tel||'');
+        if(tn && !gorulen2[tn]){ gorulen2[tn]=true; persons.push(p); }
+      });
+    });
+  }
+
+  // Son çare: tüm kullanicilar Firebase'den local cache ile
+  if(!persons.length && user){
+    // En azından kendi kartını göster
+    persons = [{ name: user.ad||'', tel: user.tel||'', rol: user.rol||'personel' }];
+  }
 
   const myTelNorm=user?normTel(user.tel):'';
   const hakDk=60;
 
   if(!persons.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-ico">📅</div><div class="empty-txt">Vardiya tablosu girilmedi.<br>Yönetici vardiyaları tanımlamalı.</div></div>';
+    el.innerHTML='<div class="empty-state"><div class="empty-ico">📅</div><div class="empty-txt">Vardiya tablosu henüz girilmedi.<br>Yönetici → Vardiya ekranından personel ekleyin.</div></div>';
     return;
   }
 
