@@ -4283,35 +4283,61 @@ function gorevTabGec(tab){
 }
 
 function _gorevAtaFormHtml(){
-  // Atanabilecek personeli topla
   var hedefRoller = atanabilirRoller();
-  var personelListesi = [];
+  var isMudur = isMudur ? isMudur() : (rolSeviye(user&&user.rol||'') >= 4);
+  var depolar = getDepolar();
+
+  // Tüm personeli depo bazlı topla
+  var tumPersonel = []; // {ad, tel, rol, depo, depoId}
   var gorulenTel = {};
-  getDepolar().forEach(function(d){
+  depolar.forEach(function(d){
     var pers = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
     pers.forEach(function(p){
       var tn = normTel(p.tel||'');
       var pRol = p.rol || 'personel';
       if(tn && !gorulenTel[tn] && hedefRoller.indexOf(pRol) !== -1 && tn !== normTel(user.tel||'')){
         gorulenTel[tn] = true;
-        personelListesi.push({ad: p.name||'', tel: tn, rol: pRol, depo: d.ad||''});
+        tumPersonel.push({ad: p.name||'', tel: tn, rol: pRol, depo: d.ad||'', depoId: d.id||''});
       }
     });
   });
 
-  var personelOpts = '<option value="">-- Personel Seçin --</option>';
-  personelListesi.forEach(function(p){
-    personelOpts += '<option value="'+p.tel+'|'+escHtml(p.ad)+'">'+escHtml(p.ad)+' — '+rolLabel(p.rol)+'</option>';
-  });
+  // Depo filtre select (sadece müdür için)
+  var depoFilterHtml = '';
+  if(isMudur && depolar.length > 1){
+    depoFilterHtml = '<label class="gorev-form-label">Depo Filtresi</label>' +
+      '<select class="gorev-form-input" id="gf-depo-filter" onchange="gorevDepoFiltrele()">' +
+      '<option value="">Tüm Depolar</option>' +
+      depolar.map(function(d){ return '<option value="'+escHtml(d.id||'')+'">'+escHtml(d.ad||'Depo')+'</option>'; }).join('') +
+      '</select>';
+  }
+
+  // Çoklu personel checkbox listesi
+  var checkboxHtml = tumPersonel.map(function(p){
+    return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer" data-depo="'+escHtml(p.depoId)+'">' +
+      '<input type="checkbox" class="gf-personel-cb" value="'+escHtml(p.tel)+'|'+escHtml(p.ad)+'" style="width:16px;height:16px;accent-color:var(--accent2);flex-shrink:0" onchange="gorevPersonelSayGuncelle()">' +
+      '<div style="flex:1">' +
+        '<div style="font-size:13px;color:var(--tx,var(--text))">'+escHtml(p.ad)+'</div>' +
+        '<div style="font-size:10px;color:var(--text3)">'+rolLabel(p.rol)+(p.depo?' · '+escHtml(p.depo):'')+'</div>' +
+      '</div>' +
+    '</label>';
+  }).join('');
+
+  if(!checkboxHtml){
+    checkboxHtml = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text3)">Atanabilecek personel bulunamadı.</div>';
+  }
 
   return '<div class="kart" style="padding:16px;margin-bottom:10px">' +
     '<div class="slabel" style="margin-top:0">Yeni Görev Ata</div>' +
     '<label class="gorev-form-label">Görev Başlığı</label>' +
     '<input class="gorev-form-input" id="gf-baslik" type="text" placeholder="Örn: Manav bölümü SKT kontrolü">' +
     '<label class="gorev-form-label">Açıklama</label>' +
-    '<textarea class="gorev-form-input" id="gf-aciklama" rows="3" placeholder="Görevin detayları ve beklentiler..."></textarea>' +
-    '<label class="gorev-form-label">Atanacak Personel</label>' +
-    '<select class="gorev-form-input" id="gf-personel">'+personelOpts+'</select>' +
+    '<textarea class="gorev-form-input" id="gf-aciklama" rows="2" placeholder="Görevin detayları..."></textarea>' +
+    depoFilterHtml +
+    '<label class="gorev-form-label">Personel Seç <span id="gf-secilen-sayi" style="background:var(--accent2);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;margin-left:6px">0</span></label>' +
+    '<div id="gf-personel-liste" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);max-height:220px;overflow-y:auto;margin-bottom:10px">' +
+      checkboxHtml +
+    '</div>' +
     '<label class="gorev-form-label">Bitiş Süresi</label>' +
     '<input class="gorev-form-input" id="gf-bitis" type="datetime-local">' +
     '<label class="gorev-form-label">Öncelik</label>' +
@@ -4320,8 +4346,21 @@ function _gorevAtaFormHtml(){
       '<option value="acil">🔴 Acil</option>' +
       '<option value="dusuk">🟢 Düşük</option>' +
     '</select>' +
-    '<button class="gorev-btn-primary" onclick="gorevAta()">📋 Görevi Ata</button>' +
+    '<button class="gorev-btn-primary" onclick="gorevAta()">📋 Görev(leri) Ata</button>' +
   '</div>';
+}
+
+function gorevPersonelSayGuncelle(){
+  var secilen = document.querySelectorAll('.gf-personel-cb:checked').length;
+  var el = document.getElementById('gf-secilen-sayi');
+  if(el) el.textContent = secilen;
+}
+
+function gorevDepoFiltrele(){
+  var filtre = (document.getElementById('gf-depo-filter')||{}).value||'';
+  document.querySelectorAll('#gf-personel-liste label').forEach(function(lbl){
+    lbl.style.display = (!filtre || lbl.dataset.depo === filtre) ? '' : 'none';
+  });
 }
 
 function _gorevKartHtml(g, yoneticiGorunumu){
@@ -4479,49 +4518,57 @@ function gmodalKapat(id){ var el = document.getElementById('gmodal-'+id); if(el)
 
 // Görev ata
 async function gorevAta(){
-  var baslik = (document.getElementById('gf-baslik')||{}).value||'';
+  var baslik   = (document.getElementById('gf-baslik')||{}).value||'';
   var aciklama = (document.getElementById('gf-aciklama')||{}).value||'';
-  var personelVal = (document.getElementById('gf-personel')||{}).value||'';
-  var bitis = (document.getElementById('gf-bitis')||{}).value||'';
-  var oncelik = (document.getElementById('gf-oncelik')||{}).value||'normal';
+  var bitis    = (document.getElementById('gf-bitis')||{}).value||'';
+  var oncelik  = (document.getElementById('gf-oncelik')||{}).value||'normal';
 
   if(!baslik.trim()){ toast('Görev başlığı zorunlu','err'); return; }
-  if(!personelVal){ toast('Personel seçin','err'); return; }
   if(!bitis){ toast('Bitiş süresi zorunlu','err'); return; }
-
-  var parcalar = personelVal.split('|');
-  var atananTel = parcalar[0];
-  var atananAd  = parcalar[1]||'';
-  var bitisTs   = new Date(bitis).getTime();
+  var bitisTs = new Date(bitis).getTime();
   if(bitisTs <= Date.now()){ toast('Bitiş süresi geçmişte olamaz','err'); return; }
 
-  var gorev = {
-    id: 'g_'+Date.now(),
-    baslik: baslik.trim(),
-    aciklama: aciklama.trim(),
-    atayanTel: normTel(user.tel||''),
-    atayanAd: user.ad||'',
-    atayanRol: user.rol||'personel',
-    atananTel: atananTel,
-    atananAd: atananAd,
-    oncelik: oncelik,
-    bitisTs: bitisTs,
-    durum: 'devam',
-    olusturmaTs: Date.now(),
-    fotolar: [],
-    tamamlamaAciklama: '',
-    degerlendirme: null,
-    tamamlamaTs: null
-  };
+  // Seçili personelleri topla
+  var secilen = Array.from(document.querySelectorAll('.gf-personel-cb:checked'));
+  if(!secilen.length){ toast('En az bir personel seçin','err'); return; }
+
+  var atananlar = secilen.map(function(cb){
+    var p = cb.value.split('|');
+    return { tel: p[0], ad: p[1]||'' };
+  });
 
   try{
-    await fbSet('gorevler', gorev.id, gorev);
-    toast('Görev atandı ✓','ok');
-    // Duyuru gönder
-    if(window._fcmPushGonder) window._fcmPushGonder('📋 Yeni Görev', baslik, [atananTel]).catch(function(){});
+    var baseTs = Date.now();
+    for(var i = 0; i < atananlar.length; i++){
+      var atanan = atananlar[i];
+      var gorev = {
+        id: 'g_'+(baseTs+i),
+        baslik: baslik.trim(),
+        aciklama: aciklama.trim(),
+        atayanTel: normTel(user.tel||''),
+        atayanAd: user.ad||'',
+        atayanRol: user.rol||'personel',
+        atananTel: atanan.tel,
+        atananAd: atanan.ad,
+        oncelik: oncelik,
+        bitisTs: bitisTs,
+        durum: 'devam',
+        olusturmaTs: baseTs+i,
+        fotolar: [],
+        tamamlamaAciklama: '',
+        degerlendirme: null,
+        tamamlamaTs: null
+      };
+      await fbSet('gorevler', gorev.id, gorev);
+      if(window._fcmPushGonder) window._fcmPushGonder('📋 Yeni Görev', baslik, [atanan.tel]).catch(function(){});
+    }
+
+    toast(atananlar.length > 1 ? atananlar.length+' personele görev atandı ✓' : 'Görev atandı ✓', 'ok');
+
     // Formu temizle
     ['gf-baslik','gf-aciklama','gf-bitis'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-    if(document.getElementById('gf-personel')) document.getElementById('gf-personel').value='';
+    document.querySelectorAll('.gf-personel-cb:checked').forEach(function(cb){ cb.checked=false; });
+    gorevPersonelSayGuncelle();
     renderGorevEkrani();
   }catch(e){ toast('Görev kaydedilemedi','err'); }
 }
