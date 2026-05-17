@@ -4618,12 +4618,17 @@ function _gorevKartHtml(g, yoneticiGorunumu){
   html += '<div style="flex:1">';
   // Başlık
   html += '<div class="gorev-baslik" style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">'+escHtml(g.baslik||'')+'</div>';
-  // Atayan bilgisi — her iki görünümde
+  // Atayan + Atanan bilgisi — her iki görünümde
   if(yoneticiGorunumu){
-    html += '<div class="gorev-atayan" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">';
-    html += '<span>👤</span><span style="color:var(--text2)">'+escHtml(g.atananAd||'')+'</span>';
-    html += '<span style="color:var(--text3)">·</span>';
-    html += '<span style="font-size:10px;color:var(--text3)">📌 '+escHtml(g.atayanAd||'Yönetici')+' ('+rolLabel(g.atayanRol||'')+')</span>';
+    html += '<div class="gorev-atayan" style="display:flex;flex-direction:column;gap:3px">';
+    html += '<div style="display:flex;align-items:center;gap:5px">';
+    html += '<span style="font-size:10px;color:var(--text3);min-width:36px">Atanan:</span>';
+    html += '<span style="font-size:12px;font-weight:600;color:var(--text)">👤 '+escHtml(g.atananAd||'—')+'</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:5px">';
+    html += '<span style="font-size:10px;color:var(--text3);min-width:36px">Atayan:</span>';
+    html += '<span style="font-size:11px;color:var(--text2)">📌 '+escHtml(g.atayanAd||'Yönetici')+' · '+rolLabel(g.atayanRol||'')+'</span>';
+    html += '</div>';
     html += '</div>';
   } else {
     var oncelikRenk = g.oncelik === 'acil' ? 'var(--red)' : g.oncelik === 'dusuk' ? 'var(--text3)' : 'var(--orange)';
@@ -5094,7 +5099,9 @@ async function gorevTamamlaGonder(){
     if(!g){ toast('Görev bulunamadı','err'); return; }
 
     // İzolasyon kontrolü — sadece atanan kişi tamamlayabilir
-    if(normTel(g.atananTel||'') !== normTel(user ? user.tel||'' : '')){
+    var gAtananNorm = normTel(g.atananTel||'');
+    var userTelNorm = normTel(user ? user.tel||'' : '');
+    if(gAtananNorm && userTelNorm && gAtananNorm !== userTelNorm){
       toast('Bu görev size atanmamış','err');
       gmodalKapat('tamamla');
       return;
