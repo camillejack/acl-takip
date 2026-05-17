@@ -2918,24 +2918,28 @@ function sesliUyari(metin, bipSayisi, frekans){
 }
 
 function _sesliUyariYap(metin, bipSayisi, frekans){
+  // Önce bipleri çal
   for(let i=0;i<bipSayisi;i++){
-    setTimeout(()=>bip(frekans||880, 0.3, 0.6), i*400);
+    setTimeout(()=>bip(frekans||880, 0.3, 0.8), i*380);
   }
-  setTimeout(()=>{
+  // Bip bittikten sonra Türkçe sesli anons
+  setTimeout(function(){
     if(!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    // iOS'ta Türkçe yoksa İngilizce ile dene
     const u = new SpeechSynthesisUtterance(metin);
-    const voices = window.speechSynthesis.getVoices();
-    const trVoice = voices.find(v=>v.lang.startsWith('tr'));
-    if(trVoice) u.voice = trVoice;
-    u.lang = trVoice ? 'tr-TR' : 'tr-TR';
+    u.lang = 'tr-TR';
     u.rate = 0.85;
     u.pitch = 1.0;
     u.volume = 1.0;
-    // iOS TTS bug fix - kısa sessizlik ekle
-    setTimeout(()=>window.speechSynthesis.speak(u), 100);
-  }, bipSayisi*400+200);
+    // Türkçe ses motoru seç — Android/Sunmi uyumlu
+    const voices = window.speechSynthesis.getVoices();
+    const trVoice = voices.find(v=>v.lang==='tr-TR') ||
+                    voices.find(v=>v.lang.startsWith('tr')) ||
+                    null;
+    if(trVoice) u.voice = trVoice;
+    // Android'de bazen ses gelmez — kısa delay ile
+    setTimeout(function(){ window.speechSynthesis.speak(u); }, 150);
+  }, bipSayisi*380+300);
 }
 
 // Kişiye özel mola saatlerini al (bugünün gününe göre)
@@ -2998,10 +3002,17 @@ function startUyariSistemi(){
 
 function molaZamaniKontrol(){
   if(!user) return;
-  const sd = JSON.parse(localStorage.getItem(SKEY)||'null');
-  if(!sd||!sd.persons) return;
-  const myTelNorm = normTel(user.tel);
-  const p = sd.persons.find(pp=>normTel(pp.tel)===myTelNorm);
+
+  // Doğru veri yapısından personeli bul
+  const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  const _depolar = (_sd&&_sd.depolar)||[];
+  const myTelNorm = normTel(user.tel||'');
+  let p = null;
+  for(const dep of _depolar){
+    const all = (dep.personeller||[]).concat((dep.shift&&dep.shift.persons)||[]);
+    p = all.find(pp=>normTel(pp.tel||'')===myTelNorm);
+    if(p) break;
+  }
   if(!p) return;
 
   const molalar = kisiMolaSaatleri(p);
@@ -3010,46 +3021,47 @@ function molaZamaniKontrol(){
   const simdi = simdiDk();
   const d = getMolaDurum(user.tel);
 
-  molalar.forEach(m=>{
+  molalar.forEach(function(m){
     const mBasDk = saatToDk(m.saat);
     const mBitDk = mBasDk + (m.sure||30);
-    const fark = mBasDk - simdi; // mola başına kaç dk kaldı
-    const bitFark = mBitDk - simdi; // mola bitişine kaç dk kaldı
-
-    // Uyarı anahtarları (günlük)
+    const fark = mBasDk - simdi;
+    const bitFark = mBitDk - simdi;
     const keyBase = myTelNorm+'_'+m.saat+'_'+todayStr;
 
-    // 3 DK ÖNCE UYARI - "Mola mola mola"
+    // 5 DK ÖNCE UYARI
+    if(fark>=4.5 && fark<=5.5 && !uyarilogged[keyBase+'_5dk']){
+      uyarilogged[keyBase+'_5dk'] = true;
+      sesliUyari('Beş dakika sonra mola zamanı.', 2, 880);
+      showMolaUyariBanner('5dk', m.saat, m.sure);
+    }
+
+    // 3 DK ÖNCE UYARI
     if(fark>=2.5 && fark<=3.5 && !uyarilogged[keyBase+'_3dk']){
-      uyarilogged[keyBase+'_3dk']=true;
+      uyarilogged[keyBase+'_3dk'] = true;
       sesliUyari('Mola. Mola. Mola. Üç dakika sonra mola zamanı.', 3, 880);
       showMolaUyariBanner('3dk', m.saat, m.sure);
     }
 
-    // MOLA BAŞLADI - "Mola zamanı"
+    // MOLA BAŞLADI
     if(fark>=-0.5 && fark<=0.5 && !uyarilogged[keyBase+'_basladi']){
-      uyarilogged[keyBase+'_basladi']=true;
+      uyarilogged[keyBase+'_basladi'] = true;
       sesliUyari('Mola zamanı! Mola zamanı! Şimdi molaya çık.', 4, 1047);
       showMolaUyariBanner('basladi', m.saat, m.sure);
-      // Otomatik mola başlat
-      if(!d.aktif){
-        molayaCik(user.tel);
-      }
+      if(!d.aktif) molayaCik(user.tel);
     }
 
-    // 2 DK KALA UYARI - "Bitti bitti bitti"
+    // 2 DK KALA UYARI
     if(bitFark>=1.5 && bitFark<=2.5 && d.aktif && !uyarilogged[keyBase+'_2dk']){
-      uyarilogged[keyBase+'_2dk']=true;
-      sesliUyari('Bitti. Bitti. Bitti. İki dakika içinde molan bitiyor, işe dön!', 3, 660);
+      uyarilogged[keyBase+'_2dk'] = true;
+      sesliUyari('İki dakika içinde molan bitiyor, işe dön!', 3, 660);
       showMolaUyariBanner('2dk', m.saat, m.sure);
     }
 
     // MOLA BİTTİ
     if(bitFark>=-0.5 && bitFark<=0.5 && d.aktif && !uyarilogged[keyBase+'_bitti']){
-      uyarilogged[keyBase+'_bitti']=true;
+      uyarilogged[keyBase+'_bitti'] = true;
       sesliUyari('Mola bitti! Mola bitti! Lütfen işe dön.', 5, 523);
       showMolaUyariBanner('bitti', m.saat, m.sure);
-      // Otomatik mola bitir
       molaBit(user.tel);
     }
   });
@@ -3065,10 +3077,11 @@ function showMolaUyariBanner(tip, saat, sure){
     document.body.appendChild(el);
   }
   const mesajlar = {
-    '3dk':  {bg:'#2a1800', color:'#ffb74d', border:'rgba(255,183,77,.4)', txt:'⏰ 3 dakika sonra mola! ('+saat+')'},
-    'basladi': {bg:'#1a3a2a', color:'#69f0ae', border:'rgba(105,240,174,.4)', txt:'☕ Mola zamanı! '+saat+' – '+sure+'dk'},
-    '2dk':  {bg:'#2a1010', color:'#ff6b6b', border:'rgba(255,107,107,.4)', txt:'⚠️ Molan 2 dk içinde bitiyor!'},
-    'bitti':{bg:'#1a0a0a', color:'#ff6b6b', border:'rgba(255,107,107,.6)', txt:'🔔 Mola bitti! İşe dön!'},
+    '5dk':   {bg:'#1a1a00', color:'#ffd600', border:'rgba(255,214,0,.4)',    txt:'⏰ 5 dakika sonra mola! ('+saat+')'},
+    '3dk':   {bg:'#2a1800', color:'#ffb74d', border:'rgba(255,183,77,.4)',   txt:'⏰ 3 dakika sonra mola! ('+saat+')'},
+    'basladi':{bg:'#1a3a2a', color:'#69f0ae', border:'rgba(105,240,174,.4)', txt:'☕ Mola zamanı! '+saat+' – '+sure+'dk'},
+    '2dk':   {bg:'#2a1010', color:'#ff6b6b', border:'rgba(255,107,107,.4)',  txt:'⚠️ Molan 2 dk içinde bitiyor!'},
+    'bitti': {bg:'#1a0a0a', color:'#ff6b6b', border:'rgba(255,107,107,.6)',  txt:'🔔 Mola bitti! İşe dön!'},
   };
   const m = mesajlar[tip]||mesajlar['basladi'];
   el.style.background=m.bg;
