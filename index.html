@@ -4511,18 +4511,21 @@ function _gorevKartHtml(g, yoneticiGorunumu){
   html += '<div style="flex:1">';
   // Başlık
   html += '<div class="gorev-baslik" style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">'+escHtml(g.baslik||'')+'</div>';
-  // Atayan bilgisi
+  // Atayan bilgisi — her iki görünümde
   if(yoneticiGorunumu){
-    html += '<div class="gorev-atayan" style="display:flex;align-items:center;gap:5px">';
-    html += '<span>👤</span><span>'+escHtml(g.atananAd||'')+'</span>';
+    html += '<div class="gorev-atayan" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">';
+    html += '<span>👤</span><span style="color:var(--text2)">'+escHtml(g.atananAd||'')+'</span>';
+    html += '<span style="color:var(--text3)">·</span>';
+    html += '<span style="font-size:10px;color:var(--text3)">📌 '+escHtml(g.atayanAd||'Yönetici')+' ('+rolLabel(g.atayanRol||'')+')</span>';
     html += '</div>';
   } else {
-    var oncelikRenk = g.oncelik === 'yuksek' ? 'var(--red)' : g.oncelik === 'normal' ? 'var(--orange)' : 'var(--text3)';
-    var oncelikAd = {yuksek:'Yüksek', normal:'Normal', dusuk:'Düşük'}[g.oncelik||'normal'] || 'Normal';
-    html += '<div class="gorev-atayan" style="display:flex;align-items:center;gap:6px">';
-    html += '<span>📌</span><span style="color:var(--text2)">'+escHtml(g.atayanAd||'')+'</span>';
-    html += '<span>—</span><span style="color:var(--text3)">'+rolLabel(g.atayanRol||'')+'</span>';
-    html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+oncelikRenk+';flex-shrink:0"></span>';
+    var oncelikRenk = g.oncelik === 'acil' ? 'var(--red)' : g.oncelik === 'dusuk' ? 'var(--text3)' : 'var(--orange)';
+    var oncelikAd = {acil:'Acil', normal:'Normal', dusuk:'Düşük'}[g.oncelik||'normal'] || 'Normal';
+    html += '<div class="gorev-atayan" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">';
+    html += '<span>📌</span>';
+    html += '<span style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(g.atayanAd||'Yönetici')+'</span>';
+    html += '<span style="font-size:11px;color:var(--text3)">'+rolLabel(g.atayanRol||'')+'</span>';
+    html += '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+oncelikRenk+'"></span>';
     html += '<span style="font-size:10px;color:'+oncelikRenk+'">'+oncelikAd+'</span>';
     html += '</div>';
   }
