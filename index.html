@@ -1207,6 +1207,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 <div class="gorev-modal-overlay" id="gmodal-yeni-sablon">
   <div class="gorev-modal" onclick="event.stopPropagation()">
     <div class="gorev-modal-baslik">Yeni Şablon <button class="gorev-modal-kapat" onclick="gmodalKapat('yeni-sablon')">×</button></div>
+    <input type="hidden" id="gs-id">
     <div class="gorev-form-label">Şablon Adı</div>
     <input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Şablon adı...">
     <div class="gorev-form-label">Açıklama</div>
@@ -4890,7 +4891,10 @@ async function _gorevSablonlarHtml(){
   var sablonlar = [];
   try{
     var snap = await window._fb.getDocs(window._fb.collection(window._fb.db, 'gorev_sablonlar'));
-    snap.forEach(function(d){ sablonlar.push(d.data()); });
+    snap.forEach(function(d){
+      var s = d.data();
+      if(!s.silindi) sablonlar.push(s);
+    });
   }catch(e){}
 
   var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
@@ -4904,11 +4908,18 @@ async function _gorevSablonlarHtml(){
     html += '<div style="text-align:center;padding:20px;font-size:12px;color:var(--text3)">Henüz şablon yok. + Yeni Şablon ile ekleyin.</div>';
   } else {
     sablonlar.forEach(function(s){
-      html += '<div class="gorev-sablon-kart" onclick="gorevSablonSecModalAc(\''+s.id+'\')">';
-      html += '<div class="gorev-sablon-ico">'+(s.ikon||'📋')+'</div>';
-      html += '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(s.baslik||'')+'</div>';
-      html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+escHtml(s.aciklama||'')+(s.sure?' · '+s.sure+' dk':'')+'</div></div>';
-      html += '<span style="font-size:18px;color:var(--text3)">›</span></div>';
+      html += '<div class="gorev-sablon-kart" style="cursor:default">';
+      html += '<div class="gorev-sablon-ico" onclick="gorevSablonSecModalAc(\''+escHtml(s.id)+'\')" style="cursor:pointer">'+(s.ikon||'📋')+'</div>';
+      html += '<div style="flex:1;cursor:pointer" onclick="gorevSablonSecModalAc(\''+escHtml(s.id)+'\')">';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(s.baslik||'')+'</div>';
+      html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+escHtml(s.aciklama||'')+(s.sure?' · '+s.sure+' dk':'')+'</div>';
+      html += '</div>';
+      // Düzenle + Sil butonları
+      html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+      html += '<button onclick="gorevSablonDuzenle(\''+escHtml(s.id)+'\')" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text2);cursor:pointer">✏️</button>';
+      html += '<button onclick="gorevSablonSil(\''+escHtml(s.id)+'\')" style="background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.25);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--red);cursor:pointer">🗑</button>';
+      html += '</div>';
+      html += '</div>';
     });
   }
   return html;
@@ -5363,25 +5374,61 @@ async function gorevSavunmaGonder(){
 
 // Şablon kaydet
 function gorevYeniSablonModalAc(){
-  // Formu temizle
+  // Formu temizle — yeni şablon modu
   ['gs-baslik','gs-aciklama','gs-sure','gs-ikon'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.value = '';
   });
+  var gizli = document.getElementById('gs-id');
+  if(gizli) gizli.value = '';
+  var baslik = document.querySelector('#gmodal-yeni-sablon .gorev-modal-baslik');
+  if(baslik) baslik.childNodes[0].textContent = 'Yeni Şablon ';
   gmodalAc('yeni-sablon');
 }
 
-async function gorevSablonKaydet(){
-  var baslik = (document.getElementById('gs-baslik')||{}).value||'';
-  var aciklama = (document.getElementById('gs-aciklama')||{}).value||'';
-  var sure = parseInt((document.getElementById('gs-sure')||{}).value||'0');
-  var ikon = (document.getElementById('gs-ikon')||{}).value||'📋';
-  if(!baslik.trim()){ toast('Şablon adı zorunlu','err'); return; }
-  var sablon = { id:'s_'+Date.now(), baslik:baslik.trim(), aciklama:aciklama.trim(), sure:sure||0, ikon:ikon.trim()||'📋', olusturanTel:normTel(user.tel||'') };
+async function gorevSablonDuzenle(sablonId){
   try{
-    await fbSet('gorev_sablonlar', sablon.id, sablon);
+    var s = await fbGet('gorev_sablonlar', sablonId);
+    if(!s){ toast('Şablon bulunamadı','err'); return; }
+    var baslikEl  = document.getElementById('gs-baslik');
+    var aciklamaEl= document.getElementById('gs-aciklama');
+    var sureEl    = document.getElementById('gs-sure');
+    var ikonEl    = document.getElementById('gs-ikon');
+    var gizliEl   = document.getElementById('gs-id');
+    if(baslikEl)   baslikEl.value   = s.baslik||'';
+    if(aciklamaEl) aciklamaEl.value = s.aciklama||'';
+    if(sureEl)     sureEl.value     = s.sure||'';
+    if(ikonEl)     ikonEl.value     = s.ikon||'📋';
+    if(gizliEl)    gizliEl.value    = sablonId;
+    var baslikDiv = document.querySelector('#gmodal-yeni-sablon .gorev-modal-baslik');
+    if(baslikDiv) baslikDiv.childNodes[0].textContent = 'Şablonu Düzenle ';
+    gmodalAc('yeni-sablon');
+  }catch(e){ toast('Şablon yüklenemedi','err'); }
+}
+
+async function gorevSablonSil(sablonId){
+  if(!confirm('Bu şablonu silmek istediğinizden emin misiniz?')) return;
+  try{
+    var _fb = window._fb;
+    await _fb.setDoc(_fb.doc(_fb.db,'gorev_sablonlar',sablonId), {silindi:true}, {merge:true});
+    toast('Şablon silindi','ok');
+    renderGorevEkrani();
+  }catch(e){ toast('Silinemedi: '+(e&&e.message?e.message.substring(0,60):e),'err'); }
+}
+
+async function gorevSablonKaydet(){
+  var baslik   = (document.getElementById('gs-baslik')||{}).value||'';
+  var aciklama = (document.getElementById('gs-aciklama')||{}).value||'';
+  var sure     = parseInt((document.getElementById('gs-sure')||{}).value||'0');
+  var ikon     = (document.getElementById('gs-ikon')||{}).value||'📋';
+  var mevcutId = (document.getElementById('gs-id')||{}).value||'';
+  if(!baslik.trim()){ toast('Şablon adı zorunlu','err'); return; }
+  var sablonId = mevcutId || 's_'+Date.now();
+  var sablon = { id:sablonId, baslik:baslik.trim(), aciklama:aciklama.trim(), sure:sure||0, ikon:ikon.trim()||'📋', olusturanTel:normTel(user.tel||'') };
+  try{
+    await fbSet('gorev_sablonlar', sablonId, sablon);
     gmodalKapat('yeni-sablon');
-    toast('Şablon kaydedildi ✓','ok');
+    toast(mevcutId ? 'Şablon güncellendi ✓' : 'Şablon kaydedildi ✓','ok');
     gorevTabGec('sablon');
     renderGorevEkrani();
   }catch(e){
