@@ -755,7 +755,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .gorev-tab.active{background:var(--accent2);color:#fff}
 .gorev-sablon-kart{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .2s}
 .gorev-sablon-kart:hover{border-color:var(--accent2)}
-.gorev-sablon-ico{width:36px;height:36px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.gorev-sablon-ico{width:36px;height:36px;border-radius:9px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
 .gorev-tamamla-btn{width:100%;padding:11px;background:var(--green);color:#000;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);margin-top:10px}
 .gorev-savunma-kutu{background:var(--red-dim);border:1px solid var(--red-b);border-radius:var(--r-sm);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
 .gorev-savunma-txt{font-size:12px;color:var(--red);line-height:1.6;font-weight:500}
@@ -4960,7 +4960,11 @@ async function _gorevSablonlarHtml(){
   } else {
     sablonlar.forEach(function(s){
       html += '<div class="gorev-sablon-kart" style="cursor:default">';
-      html += '<div class="gorev-sablon-ico" onclick="gorevSablonSecModalAc(\''+escHtml(s.id)+'\')" style="cursor:pointer">'+(s.ikon||'📋')+'</div>';
+      var ikon = s.ikon||'📋';
+      // Emoji mi metin mi? — metinse küçük font ile sığdır
+      var ikoIsEmoji = /^\p{Emoji}/u.test(ikon);
+      var ikonStyle = ikoIsEmoji ? 'font-size:18px' : 'font-size:10px;font-weight:700;color:var(--text2);text-align:center;line-height:1.2;word-break:break-all;padding:2px';
+      html += '<div class="gorev-sablon-ico" onclick="gorevSablonSecModalAc(\''+escHtml(s.id)+'\')" style="cursor:pointer"><span style="'+ikonStyle+'">'+escHtml(ikon.substring(0,8))+'</span></div>';
       html += '<div style="flex:1;cursor:pointer" onclick="gorevSablonSecModalAc(\''+escHtml(s.id)+'\')">';
       html += '<div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(s.baslik||'')+'</div>';
       html += '<div style="font-size:11px;color:var(--text3);margin-top:2px">';
