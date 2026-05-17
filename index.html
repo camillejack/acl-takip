@@ -1205,27 +1205,57 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
 </div>
 
 <div class="gorev-modal-overlay" id="gmodal-yeni-sablon">
-  <div class="gorev-modal" onclick="event.stopPropagation()">
+  <div class="gorev-modal" onclick="event.stopPropagation()" style="max-height:90vh;overflow-y:auto">
     <div class="gorev-modal-baslik">Yeni Şablon <button class="gorev-modal-kapat" onclick="gmodalKapat('yeni-sablon')">×</button></div>
     <input type="hidden" id="gs-id">
+
     <div class="gorev-form-label">Şablon Adı</div>
-    <input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Şablon adı...">
+    <input class="gorev-form-input" id="gs-baslik" type="text" placeholder="Örn: Sabah rafları düzenleme">
+
     <div class="gorev-form-label">Açıklama</div>
-    <textarea class="gorev-form-input" id="gs-aciklama" rows="2" placeholder="Görev detayları..."></textarea>
+    <textarea class="gorev-form-input" id="gs-aciklama" rows="2" placeholder="Kısa görev tanımı..."></textarea>
+
+    <div class="gorev-form-label">Nasıl Yapılır? (Adım adım kılavuz)</div>
+    <textarea class="gorev-form-input" id="gs-kilavuz" rows="4" placeholder="1. Rafları soldan sağa kontrol et&#10;2. Eksik ürünleri not al&#10;3. Depodan tamamla&#10;4. Fotoğraf çek"></textarea>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div>
         <div class="gorev-form-label">Başlangıç Saati</div>
-        <input class="gorev-form-input" id="gs-baslangic" type="time" style="margin-bottom:0">
+        <input class="gorev-form-input" id="gs-baslangic" type="time" style="margin-bottom:0" oninput="gsBitisHesapla()">
       </div>
       <div>
         <div class="gorev-form-label">Bitiş Saati</div>
         <input class="gorev-form-input" id="gs-bitis-saat" type="time" style="margin-bottom:0" oninput="gsSureHesapla()">
       </div>
     </div>
+
     <div class="gorev-form-label" style="margin-top:8px">Tahmini Süre (dakika)</div>
     <input class="gorev-form-input" id="gs-sure" type="number" placeholder="45" oninput="gsBitisHesapla()">
+
+    <div class="gorev-form-label">Tekrarlama Sıklığı</div>
+    <select class="gorev-form-input" id="gs-tekrar">
+      <option value="">Tekrarlama yok (tek seferlik)</option>
+      <option value="gunluk">Her gün</option>
+      <option value="sabah-aksam">Sabah & Akşam (günde 2)</option>
+      <option value="haftalik">Her hafta</option>
+      <option value="aylik">Her ay</option>
+    </select>
+
+    <div class="gorev-form-label">Tekrarlama Süresi</div>
+    <select class="gorev-form-input" id="gs-tekrar-sure">
+      <option value="">Süresiz</option>
+      <option value="1">1 Ay</option>
+      <option value="2">2 Ay</option>
+      <option value="3">3 Ay</option>
+      <option value="4">4 Ay</option>
+      <option value="5">5 Ay</option>
+      <option value="6">6 Ay</option>
+      <option value="12">12 Ay</option>
+    </select>
+
     <div class="gorev-form-label">İkon (emoji)</div>
     <input class="gorev-form-input" id="gs-ikon" type="text" placeholder="🧹">
+
     <button class="gorev-btn-primary" onclick="gorevSablonKaydet()">💾 Şablonu Kaydet</button>
   </div>
 </div>
@@ -4858,6 +4888,17 @@ function _gorevKartHtml(g, yoneticiGorunumu){
   }
   html += '</div>';
 
+  // ── KILAVUZ (nasıl yapılır) ──
+  if(!yoneticiGorunumu && g.kilavuz && g.kilavuz.trim()){
+    var kilavuzSatirlar = g.kilavuz.trim().split('\n');
+    html += '<div style="background:rgba(106,31,194,.08);border:1px solid rgba(106,31,194,.2);border-radius:var(--r-sm);padding:10px 12px;margin-top:8px">';
+    html += '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">📖 Nasıl Yapılır?</div>';
+    kilavuzSatirlar.forEach(function(satir){
+      if(satir.trim()) html += '<div style="font-size:12px;color:var(--text2);padding:3px 0;border-bottom:1px solid rgba(106,31,194,.1)">'+escHtml(satir.trim())+'</div>';
+    });
+    html += '</div>';
+  }
+
   // ── ONAY ve DELEGE ENGEL durumu ──
   if(g.onaylandi){
     html += '<div style="font-size:10px;color:var(--green);margin-top:6px">✓ Onaylandı — '+escHtml(g.onaylayanAd||'')+'</div>';
@@ -4929,7 +4970,12 @@ async function _gorevSablonlarHtml(){
       } else if(s.sure){
         html += s.sure+' dk';
       }
-      html += escHtml(s.aciklama ? ' · '+s.aciklama : '');
+      var tekrarMap = {gunluk:'🔄 Her gün','sabah-aksam':'🔄 Sabah & Akşam',haftalik:'📅 Her hafta',aylik:'📅 Her ay'};
+      if(s.tekrar && tekrarMap[s.tekrar]){
+        html += ' · '+tekrarMap[s.tekrar];
+        if(s.tekrarSure) html += ' ('+s.tekrarSure+' ay)';
+      }
+      if(s.kilavuz) html += ' · 📖 Kılavuz var';
       html += '</div>';
       html += '</div>';
       // Düzenle + Sil butonları
@@ -5415,9 +5461,11 @@ function gsBitisHesapla(){
 }
 
 function gorevYeniSablonModalAc(){
-  ['gs-baslik','gs-aciklama','gs-sure','gs-ikon','gs-baslangic','gs-bitis-saat','gs-id'].forEach(function(id){
+  ['gs-baslik','gs-aciklama','gs-kilavuz','gs-sure','gs-ikon','gs-baslangic','gs-bitis-saat','gs-id'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.value = '';
   });
+  var tekrarEl = document.getElementById('gs-tekrar'); if(tekrarEl) tekrarEl.value = '';
+  var tekrarSureEl = document.getElementById('gs-tekrar-sure'); if(tekrarSureEl) tekrarSureEl.value = '';
   var baslikDiv = document.querySelector('#gmodal-yeni-sablon .gorev-modal-baslik');
   if(baslikDiv) baslikDiv.childNodes[0].textContent = 'Yeni Şablon ';
   gmodalAc('yeni-sablon');
@@ -5439,8 +5487,14 @@ async function gorevSablonDuzenle(sablonId){
     if(gizliEl)    gizliEl.value    = sablonId;
     var basEl = document.getElementById('gs-baslangic');
     var bitEl = document.getElementById('gs-bitis-saat');
+    var klavuzEl = document.getElementById('gs-kilavuz');
+    var tekrarEl = document.getElementById('gs-tekrar');
+    var tekrarSureEl = document.getElementById('gs-tekrar-sure');
     if(basEl) basEl.value = s.baslangicSaat||'';
     if(bitEl) bitEl.value = s.bitisSaat||'';
+    if(klavuzEl) klavuzEl.value = s.kilavuz||'';
+    if(tekrarEl) tekrarEl.value = s.tekrar||'';
+    if(tekrarSureEl) tekrarSureEl.value = s.tekrarSure||'';
     var baslikDiv = document.querySelector('#gmodal-yeni-sablon .gorev-modal-baslik');
     if(baslikDiv) baslikDiv.childNodes[0].textContent = 'Şablonu Düzenle ';
     gmodalAc('yeni-sablon');
@@ -5458,16 +5512,25 @@ async function gorevSablonSil(sablonId){
 }
 
 async function gorevSablonKaydet(){
-  var baslik      = (document.getElementById('gs-baslik')||{}).value||'';
-  var aciklama    = (document.getElementById('gs-aciklama')||{}).value||'';
-  var sure        = parseInt((document.getElementById('gs-sure')||{}).value||'0');
-  var ikon        = (document.getElementById('gs-ikon')||{}).value||'📋';
-  var mevcutId    = (document.getElementById('gs-id')||{}).value||'';
+  var baslik        = (document.getElementById('gs-baslik')||{}).value||'';
+  var aciklama      = (document.getElementById('gs-aciklama')||{}).value||'';
+  var kilavuz       = (document.getElementById('gs-kilavuz')||{}).value||'';
+  var sure          = parseInt((document.getElementById('gs-sure')||{}).value||'0');
+  var ikon          = (document.getElementById('gs-ikon')||{}).value||'📋';
+  var mevcutId      = (document.getElementById('gs-id')||{}).value||'';
   var baslangicSaat = (document.getElementById('gs-baslangic')||{}).value||'';
-  var bitisSaat   = (document.getElementById('gs-bitis-saat')||{}).value||'';
+  var bitisSaat     = (document.getElementById('gs-bitis-saat')||{}).value||'';
+  var tekrar        = (document.getElementById('gs-tekrar')||{}).value||'';
+  var tekrarSure    = parseInt((document.getElementById('gs-tekrar-sure')||{}).value||'0')||0;
   if(!baslik.trim()){ toast('Şablon adı zorunlu','err'); return; }
   var sablonId = mevcutId || 's_'+Date.now();
-  var sablon = { id:sablonId, baslik:baslik.trim(), aciklama:aciklama.trim(), sure:sure||0, ikon:ikon.trim()||'📋', baslangicSaat:baslangicSaat, bitisSaat:bitisSaat, olusturanTel:normTel(user.tel||'') };
+  var sablon = {
+    id: sablonId, baslik: baslik.trim(), aciklama: aciklama.trim(),
+    kilavuz: kilavuz.trim(), sure: sure||0, ikon: ikon.trim()||'📋',
+    baslangicSaat: baslangicSaat, bitisSaat: bitisSaat,
+    tekrar: tekrar, tekrarSure: tekrarSure,
+    olusturanTel: normTel(user.tel||'')
+  };
   try{
     await fbSet('gorev_sablonlar', sablonId, sablon);
     gmodalKapat('yeni-sablon');
@@ -5487,10 +5550,28 @@ async function gorevSablonSecModalAc(sablonId){
     var s = await fbGet('gorev_sablonlar', sablonId);
     var detayEl = document.getElementById('gsec-sablon-detay');
     if(detayEl && s){
+      var tekrarMap = {gunluk:'🔄 Her gün','sabah-aksam':'🔄 Sabah & Akşam',haftalik:'📅 Her hafta',aylik:'📅 Her ay'};
+      var tekrarStr = (s.tekrar && tekrarMap[s.tekrar]) ? tekrarMap[s.tekrar]+(s.tekrarSure?' · '+s.tekrarSure+' ay':'') : '';
+      var saatStr = (s.baslangicSaat||s.bitisSaat) ? (s.baslangicSaat||'?')+' → '+(s.bitisSaat||'?') : '';
+
+      var kilavuzHtml = '';
+      if(s.kilavuz){
+        var satirlar = s.kilavuz.trim().split('\n');
+        kilavuzHtml = '<div style="background:var(--bg3);border-radius:6px;padding:10px 12px;margin-top:8px">'+
+          '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">📖 Nasıl Yapılır?</div>'+
+          satirlar.map(function(s){ return '<div style="font-size:12px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border)">'+escHtml(s.trim())+'</div>'; }).join('')+
+        '</div>';
+      }
+
       detayEl.innerHTML =
-        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">'+(s.ikon||'📋')+' '+escHtml(s.baslik||'')+'</div>' +
-        '<div style="font-size:11px;color:var(--text3)">'+escHtml(s.aciklama||'')+'</div>' +
-        (s.sure ? '<div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:6px">⏱️ Tahmini: '+s.sure+' dakika</div>' : '');
+        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">'+(s.ikon||'📋')+' '+escHtml(s.baslik||'')+'</div>' +
+        (s.aciklama ? '<div style="font-size:12px;color:var(--text3);margin-bottom:6px">'+escHtml(s.aciklama)+'</div>' : '') +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+          (saatStr ? '<span style="background:var(--bg3);border-radius:4px;padding:3px 8px;font-family:var(--mono);font-size:11px;color:var(--accent)">⏰ '+saatStr+'</span>' : '') +
+          (s.sure  ? '<span style="background:var(--bg3);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text2)">⏱️ '+s.sure+' dk</span>' : '') +
+          (tekrarStr ? '<span style="background:var(--bg3);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text2)">'+tekrarStr+'</span>' : '') +
+        '</div>' +
+        kilavuzHtml;
     }
     gmodalAc('sablon-sec');
   }catch(e){}
@@ -5509,8 +5590,12 @@ async function gorevSablondanAta(){
     var bitisTs = new Date(bitis).getTime();
     if(bitisTs <= Date.now()){ toast('Bitiş süresi geçmişte olamaz','err'); return; }
     var gorev = { id:'g_'+Date.now(), baslik:s.baslik, aciklama:s.aciklama,
+      kilavuz: s.kilavuz||'',
       atayanTel:normTel(user.tel||''), atayanAd:user.ad||'', atayanRol:user.rol||'personel',
       atananTel:atananTel, atananAd:atananAd, oncelik:'normal',
+      sureDk: s.sure||null,
+      sablonId: _aktifSablonId,
+      tekrar: s.tekrar||'', tekrarSure: s.tekrarSure||0,
       bitisTs:bitisTs, durum:'devam', olusturmaTs:Date.now(),
       fotolar:[], tamamlamaAciklama:'', degerlendirme:null, tamamlamaTs:null };
     await fbSet('gorevler', gorev.id, gorev);
