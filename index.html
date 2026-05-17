@@ -3839,7 +3839,6 @@ var GENEL_SINAV_SORULAR = [
 function gorevBildirimSesiCal(){
   try{
     var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    // Görev bildirimi: 2 uzun + 1 kısa bip — duyurudan farklı
     function _gbip(bas, fq1, fq2, sure, vol){
       var osc = ctx.createOscillator();
       var gain = ctx.createGain();
@@ -3857,10 +3856,27 @@ function gorevBildirimSesiCal(){
       gain.gain.linearRampToValueAtTime(0, ctx.currentTime+bas+sure);
       osc.start(ctx.currentTime+bas); osc.stop(ctx.currentTime+bas+sure);
     }
+    // Güçlü 3 bip — duyuru sesinden farklı, daha alçak ton
     _gbip(0.00, 700, 900, 0.25, 0.85);
     _gbip(0.30, 700, 900, 0.25, 0.85);
-    _gbip(0.60, 1100, 800, 0.15, 0.95);
+    _gbip(0.60, 1100, 800, 0.15, 1.0);
     setTimeout(function(){ try{ ctx.close(); }catch(e){} }, 1500);
+  }catch(e){}
+
+  // Sesli Türkçe anons — Speech Synthesis API
+  try{
+    if(window.speechSynthesis){
+      window.speechSynthesis.cancel();
+      var utt = new SpeechSynthesisUtterance('Yeni görev atandı');
+      utt.lang = 'tr-TR';
+      utt.rate = 0.9;
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+      // Bip bittikten sonra konuş
+      setTimeout(function(){
+        window.speechSynthesis.speak(utt);
+      }, 900);
+    }
   }catch(e){}
 }
 
@@ -4030,16 +4046,21 @@ async function _renderGorevEkrani(){
   var yonetici = gorevAtayabilir();
   var telNorm = normTel(user.tel||'');
 
-  // Firebase'den görevleri çek
+  // Firebase'den görevleri çek — KESİN İZOLASYON
   var tumGorevler = [];
   try{
     var snap = await window._fb.getDocs(window._fb.collection(window._fb.db, 'gorevler'));
     snap.forEach(function(d){ tumGorevler.push(d.data()); });
   }catch(e){ tumGorevler = []; }
 
-  // Bana atanan + benim attığım görevler
-  var banaAtanan = tumGorevler.filter(function(g){ return normTel(g.atananTel||'') === telNorm; });
-  var benimAtadim = tumGorevler.filter(function(g){ return normTel(g.atayanTel||'') === telNorm; });
+  // Personel: SADECE kendine atanan görevler
+  // Yönetici: Kendi atadıkları + kendine atananlar
+  var banaAtanan = tumGorevler.filter(function(g){
+    return normTel(g.atananTel||'') === telNorm;
+  });
+  var benimAtadim = yonetici ? tumGorevler.filter(function(g){
+    return normTel(g.atayanTel||'') === telNorm;
+  }) : [];
 
   // Aktif (bitmemiş) / biten ayrımı
   var aktifBana = banaAtanan.filter(function(g){ return g.durum !== 'tamam'; });
@@ -4447,6 +4468,13 @@ async function gorevTamamlaGonder(){
   try{
     var g = await fbGet('gorevler', _aktifGorevId);
     if(!g){ toast('Görev bulunamadı','err'); return; }
+
+    // İzolasyon kontrolü — sadece atanan kişi tamamlayabilir
+    if(normTel(g.atananTel||'') !== normTel(user ? user.tel||'' : '')){
+      toast('Bu görev size atanmamış','err');
+      gmodalKapat('tamamla');
+      return;
+    }
 
     var tamamlamaTs = Date.now();
     var gecenDk = (tamamlamaTs - (g.olusturmaTs||tamamlamaTs)) / 60000;
