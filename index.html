@@ -883,6 +883,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
     <button class="nav-btn" onclick="showScreen('rapor')">📊 Rapor</button>
     <button class="nav-btn" onclick="showScreen('gorev')">📋 Görevler</button>
     <button class="nav-btn" onclick="showScreen('kariyer')">🏆 Kariyer</button>
+    <button class="nav-btn" onclick="showScreen('liderlik')">🎯 Liderlik</button>
   </div>
 
   <div class="screens">
@@ -1152,6 +1153,11 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
     <!-- KARİYER BASAMAKLARI EKRANI -->
     <div class="screen hidden" id="screen-kariyer">
       <div id="kariyer-content"></div>
+    </div>
+
+    <!-- LİDERLİK EKRANI -->
+    <div class="screen hidden" id="screen-liderlik">
+      <div id="liderlik-content"></div>
     </div>
 
   </div>
@@ -1718,6 +1724,7 @@ function showScreen(name){
   if(name==='rapor') renderRapor();
   if(name==='gorev') renderGorevEkrani();
   if(name==='kariyer') renderKariyerEkrani();
+  if(name==='liderlik') renderLiderlikEkrani();
 }
 
 // TOAST
@@ -2884,6 +2891,152 @@ async function _raporGorevDetayHtml(){
 }
 
 // ─── TAM EKRAN RAPOR SİSTEMİ SONU ───────────────────────────
+
+// ─── LİDERLİK SİSTEMİ ────────────────────────────────────────
+var _liderAktifTab = 'gunluk';
+
+async function renderLiderlikEkrani(){
+  var el = document.getElementById('liderlik-content');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">⟳ Yükleniyor...</div>';
+  el.innerHTML = await _liderHtml();
+}
+
+function liderTabGec(tab){
+  _liderAktifTab = tab;
+  renderLiderlikEkrani();
+}
+
+async function _liderHtml(){
+  var myTel = user ? normTel(user.tel||'') : '';
+  var simdi = new Date();
+  var bugun = todayStr;
+  var gCal = calismaData[bugun]||{};
+
+  // Hafta günleri
+  var pzt = new Date(simdi);
+  pzt.setDate(simdi.getDate()-(simdi.getDay()===0?6:simdi.getDay()-1));
+  var haftaGunler=[];
+  for(var i=0;i<7;i++){var g2=new Date(pzt);g2.setDate(pzt.getDate()+i);haftaGunler.push(g2.getDate().toString().padStart(2,'0')+'.'+(g2.getMonth()+1).toString().padStart(2,'0')+'.'+g2.getFullYear());}
+
+  // Ay günleri
+  var ayGunler=[];
+  Object.keys(calismaData).forEach(function(t){var p=t.split('.');if(p.length===3&&parseInt(p[1])===simdi.getMonth()+1&&parseInt(p[2])===simdi.getFullYear())ayGunler.push(t);});
+
+  // Firebase görev verisi
+  var gorevler=[];
+  try{
+    var snap=await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    snap.forEach(function(d){
+      var g=d.data();
+      if(!g||g.durum==='silindi') return;
+      if(normTel(g.atananTel||'')===myTel||normTel(g.atayanTel||'')===myTel) gorevler.push(g);
+    });
+  }catch(e){}
+
+  var isbasiLocal=JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
+
+  function hesapla(period){
+    var gunler=period==='gunluk'?[bugun]:period==='haftalik'?haftaGunler:ayGunler;
+    var toplamDk=0,molaDk=0,calisGunSayisi=0;
+    gunler.forEach(function(t){var c=calismaData[t]||{};if(c.toplamDk>0){toplamDk+=c.toplamDk;molaDk+=(c.toplamMolaDk||0);calisGunSayisi++;}});
+    var periodGorevler=gorevler.filter(function(g){var d=new Date(g.olusturmaTs||0);var t=d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear();return gunler.indexOf(t)!==-1;});
+    var tamamlanan=periodGorevler.filter(function(g){return g.durum==='tamam';});
+    var mukemmel=periodGorevler.filter(function(g){return g.degerlendirme==='mukemmel';}).length;
+    var zamanindaBit=tamamlanan.filter(function(g){return g.tamamlamaTs&&g.bitisTs&&g.tamamlamaTs<=g.bitisTs;}).length;
+    var ibKayitlari=Object.values(isbasiLocal).filter(function(k){return k&&gunler.indexOf(k.tarih)!==-1;});
+    var saatUyumu=ibKayitlari.length?Math.round((ibKayitlari.filter(function(k){return (k.gecDk||0)===0;}).length/ibKayitlari.length)*100):0;
+    var gunUyumu=period==='gunluk'?(calisGunSayisi>0?100:0):(gunler.length>0?Math.round((calisGunSayisi/gunler.length)*100):0);
+    var gorevOran=periodGorevler.length?Math.round((tamamlanan.length/periodGorevler.length)*100):0;
+    var zamanindaOran=tamamlanan.length?Math.round((zamanindaBit/tamamlanan.length)*100):0;
+    var skor=Math.round((gunUyumu*0.3)+(saatUyumu*0.25)+(gorevOran*0.3)+(zamanindaOran*0.15));
+    return {toplamDk,calisGunSayisi,totalGun:gunler.length,gorevToplam:periodGorevler.length,gorevTamamlanan:tamamlanan.length,gorevOran,mukemmel,zamanindaOran,saatUyumu,gunUyumu,skor};
+  }
+
+  var tab = _liderAktifTab;
+  var m = hesapla(tab);
+  var skorRenk=m.skor>=80?'#22d3a0':m.skor>=60?'#f0b429':m.skor>=40?'#fb923c':'#f87171';
+  var tabLabels={gunluk:'GÜNÜN ŞAMPİYONU',haftalik:'HAFTANIN LİDERİ',aylik:'AYIN PERFORMANCISI'};
+  var tabIkonlar={gunluk:'🔥',haftalik:'🎯',aylik:'👑'};
+  var oranlar={gunluk:80,haftalik:75,aylik:70};
+  var odulPuan={gunluk:'+2 Kariyer Puanı',haftalik:'+3 Kariyer Puanı',aylik:'+5 Kariyer Puanı'};
+  var odulAktif=m.skor>=oranlar[tab];
+  var eksikPuan=Math.max(0,oranlar[tab]-m.skor);
+  var odul=odulAktif?tabIkonlar[tab]+' '+tabLabels[tab]+' kazanıldı! '+odulPuan[tab]:eksikPuan+' puan → '+odulPuan[tab];
+
+  var h='';
+
+  // Sekme butonları
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:14px">';
+  [{t:'gunluk',ico:'🔥',lbl:'Günün\nŞampiyonu'},{t:'haftalik',ico:'🎯',lbl:'Haftanın\nLideri'},{t:'aylik',ico:'👑',lbl:'Ayın\nPerf.'}].forEach(function(item){
+    var aktif=tab===item.t;
+    h+='<button onclick="liderTabGec(\''+item.t+'\')" style="padding:10px 4px;border-radius:var(--r-sm);border:2px solid '+(aktif?'var(--accent)':'var(--border)')+';background:'+(aktif?'var(--accent)':'var(--bg2)')+';color:'+(aktif?'#000':'var(--text2)')+';font-size:11px;font-weight:'+(aktif?700:400)+';cursor:pointer;font-family:var(--sans);line-height:1.4;text-align:center">'+item.ico+'<br>'+item.lbl.replace('\n','<br>')+'</button>';
+  });
+  h+='</div>';
+
+  // Ana kart
+  h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px">';
+
+  // Başlık + ödül durumu
+  h+='<div style="padding:18px;text-align:center;border-bottom:1px solid var(--border)">';
+  h+='<div style="font-size:36px;margin-bottom:6px">'+tabIkonlar[tab]+'</div>';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-bottom:12px">'+tabLabels[tab]+'</div>';
+  h+='<div style="background:'+(odulAktif?'rgba(34,211,160,.1)':'var(--bg3)')+';border:1px solid '+(odulAktif?'var(--green)':'var(--border)')+';border-radius:var(--r-sm);padding:12px">';
+  h+='<div style="font-size:13px;font-weight:700;color:'+(odulAktif?'var(--green)':'var(--text2)')+'">'+odul+'</div>';
+  if(!odulAktif) h+='<div style="font-size:10px;color:var(--text3);margin-top:3px">'+oranlar[tab]+' puan → '+odulPuan[tab]+'</div>';
+  h+='</div></div>';
+
+  // 2x2 metrik grid
+  function mkart(ico,lbl,val,pct,renk,alt){
+    return '<div style="background:var(--bg2);padding:14px">'+
+      '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">'+ico+' '+lbl+'</div>'+
+      '<div style="font-family:var(--mono);font-size:28px;font-weight:700;color:'+renk+'">'+val+'<span style="font-size:13px">%</span></div>'+
+      '<div style="height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:8px 0"><div style="width:'+Math.min(100,pct)+'%;height:100%;background:'+renk+'"></div></div>'+
+      '<div style="font-size:10px;color:var(--text3)">'+alt+'</div></div>';
+  }
+
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)">';
+  h+=mkart('📋','Görev Tamamlama',m.gorevOran,m.gorevOran,'#f0b429',m.gorevTamamlanan+'/'+m.gorevToplam+' görev');
+  h+=mkart('⚡','Görev Hızı',m.zamanindaOran,m.zamanindaOran,'#22d3a0','Zamanında biten');
+  var mukOran=m.gorevTamamlanan>0?Math.round((m.mukemmel/m.gorevTamamlanan)*100):0;
+  h+=mkart('⭐','Mükemmel Oran',mukOran,mukOran,'#a78bfa',m.mukemmel+' mükemmel');
+  h+=mkart('🕐','Saat Uyumu',m.saatUyumu,m.saatUyumu,'#c084fc','Zamanında giriş');
+  h+='</div>';
+
+  // Gün uyumu — tam genişlik
+  h+='<div style="background:var(--bg2);border-top:1px solid var(--border);padding:16px">';
+  h+='<div style="font-size:10px;color:var(--text3);margin-bottom:8px">📅 Gün Uyumu</div>';
+  h+='<div style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--orange)">'+m.gunUyumu+'<span style="font-size:13px">%</span></div>';
+  h+='<div style="height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:8px 0"><div style="width:'+m.gunUyumu+'%;height:100%;background:var(--orange)"></div></div>';
+  h+='<div style="font-size:10px;color:var(--text3)">'+m.calisGunSayisi+'/ '+m.totalGun+' gün</div>';
+  h+='</div>';
+
+  // Skor
+  h+='<div style="background:var(--bg3);border-top:1px solid var(--border);padding:16px;display:flex;align-items:center;justify-content:space-between">';
+  h+='<span style="font-size:13px;color:var(--text2)">Genel Performans Skoru</span>';
+  h+='<span style="font-family:var(--mono);font-size:30px;font-weight:800;color:'+skorRenk+'">'+m.skor+'<span style="font-size:14px;color:var(--text3)">/100</span></span>';
+  h+='</div>';
+  h+='</div>'; // ana kart
+
+  // Ödül sistemi
+  h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px">';
+  [{ico:'🔥',ad:'Günün Şampiyonu',kriter:'Günlük ≥80',puan:'+2 puan',t:'gunluk'},
+   {ico:'🎯',ad:'Haftanın Lideri',kriter:'Haftalık ≥75',puan:'+3 puan',t:'haftalik'},
+   {ico:'👑',ad:'Ayın Performanscısı',kriter:'Aylık ≥70',puan:'+5 puan',t:'aylik'}].forEach(function(o){
+    var aktif=tab===o.t;
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border-radius:var(--r-sm);margin-bottom:6px;border:1px solid '+(aktif?'rgba(240,180,41,.35)':'var(--border)')+';">';
+    h+='<div style="font-size:22px">'+o.ico+'</div>';
+    h+='<div style="flex:1"><div style="font-size:12px;font-weight:700;color:'+(aktif?'var(--accent)':'var(--text)')+'">'+o.ad+'</div>';
+    h+='<div style="font-size:10px;color:var(--text3)">'+o.kriter+'</div></div>';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--green)">'+o.puan+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  return h;
+}
+
+// ─── LİDERLİK SİSTEMİ SONU ───────────────────────────────────
 let aktifDepoId = null;
 
 function mgr_depoListesiniGuncelle(){
