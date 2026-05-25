@@ -1,5 +1,5 @@
 // Service Worker - ACL Depo Yönetim Sistemi
-const CACHE = 'acl-takip-v66';
+const CACHE = 'acl-takip-v67';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', function(e) {
@@ -16,16 +16,16 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  if(e.request.mode === 'navigate'){
+  // HTML dosyaları için her zaman network'ten al, cache'e yazma
+  if(e.request.url.endsWith('.html') || e.request.mode === 'navigate'){
     e.respondWith(
-      fetch(e.request).then(function(res) {
-        var clone = res.clone();
-        caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
+      fetch(e.request, {cache:'no-store'}).then(function(res) {
         return res;
       }).catch(function() { return caches.match('/index.html'); })
     );
     return;
   }
+  // Diğer kaynaklar cache-first
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       return cached || fetch(e.request).then(function(res) {

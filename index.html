@@ -9285,31 +9285,27 @@ async function duyuruKontrol(){
 }
 
 function duyuruGoster(d, sesCal){
+  if(!d) return;
   _aktifDuyuru = d;
   var isAcil = d.oncelik === 'acil';
 
-  // Overlay rengi ve başlık — acil kırmızı, normal mor
   var box = document.getElementById('duyuru-box');
   var header = box ? box.querySelector('div') : null;
-  if(header){
-    header.style.background = isAcil ? 'linear-gradient(135deg,#b71c1c,#e53935)' : 'var(--accent2)';
-  }
-  // İkon ve başlık
+  if(header) header.style.background = isAcil ? 'linear-gradient(135deg,#b71c1c,#e53935)' : 'var(--accent2)';
   var ikonel = box ? box.querySelector('span') : null;
   if(ikonel) ikonel.textContent = isAcil ? '🔴' : '📢';
-  var baslikEl = box ? box.querySelector('div > div > div:first-child') : null;
-  if(baslikEl) baslikEl.textContent = isAcil ? 'ACİL DUYURU!' : 'Yeni Duyuru';
 
-  // Acil badge
-  var acilBadge = document.getElementById('duyuru-acil-badge');
-  if(acilBadge) acilBadge.style.display = isAcil ? 'block' : 'none';
+  var tarihEl   = document.getElementById('duyuru-tarih');
+  var icerikEl  = document.getElementById('duyuru-icerik');
+  var kimdenEl  = document.getElementById('duyuru-kimden');
+  var badgeEl   = document.getElementById('duyuru-acil-badge');
+  var ov        = document.getElementById('duyuru-overlay');
 
-  document.getElementById('duyuru-tarih').textContent = d.tarih||'';
-  document.getElementById('duyuru-icerik').textContent = d.icerik||'';
-  document.getElementById('duyuru-kimden').textContent = 'Gönderen: '+(d.gonderen||'Yönetim');
-
-  const ov = document.getElementById('duyuru-overlay');
-  ov.style.display = 'flex';
+  if(tarihEl)  tarihEl.textContent  = d.tarih||'';
+  if(icerikEl) icerikEl.textContent = d.icerik||'';
+  if(kimdenEl) kimdenEl.textContent = 'Gönderen: '+(d.gonderen||'Yönetim');
+  if(badgeEl)  badgeEl.style.display = isAcil ? 'block' : 'none';
+  if(ov)       ov.style.display = 'flex';
   if(sesCal !== false) duyuruSesiCal();
 }
 
