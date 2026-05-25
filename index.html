@@ -16,8 +16,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>ACL Depo Yönetim Sistemi</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
   --bg:#1a0f2e;--bg2:#231540;--bg3:#2d1a52;--bg4:#3a2266;
   --accent:#ffd600;--accent2:#6a1fc2;
   --green:#69f0ae;--green-dim:#1a3a2a;--green-b:rgba(105,240,174,.2);
@@ -830,6 +830,81 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
     <div id="lb-sayac" style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.5);font-family:var(--mono)"></div>
   </div>
 
+  <!-- PİCKER AI YÜKLEME MODALI -->
+  <div class="gorev-modal-overlay" id="picker-ai-modal">
+    <div class="gorev-modal" onclick="event.stopPropagation()" style="max-height:92vh;overflow-y:auto">
+      <div class="gorev-modal-baslik">🤖 AI ile Picker Verisi Yükle <button class="gorev-modal-kapat" onclick="pickerAiModalKapat()">×</button></div>
+
+      <!-- ADIM 1: Dosya seç -->
+      <div id="pai-adim1">
+        <div style="background:rgba(167,139,250,.06);border:2px dashed rgba(167,139,250,.3);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:14px;cursor:pointer" onclick="document.getElementById('pai-file-input').click()">
+          <div style="font-size:36px;margin-bottom:8px">📂</div>
+          <div style="font-size:14px;font-weight:700;color:var(--accent2);margin-bottom:4px">Dosyayı Buraya Sürükle veya Tıkla</div>
+          <div style="font-size:11px;color:var(--text3)">CSV, Excel (.xlsx) veya metin dosyası</div>
+          <input type="file" id="pai-file-input" accept=".csv,.xlsx,.xls,.txt" style="display:none" onchange="pickerAiDosyaSec(this)">
+        </div>
+        <div id="pai-dosya-adi" style="display:none;background:var(--bg3);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--text2)"></div>
+        <div class="gorev-form-label">Dönem</div>
+        <input class="gorev-form-input" id="pai-donem" type="month">
+        <button id="pai-analiz-btn" class="gorev-btn-primary" onclick="pickerAiAnaliz()" disabled style="opacity:.4">🤖 AI ile Analiz Et</button>
+      </div>
+
+      <!-- ADIM 2: AI sonucu + önizleme -->
+      <div id="pai-adim2" style="display:none">
+        <div id="pai-yukleniyor" style="text-align:center;padding:24px;color:var(--accent2)">
+          <div style="font-size:32px;margin-bottom:8px;animation:spin 1s linear infinite">⟳</div>
+          <div style="font-size:13px">AI dosyayı okuyor ve verileri çıkarıyor...</div>
+        </div>
+        <div id="pai-sonuc" style="display:none">
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px" id="pai-sonuc-baslik"></div>
+          <div id="pai-onizleme" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:12px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button onclick="pickerAiAdim1eGeri()" style="padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--sans)">← Geri</button>
+            <button onclick="pickerAiKaydet()" style="padding:11px;background:var(--green);border:none;border-radius:var(--r-sm);color:#000;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)" id="pai-kaydet-btn">✅ Tümünü Kaydet</button>
+          </div>
+        </div>
+        <div id="pai-hata" style="display:none;color:var(--red);padding:12px;background:rgba(248,113,113,.1);border-radius:var(--r-sm);font-size:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PİCKER VERİ GİRİŞ MODALI -->
+  <div class="gorev-modal-overlay" id="picker-modal">
+    <div class="gorev-modal" onclick="event.stopPropagation()" style="max-height:90vh;overflow-y:auto">
+      <div class="gorev-modal-baslik">Picker Verisi Ekle <button class="gorev-modal-kapat" onclick="pickerModalKapat()">×</button></div>
+      <input type="hidden" id="pk-edit-id">
+      <div class="gorev-form-label">Picker Adı</div>
+      <input class="gorev-form-input" id="pk-ad" type="text" placeholder="Ad Soyad">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="gorev-form-label">Toplam Sipariş</div>
+          <input class="gorev-form-input" id="pk-siparis" type="number" min="0" placeholder="82" style="margin-bottom:0" oninput="pickerRenkGuncelle()">
+        </div>
+        <div>
+          <div class="gorev-form-label">THS Uyum (%)</div>
+          <input class="gorev-form-input" id="pk-ths-uyum" type="number" min="0" step="0.1" placeholder="99.5" style="margin-bottom:0" oninput="pickerRenkGuncelle()">
+        </div>
+        <div>
+          <div class="gorev-form-label">THS Puanı</div>
+          <input class="gorev-form-input" id="pk-ths-puan" type="number" min="0" step="0.1" placeholder="100.0" style="margin-bottom:0">
+        </div>
+        <div>
+          <div class="gorev-form-label">Top. Toplama Süresi</div>
+          <input class="gorev-form-input" id="pk-toplam-sure" type="number" min="0" step="0.1" placeholder="261.8" style="margin-bottom:0">
+        </div>
+        <div style="grid-column:1/-1">
+          <div class="gorev-form-label">Ort. Toplama Süresi (dk)</div>
+          <input class="gorev-form-input" id="pk-ort-sure" type="number" min="0" step="0.1" placeholder="3.2" style="margin-bottom:0">
+        </div>
+      </div>
+      <div class="gorev-form-label" style="margin-top:10px">Dönem</div>
+      <input class="gorev-form-input" id="pk-donem" type="month" placeholder="2026-05">
+      <!-- Renk önizleme -->
+      <div id="pk-renk-onizleme" style="margin:10px 0;padding:8px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:600;text-align:center;display:none"></div>
+      <button class="gorev-btn-primary" onclick="pickerVeriKaydet()">💾 Kaydet</button>
+    </div>
+  </div>
+
   <div id="duyuru-overlay" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;padding:20px">
     <div id="duyuru-box" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);width:100%;max-width:400px;overflow:hidden">
       <div style="background:var(--accent2);padding:14px 16px;display:flex;align-items:center;gap:10px">
@@ -1115,6 +1190,26 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
         <div class="rapor-sub">Tüm verileri Excel'de açılabilir CSV formatında indir.</div>
         <button class="rapor-btn csv" id="exp-btn" onclick="doExport()">⬇ CSV İndir (Excel'de Aç)</button>
         <div class="rapor-info" id="rapor-info"></div>
+      </div>
+
+      <!-- PİCKER PERFORMANS KARTLARI -->
+      <div class="slabel">Picker Performans Raporu</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div class="kart" onclick="raporAc('picker')" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">🏃</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Picker Tablosu</div>
+          <div style="font-size:11px;color:var(--text3)">THS uyum, puan, toplama süresi</div>
+        </div>
+        <div class="kart" onclick="pickerVeriGir()" style="cursor:pointer;padding:14px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:24px;margin-bottom:8px">➕</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Manuel Veri Gir</div>
+          <div style="font-size:11px;color:var(--text3)">Picker performans verisi ekle</div>
+        </div>
+        <div class="kart" onclick="pickerAiModalAc()" style="cursor:pointer;padding:14px;transition:border-color .2s;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04)" onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='rgba(167,139,250,.3)'">
+          <div style="font-size:24px;margin-bottom:8px">🤖</div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:4px">AI ile Dosya Yükle</div>
+          <div style="font-size:11px;color:var(--text3)">CSV/Excel → AI okur, otomatik ekler</div>
+        </div>
       </div>
 
       <div class="slabel">Arşiv Filtresi</div>
@@ -2494,6 +2589,7 @@ async function raporAc(tip){
     if(tip==='haftalik') icerik.innerHTML = await _raporHaftalikHtml();
     if(tip==='aylik')    icerik.innerHTML = await _raporAylikHtml();
     if(tip==='gorev')    icerik.innerHTML = await _raporGorevDetayHtml();
+    if(tip==='picker')   icerik.innerHTML = await _raporPickerHtml();
   }catch(e){
     icerik.innerHTML = '<div style="color:var(--red);padding:20px">Rapor yüklenemedi: '+e.message+'</div>';
   }
@@ -3037,6 +3133,347 @@ async function _liderHtml(){
 }
 
 // ─── LİDERLİK SİSTEMİ SONU ───────────────────────────────────
+
+// ─── PİCKER AI YÜKLEME SİSTEMİ ──────────────────────────────
+var _paiDosyaIcerik = '';
+var _paiCikarilan = [];
+
+function pickerAiModalAc(){
+  if(!isYonetici()){ toast('Sadece yöneticiler kullanabilir','err'); return; }
+  pickerAiAdim1eGeri();
+  var ov = document.getElementById('picker-ai-modal');
+  if(ov) ov.classList.add('acik');
+  var donemEl = document.getElementById('pai-donem');
+  if(donemEl){ var s=new Date(); donemEl.value=s.getFullYear()+'-'+(s.getMonth()+1).toString().padStart(2,'0'); }
+}
+
+function pickerAiModalKapat(){
+  var ov = document.getElementById('picker-ai-modal');
+  if(ov) ov.classList.remove('acik');
+}
+
+function pickerAiAdim1eGeri(){
+  document.getElementById('pai-adim1').style.display='block';
+  document.getElementById('pai-adim2').style.display='none';
+  document.getElementById('pai-yukleniyor').style.display='none';
+  document.getElementById('pai-sonuc').style.display='none';
+  document.getElementById('pai-hata').style.display='none';
+  _paiDosyaIcerik=''; _paiCikarilan=[];
+}
+
+function pickerAiDosyaSec(input){
+  var file = input.files[0];
+  if(!file) return;
+  var adEl = document.getElementById('pai-dosya-adi');
+  var btnEl = document.getElementById('pai-analiz-btn');
+  if(adEl){ adEl.style.display='block'; adEl.innerHTML='📄 <strong>'+escHtml(file.name)+'</strong> ('+Math.round(file.size/1024)+' KB)'; }
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _paiDosyaIcerik = e.target.result;
+    if(btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
+  };
+  // CSV/txt için text, xlsx için binary
+  if(file.name.match(/\.(csv|txt)$/i)){
+    reader.readAsText(file, 'utf-8');
+  } else {
+    // xlsx — SheetJS ile okuyacağız
+    reader.readAsBinaryString(file);
+    reader.onload = function(e){
+      try{
+        if(typeof XLSX === 'undefined'){ toast('Excel desteği yükleniyor...','ok'); return; }
+        var wb = XLSX.read(e.target.result, {type:'binary'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        _paiDosyaIcerik = XLSX.utils.sheet_to_csv(ws);
+        if(btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
+      }catch(ex){ toast('Excel okunamadı: '+ex.message,'err'); }
+    };
+  }
+}
+
+async function pickerAiAnaliz(){
+  var donem = (document.getElementById('pai-donem')||{}).value||'';
+  if(!_paiDosyaIcerik){ toast('Önce dosya seçin','err'); return; }
+  if(!donem){ toast('Dönem seçin','err'); return; }
+
+  document.getElementById('pai-adim1').style.display='none';
+  document.getElementById('pai-adim2').style.display='block';
+  document.getElementById('pai-yukleniyor').style.display='block';
+  document.getElementById('pai-sonuc').style.display='none';
+  document.getElementById('pai-hata').style.display='none';
+
+  var prompt = `Aşağıdaki veri bir depo picker (sipariş toplayıcı) performans tablosudur.
+Bu tablodan her picker için şu bilgileri çıkar:
+1. Ad (picker adı/soyadı)
+2. siparis (toplam sipariş sayısı - tam sayı)
+3. thsUyum (THS Uyum Performansı yüzdesi - ondalıklı sayı, sadece rakam, % işareti olmadan)
+4. thsPuan (THS Puanı - ondalıklı sayı)
+5. toplamSure (Toplam Toplama Süresi - ondalıklı sayı)
+6. ortSure (Ortalama Toplama Süresi - ondalıklı sayı)
+
+SADECE JSON array döndür, başka hiçbir şey yazma. Örnek format:
+[{"ad":"Ali Yılmaz","siparis":82,"thsUyum":99.5,"thsPuan":100.0,"toplamSure":261.8,"ortSure":3.2}]
+
+Eğer bir alan bulunamazsa 0 yaz. Veri:
+${_paiDosyaIcerik.substring(0, 8000)}`;
+
+  try{
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    var data = await resp.json();
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('');
+    // JSON'u temizle
+    var clean = text.replace(/```json|```/g,'').trim();
+    var start = clean.indexOf('['); var end = clean.lastIndexOf(']');
+    if(start===-1||end===-1) throw new Error('AI geçerli JSON döndürmedi');
+    _paiCikarilan = JSON.parse(clean.substring(start,end+1));
+    if(!Array.isArray(_paiCikarilan)||!_paiCikarilan.length) throw new Error('Hiç veri çıkarılamadı');
+
+    // Önizleme tablosu
+    var onizleme = '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    onizleme += '<tr style="background:var(--bg3)"><th style="padding:6px;text-align:left;color:var(--text3)">Ad</th><th style="padding:6px;text-align:center;color:var(--text3)">Sipariş</th><th style="padding:6px;text-align:center;color:var(--text3)">THS%</th><th style="padding:6px;text-align:center;color:var(--text3)">Puan</th><th style="padding:6px;text-align:center;color:var(--text3)">Ort.Süre</th></tr>';
+    _paiCikarilan.forEach(function(p){
+      var renk = p.thsUyum<=100?'var(--green)':p.thsUyum<=115?'var(--orange)':'var(--red)';
+      onizleme += '<tr style="border-bottom:1px solid var(--border)">';
+      onizleme += '<td style="padding:7px 6px;color:var(--text)">'+escHtml(p.ad||'')+'</td>';
+      onizleme += '<td style="padding:7px 6px;text-align:center;font-family:var(--mono);color:var(--text2)">'+p.siparis+'</td>';
+      onizleme += '<td style="padding:7px 6px;text-align:center;font-family:var(--mono);font-weight:700;color:'+renk+'">%'+p.thsUyum+'</td>';
+      onizleme += '<td style="padding:7px 6px;text-align:center;font-family:var(--mono);color:var(--text2)">'+p.thsPuan+'</td>';
+      onizleme += '<td style="padding:7px 6px;text-align:center;font-family:var(--mono);color:var(--text2)">'+p.ortSure+'dk</td>';
+      onizleme += '</tr>';
+    });
+    onizleme += '</table>';
+
+    document.getElementById('pai-yukleniyor').style.display='none';
+    document.getElementById('pai-sonuc').style.display='block';
+    document.getElementById('pai-sonuc-baslik').textContent='✅ '+_paiCikarilan.length+' picker verisi bulundu — kontrol edip kaydedin:';
+    document.getElementById('pai-onizleme').innerHTML = onizleme;
+
+  }catch(err){
+    document.getElementById('pai-yukleniyor').style.display='none';
+    document.getElementById('pai-hata').style.display='block';
+    document.getElementById('pai-hata').innerHTML='❌ Hata: '+escHtml(err.message||String(err))+'<br><br><button onclick="pickerAiAdim1eGeri()" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text2);cursor:pointer;font-family:var(--sans)">← Tekrar Dene</button>';
+  }
+}
+
+async function pickerAiKaydet(){
+  if(!_paiCikarilan.length){ toast('Kaydedilecek veri yok','err'); return; }
+  var donem = (document.getElementById('pai-donem')||{}).value||'';
+  if(!donem){ toast('Dönem seçin','err'); return; }
+
+  var btn = document.getElementById('pai-kaydet-btn');
+  if(btn){ btn.textContent='⟳ Kaydediliyor...'; btn.disabled=true; }
+
+  var basarili=0, hatali=0;
+  try{
+    var baseTs=Date.now();
+    for(var i=0;i<_paiCikarilan.length;i++){
+      var p=_paiCikarilan[i];
+      if(!p.ad||!p.ad.trim()) continue;
+      var kayitId='pk_'+donem+'_'+p.ad.trim().replace(/\s+/g,'_').toLowerCase()+'_'+baseTs;
+      var veri={id:kayitId, ad:p.ad.trim(), siparis:p.siparis||0,
+        thsUyum:p.thsUyum||0, thsPuan:p.thsPuan||0,
+        toplamSure:p.toplamSure||0, ortSure:p.ortSure||0,
+        donem:donem, kayitTs:baseTs+i,
+        kaydedenTel:user?normTel(user.tel||''):'',
+        kaydedenAd:user?user.ad||'':'',
+        aiIleEklendi:true
+      };
+      try{ await fbSet('picker_performans',kayitId,veri); basarili++; }
+      catch(e){ hatali++; }
+    }
+    toast(basarili+' picker kaydedildi'+(hatali?' ('+hatali+' hata)':''),'ok');
+    pickerAiModalKapat();
+    if(document.getElementById('rapor-panel').style.display!=='none') raporAc('picker');
+  }catch(e){
+    toast('Kayıt hatası: '+(e.message||e),'err');
+  }
+  if(btn){ btn.textContent='✅ Tümünü Kaydet'; btn.disabled=false; }
+}
+
+// ─── PİCKER AI YÜKLEME SİSTEMİ SONU ─────────────────────────
+
+function pickerVeriGir(editId){
+  // Formu temizle
+  ['pk-ad','pk-siparis','pk-ths-uyum','pk-ths-puan','pk-toplam-sure','pk-ort-sure'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var donemEl=document.getElementById('pk-donem');
+  if(donemEl){ var s=new Date(); donemEl.value=s.getFullYear()+'-'+(s.getMonth()+1).toString().padStart(2,'0'); }
+  var editEl=document.getElementById('pk-edit-id');
+  if(editEl) editEl.value=editId||'';
+  var ov=document.getElementById('picker-modal');
+  if(ov){ ov.classList.add('acik'); }
+}
+
+function pickerModalKapat(){
+  var ov=document.getElementById('picker-modal');
+  if(ov) ov.classList.remove('acik');
+}
+
+function pickerRenkGuncelle(){
+  var uyum=parseFloat((document.getElementById('pk-ths-uyum')||{}).value||'0')||0;
+  var el=document.getElementById('pk-renk-onizleme');
+  if(!el) return;
+  if(!uyum){ el.style.display='none'; return; }
+  var renk,bg,txt;
+  if(uyum<=100){ renk='#1a3a2a'; bg='#22d3a0'; txt='✅ Yeşil — THS uyumu normal (≤%100)'; }
+  else if(uyum<=115){ renk='#2a1800'; bg='#fb923c'; txt='🟠 Turuncu — THS aşımı orta (%100-115)'; }
+  else { renk='#2a0a0a'; bg='#f87171'; txt='🔴 Kırmızı — THS aşımı yüksek (>%115)'; }
+  el.style.display='block';
+  el.style.background=renk;
+  el.style.color=bg;
+  el.style.border='1px solid '+bg+'44';
+  el.textContent=txt;
+}
+
+async function pickerVeriKaydet(){
+  var ad=(document.getElementById('pk-ad')||{}).value||'';
+  var siparis=parseInt((document.getElementById('pk-siparis')||{}).value||'0')||0;
+  var thsUyum=parseFloat((document.getElementById('pk-ths-uyum')||{}).value||'0')||0;
+  var thsPuan=parseFloat((document.getElementById('pk-ths-puan')||{}).value||'0')||0;
+  var toplamSure=parseFloat((document.getElementById('pk-toplam-sure')||{}).value||'0')||0;
+  var ortSure=parseFloat((document.getElementById('pk-ort-sure')||{}).value||'0')||0;
+  var donem=(document.getElementById('pk-donem')||{}).value||'';
+  var editId=(document.getElementById('pk-edit-id')||{}).value||'';
+
+  if(!ad.trim()){ toast('Picker adı zorunlu','err'); return; }
+  if(!donem){ toast('Dönem seçin','err'); return; }
+
+  var kayitId = editId || ('pk_'+donem+'_'+Date.now());
+  var veri = {
+    id:kayitId, ad:ad.trim(), siparis, thsUyum, thsPuan,
+    toplamSure, ortSure, donem,
+    kayitTs:Date.now(),
+    kaydedenTel:user?normTel(user.tel||''):'',
+    kaydedenAd:user?user.ad||'':''
+  };
+
+  try{
+    await fbSet('picker_performans', kayitId, veri);
+    toast(editId?'Güncellendi ✓':'Kaydedildi ✓','ok');
+    pickerModalKapat();
+    if(document.getElementById('rapor-panel').style.display!=='none'){
+      raporAc('picker');
+    }
+  }catch(e){ toast('Kaydedilemedi: '+(e.message||e),'err'); }
+}
+
+// Picker raporu — tam ekran panel içeriği
+async function _raporPickerHtml(){
+  var html='';
+  // Dönem filtresi
+  var simdi=new Date();
+  var aktifDonem=(window._pickerDonem||simdi.getFullYear()+'-'+(simdi.getMonth()+1).toString().padStart(2,'0'));
+
+  // Firebase'den picker verilerini çek
+  var kayitlar=[];
+  try{
+    var snap=await window._fb.getDocs(window._fb.collection(window._fb.db,'picker_performans'));
+    snap.forEach(function(d){ var v=d.data(); if(v&&v.donem===aktifDonem) kayitlar.push(v); });
+  }catch(e){ return '<div style="color:var(--red);padding:20px">Veri yüklenemedi: '+e.message+'</div>'; }
+
+  // Dönem seçici + ekle butonu
+  html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">';
+  html+='<input type="month" value="'+aktifDonem+'" onchange="window._pickerDonem=this.value;raporAc(\'picker\')" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:13px;flex:1">';
+  if(isYonetici()){
+    html+='<button onclick="pickerVeriGir()" style="background:var(--green);color:#000;border:none;border-radius:var(--r-sm);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap">➕ Veri Ekle</button>';
+  }
+  html+='</div>';
+
+  if(!kayitlar.length){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:12px">📭</div><div>Bu dönem için picker verisi yok</div>';
+    if(isYonetici()) html+='<div style="margin-top:12px"><button onclick="pickerVeriGir()" style="background:var(--accent2);color:#fff;border:none;border-radius:var(--r-sm);padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)">➕ İlk Veriyi Ekle</button></div>';
+    html+='</div>';
+    return html;
+  }
+
+  // Renk fonksiyonu — görseldeki gibi
+  function satırRenk(thsUyum){
+    if(thsUyum<=100) return {bg:'rgba(34,211,160,.08)',border:'rgba(34,211,160,.2)',badge:'var(--green)',label:'İyi'};
+    if(thsUyum<=115) return {bg:'rgba(251,146,60,.08)',border:'rgba(251,146,60,.2)',badge:'var(--orange)',label:'Orta'};
+    return {bg:'rgba(248,113,113,.08)',border:'rgba(248,113,113,.2)',badge:'var(--red)',label:'Aşım'};
+  }
+
+  // Özet istatistikler
+  var topSiparis=kayitlar.reduce(function(s,k){return s+k.siparis;},0);
+  var ortThs=kayitlar.length?Math.round(kayitlar.reduce(function(s,k){return s+k.thsUyum;},0)/kayitlar.length*10)/10:0;
+  var ortTopSure=kayitlar.length?Math.round(kayitlar.reduce(function(s,k){return s+k.ortSure;},0)/kayitlar.length*10)/10:0;
+  var yesil=kayitlar.filter(function(k){return k.thsUyum<=100;}).length;
+  var turuncu=kayitlar.filter(function(k){return k.thsUyum>100&&k.thsUyum<=115;}).length;
+  var kirmizi=kayitlar.filter(function(k){return k.thsUyum>115;}).length;
+
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)">'+kayitlar.length+'</div><div style="font-size:10px;color:var(--text3);margin-top:3px">Toplam Picker</div></div>';
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)">'+topSiparis+'</div><div style="font-size:10px;color:var(--text3);margin-top:3px">Toplam Sipariş</div></div>';
+  html+='<div style="background:rgba(34,211,160,.08);border:1px solid rgba(34,211,160,.25);border-radius:var(--r-sm);padding:12px;text-align:center"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--green)">'+yesil+'</div><div style="font-size:10px;color:var(--text3);margin-top:3px">✅ İyi (≤%100)</div></div>';
+  html+='<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:var(--r-sm);padding:12px;text-align:center"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--red)">'+kirmizi+'</div><div style="font-size:10px;color:var(--text3);margin-top:3px">🔴 Aşım (>%115)</div></div>';
+  html+='</div>';
+
+  // THS uyumuna göre sırala
+  kayitlar.sort(function(a,b){return a.thsUyum-b.thsUyum;});
+
+  // TABLO — mobil uyumlu
+  html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">';
+  // Başlık
+  html+='<div style="background:var(--bg3);display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:0;border-bottom:1px solid var(--border)">';
+  html+='<div style="padding:10px 8px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">#</div>';
+  html+='<div style="padding:10px 8px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Picker</div>';
+  html+='<div style="padding:10px 6px;font-size:9px;font-weight:700;color:var(--text3);text-align:center">Sipariş</div>';
+  html+='<div style="padding:10px 6px;font-size:9px;font-weight:700;color:var(--text3);text-align:center">THS Uyum</div>';
+  html+='<div style="padding:10px 6px;font-size:9px;font-weight:700;color:var(--text3);text-align:center">THS Puan</div>';
+  html+='<div style="padding:10px 6px;font-size:9px;font-weight:700;color:var(--text3);text-align:center">Ort.Süre</div>';
+  html+='</div>';
+
+  kayitlar.forEach(function(k,idx){
+    var rk=satırRenk(k.thsUyum);
+    var editBtn=isYonetici()?'<button onclick="pickerDuzenle(\''+k.id+'\')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:2px 4px" title="Düzenle">✏️</button>':'';
+    html+='<div style="display:grid;grid-template-columns:auto 1fr auto auto auto auto;background:'+rk.bg+';border-bottom:1px solid var(--border);border-left:3px solid '+rk.badge+'">';
+    html+='<div style="padding:10px 8px;font-size:11px;color:var(--text3);font-family:var(--mono)">'+(idx+1)+'</div>';
+    html+='<div style="padding:10px 8px"><div style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(k.ad)+'</div>'+editBtn+'</div>';
+    html+='<div style="padding:10px 6px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2)">'+k.siparis+'</div>';
+    html+='<div style="padding:10px 6px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:'+rk.badge+'">%'+k.thsUyum+'</div>';
+    html+='<div style="padding:10px 6px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2)">'+k.thsPuan+'</div>';
+    html+='<div style="padding:10px 6px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2)">'+k.ortSure+'dk</div>';
+    html+='</div>';
+  });
+
+  // Renk açıklaması
+  html+='<div style="padding:10px 12px;display:flex;gap:12px;flex-wrap:wrap;border-top:1px solid var(--border)">';
+  html+='<span style="font-size:10px;color:var(--green)">■ ≤%100 İyi</span>';
+  html+='<span style="font-size:10px;color:var(--orange)">■ %100-115 Orta</span>';
+  html+='<span style="font-size:10px;color:var(--red)">■ >%115 Aşım</span>';
+  html+='</div></div>';
+
+  return html;
+}
+
+async function pickerDuzenle(kayitId){
+  try{
+    var veri=await fbGet('picker_performans',kayitId);
+    if(!veri){ toast('Kayıt bulunamadı','err'); return; }
+    document.getElementById('pk-ad').value=veri.ad||'';
+    document.getElementById('pk-siparis').value=veri.siparis||'';
+    document.getElementById('pk-ths-uyum').value=veri.thsUyum||'';
+    document.getElementById('pk-ths-puan').value=veri.thsPuan||'';
+    document.getElementById('pk-toplam-sure').value=veri.toplamSure||'';
+    document.getElementById('pk-ort-sure').value=veri.ortSure||'';
+    document.getElementById('pk-donem').value=veri.donem||'';
+    document.getElementById('pk-edit-id').value=kayitId;
+    pickerRenkGuncelle();
+    var ov=document.getElementById('picker-modal');
+    if(ov) ov.classList.add('acik');
+  }catch(e){ toast('Yüklenemedi','err'); }
+}
+
+// ─── PİCKER PERFORMANS SİSTEMİ SONU ─────────────────────────
 let aktifDepoId = null;
 
 function mgr_depoListesiniGuncelle(){
