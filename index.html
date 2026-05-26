@@ -3258,7 +3258,7 @@ ${_vaiDosyaIcerik.substring(0,8000)}`;
 
   try{
     var vaiBody = JSON.stringify({
-      model:'claude-3-5-sonnet-20241022',
+      model:'claude-opus-4-5',
       max_tokens:4000,
       messages:[{role:'user',content:prompt}]
     });
@@ -3436,7 +3436,7 @@ ${_paiDosyaIcerik.substring(0, 8000)}`;
 
   try{
     var apiBody = JSON.stringify({
-      model:'claude-3-5-sonnet-20241022',
+      model:'claude-opus-4-5',
       max_tokens:2000,
       messages:[{role:'user',content:prompt}]
     });
