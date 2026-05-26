@@ -1498,11 +1498,46 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
     }catch(e){ return null; }
   }
 
-  // FCM push gönderimi — şimdilik devre dışı (backend gerektirir)
-  // İleride Cloudflare Workers veya Cloud Functions ile aktif edilecek
-  async function fcmPushGonder(baslik, icerik, hedefler){
-    // TODO: backend hazır olduğunda aktif edilecek
-    return;
+  // FCM push gönderimi — Cloudflare Worker üzerinden
+  async function fcmPushGonder(baslik, icerik, hedefTeller){
+    try{
+      // Firestore'dan FCM tokenları topla
+      var tokenSnap = await getDocs(collection(db, 'push_tokens'));
+      var tumTokenlar = [];
+      tokenSnap.forEach(function(d){
+        var t = d.data();
+        if(t && t.fcmToken){
+          // hedef filtresi
+          if(!hedefTeller || !hedefTeller.length){
+            tumTokenlar.push(t.fcmToken); // genel → herkese
+          } else {
+            var tel = normTel ? normTel(t.tel||'') : (t.tel||'').replace(/\D/g,'');
+            if(hedefTeller.some(function(h){ return (normTel?normTel(h):h.replace(/\D/g,'')) === tel; })){
+              tumTokenlar.push(t.fcmToken);
+            }
+          }
+        }
+      });
+
+      if(!tumTokenlar.length) return;
+
+      var isAcil = (baslik||'').indexOf('ACİL') !== -1;
+
+      await fetch('https://sweet-cell-5655.tarikozmenben.workers.dev', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Action': 'fcm-push'
+        },
+        body: JSON.stringify({
+          tokens: tumTokenlar,
+          title: baslik,
+          body: icerik,
+          isAcil: isAcil,
+          data: { oncelik: isAcil ? 'acil' : 'normal', url: '/' }
+        })
+      });
+    }catch(e){ console.warn('FCM push gönderilemedi:', e); }
   }
 
   // Global erişim
@@ -9045,38 +9080,55 @@ var _swReg = null;
 // Bildirim izni iste ve SW kaydet
 function bildirimIzniIste(){
   if(!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
   if(Notification.permission === 'granted'){
     bildirimTokenKaydet();
     return;
   }
-  if(Notification.permission === 'denied') return;
+  if(Notification.permission === 'denied'){
+    toast('⚠️ Bildirim izni reddedildi — tarayıcı ayarlarından izin verin','err');
+    return;
+  }
+  // izin iste
   Notification.requestPermission().then(function(perm){
-    if(perm === 'granted') bildirimTokenKaydet();
+    if(perm === 'granted'){
+      toast('Bildirimler aktif ✓','ok');
+      bildirimTokenKaydet();
+    } else {
+      toast('Bildirim izni verilmedi — bazı uyarılar çalışmayabilir','err');
+    }
   });
 }
 
 function bildirimTokenKaydet(){
-  if(!navigator.serviceWorker) return;
+  if(!navigator.serviceWorker || !user || !window._fbReady) return;
   navigator.serviceWorker.ready.then(function(reg){
     _swReg = reg;
-    if(user && window._fbReady){
-      // Gerçek FCM token al
-      if(window._fcmTokenAl){
-        window._fcmTokenAl(normTel(user.tel)).catch(function(){});
-      } else {
-        // Fallback: eski basit token sistemi
-        var token = 'web_' + normTel(user.tel) + '_' + Date.now();
-        var existing = localStorage.getItem('acl_push_token');
-        if(!existing){
-          localStorage.setItem('acl_push_token', token);
-          fbSet('push_tokens', normTel(user.tel), {
-            token: token, tel: user.tel, ad: user.ad,
-            platform: navigator.userAgent,
-            kayit: new Date().toISOString()
-          }).catch(function(){});
-        }
-      }
+    // FCM token al
+    if(window._fcmTokenAl){
+      window._fcmTokenAl(normTel(user.tel)).then(function(token){
+        if(token) console.log('FCM token kaydedildi');
+        else bildirimFallbackTokenKaydet(reg);
+      }).catch(function(){ bildirimFallbackTokenKaydet(reg); });
+    } else {
+      bildirimFallbackTokenKaydet(reg);
     }
+  }).catch(function(){});
+}
+
+function bildirimFallbackTokenKaydet(reg){
+  // FCM çalışmazsa basit token sistemi
+  if(!user || !window._fbReady) return;
+  var tel = normTel(user.tel||'');
+  var token = 'web_'+tel+'_'+navigator.userAgent.slice(0,20).replace(/\W/g,'');
+  fbSet('push_tokens', tel, {
+    fcmToken: null,
+    webToken: token,
+    tel: user.tel,
+    ad: user.ad||'',
+    platform: /Android/i.test(navigator.userAgent)?'android':/iPhone|iPad/i.test(navigator.userAgent)?'ios':'web',
+    kayit: new Date().toISOString(),
+    ts: Date.now()
   }).catch(function(){});
 }
 
