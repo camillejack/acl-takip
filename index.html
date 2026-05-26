@@ -3258,24 +3258,16 @@ ${_vaiDosyaIcerik.substring(0,8000)}`;
 
   try{
     var vaiBody = JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:'claude-3-5-sonnet-20241022',
       max_tokens:4000,
       messages:[{role:'user',content:prompt}]
     });
 
-    var vaiProxies = [
-      'https://api.anthropic.com/v1/messages',
-      'https://api.codetabs.com/v1/proxy?quest=https://api.anthropic.com/v1/messages',
-      'https://thingproxy.freeboard.io/fetch/https://api.anthropic.com/v1/messages'
-    ];
-    var resp = null;
-    for(var vpi=0; vpi<vaiProxies.length; vpi++){
-      try{
-        resp = await fetch(vaiProxies[vpi], {method:'POST',headers:{'Content-Type':'application/json'},body:vaiBody});
-        if(resp.ok) break;
-      }catch(e){ resp=null; }
-    }
-    if(!resp) throw new Error('API bağlantısı kurulamadı.');
+    var resp = await fetch('https://sweet-cell-5655.tarikozmenben.workers.dev', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: vaiBody
+    });
     var data=await resp.json();
     var text=(data.content||[]).map(function(c){return c.text||'';}).join('');
     var clean=text.replace(/```json|```/g,'').trim();
@@ -3444,31 +3436,16 @@ ${_paiDosyaIcerik.substring(0, 8000)}`;
 
   try{
     var apiBody = JSON.stringify({
-      model:'claude-sonnet-4-20250514',
+      model:'claude-3-5-sonnet-20241022',
       max_tokens:2000,
       messages:[{role:'user',content:prompt}]
     });
 
-    // CORS proxy zinciri — birinde sorun olursa diğerini dene
-    var proxyUrls = [
-      'https://api.anthropic.com/v1/messages',
-      'https://api.codetabs.com/v1/proxy?quest=https://api.anthropic.com/v1/messages',
-      'https://thingproxy.freeboard.io/fetch/https://api.anthropic.com/v1/messages'
-    ];
-
-    var resp = null;
-    var lastErr = null;
-    for(var pi=0; pi<proxyUrls.length; pi++){
-      try{
-        resp = await fetch(proxyUrls[pi], {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: apiBody
-        });
-        if(resp.ok) break;
-      }catch(e){ lastErr=e; resp=null; }
-    }
-    if(!resp){ throw new Error('API bağlantısı kurulamadı. Cloudflare Workers kurulumu gerekli.'); }
+    var resp = await fetch('https://sweet-cell-5655.tarikozmenben.workers.dev', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: apiBody
+    });
     var data = await resp.json();
     var text = (data.content||[]).map(function(c){return c.text||'';}).join('');
     // JSON'u temizle
