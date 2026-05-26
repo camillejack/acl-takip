@@ -1896,13 +1896,14 @@ async function toggleCam(s){
     btn.classList.add('on'); btn.disabled=false;
     // Küçük barkodlar için video constraints - yüksek çözünürlük
     const videoConstraints = {
-      deviceId: cam ? cam.deviceId : undefined ? {exact: cam.deviceId} : undefined,
-      width: {ideal: 1920, min: 1280},
-      height: {ideal: 1080, min: 720},
-      focusMode: 'continuous',
-      advanced: [{zoom: 1}]
+      video: {
+        deviceId: cam ? {exact: cam.deviceId} : undefined,
+        facingMode: cam ? undefined : {ideal: 'environment'},
+        width: {ideal: 1920, min: 1280},
+        height: {ideal: 1080, min: 720}
+      }
     };
-    const stream = await navigator.mediaDevices.getUserMedia({video: videoConstraints});
+    const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
     const vid = document.getElementById('vid-'+s);
     vid.srcObject = stream;
     // Zoom destekliyorsa uygula
@@ -8408,16 +8409,39 @@ function vardiyaBaslangiciDk(p){
 function konumTakibiniBaslat(){
   if(!navigator.geolocation) return;
   if(konumWatcher) navigator.geolocation.clearWatch(konumWatcher);
-  konumWatcher = navigator.geolocation.watchPosition(
-    pos => {
+
+  // PWA'da izin durumunu kontrol et ve gerekirse yeniden iste
+  function _baslatWatch(){
+    konumWatcher = navigator.geolocation.watchPosition(
+      function(pos){
+        sonKonum = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy};
+        konumGuncelle();
+      },
+      function(err){
+        sonKonum = null;
+        konumGuncelle();
+        // Hata 1 = izin reddedildi, hata 3 = timeout — timeout olursa tekrar dene
+        if(err.code === 3){
+          setTimeout(_baslatWatch, 5000);
+        }
+      },
+      {enableHighAccuracy:true, maximumAge:10000, timeout:15000}
+    );
+  }
+
+  // Önce tek seferlik konum al (PWA'da ilk izni tetikler)
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
       sonKonum = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy};
       konumGuncelle();
+      _baslatWatch();
     },
-    err => {
+    function(err){
       sonKonum = null;
       konumGuncelle();
+      _baslatWatch(); // yine de izlemeyi başlat
     },
-    {enableHighAccuracy:true, maximumAge:15000, timeout:20000}
+    {enableHighAccuracy:true, maximumAge:0, timeout:10000}
   );
 }
 
