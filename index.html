@@ -3385,27 +3385,24 @@ function pickerAiDosyaSec(input){
   var adEl = document.getElementById('pai-dosya-adi');
   var btnEl = document.getElementById('pai-analiz-btn');
   if(adEl){ adEl.style.display='block'; adEl.innerHTML='📄 <strong>'+escHtml(file.name)+'</strong> ('+Math.round(file.size/1024)+' KB)'; }
-
   var reader = new FileReader();
-  reader.onload = function(e){
-    _paiDosyaIcerik = e.target.result;
-    if(btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
-  };
-  // CSV/txt için text, xlsx için binary
   if(file.name.match(/\.(csv|txt)$/i)){
+    reader.onload = function(e){
+      _paiDosyaIcerik = e.target.result;
+      if(btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
+    };
     reader.readAsText(file, 'utf-8');
   } else {
-    // xlsx — SheetJS ile okuyacağız
-    reader.readAsBinaryString(file);
     reader.onload = function(e){
       try{
-        if(typeof XLSX === 'undefined'){ toast('Excel desteği yükleniyor...','ok'); return; }
         var wb = XLSX.read(e.target.result, {type:'binary'});
         var ws = wb.Sheets[wb.SheetNames[0]];
         _paiDosyaIcerik = XLSX.utils.sheet_to_csv(ws);
         if(btnEl){ btnEl.disabled=false; btnEl.style.opacity='1'; }
+        if(adEl){ adEl.innerHTML='📄 <strong>'+escHtml(file.name)+'</strong> ✅ Okundu'; }
       }catch(ex){ toast('Excel okunamadı: '+ex.message,'err'); }
     };
+    reader.readAsBinaryString(file);
   }
 }
 
