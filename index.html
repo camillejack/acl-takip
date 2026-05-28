@@ -8801,8 +8801,129 @@ function renderIsbasiEkrani(){
 
     ${calismaKartHtml}
     ${sonKayitlarHtml}
+    ${isYonetici() ? _amirVardiyaBitirHtml(depolar) : ''}
     ${buildDepolerKartiHtml(depolar)}
   `;
+}
+
+function _amirVardiyaBitirHtml(depolar){
+  if(rolSeviye(user?user.rol:'') < 2) return '';
+
+  // Kendi deposundaki personeli bul
+  var myTelNorm = normTel(user.tel||'');
+  var personeller = [];
+  var gorulen = {};
+  depolar.forEach(function(d){
+    // Müdür tüm depoları, Şef/Amir kendi deposunu görür
+    var kendi = (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]);
+    var benimDepo = kendi.some(function(p){ return normTel(p.tel||'')===myTelNorm; }) || rolSeviye(user.rol)>=4;
+    if(!benimDepo && rolSeviye(user.rol)<4) return;
+    kendi.forEach(function(p){
+      var tn = normTel(p.tel||'');
+      if(!tn || tn===myTelNorm || gorulen[tn]) return;
+      gorulen[tn]=true;
+      // Bugün iş başı yaptı mı ve çıkış yaptı mı?
+      var cal = calismaData[todayStr];
+      var girisVar = cal && (cal[tn]||{girisler:[]}).girisler ? true : false;
+      // calismaData kişi bazlı değil, gün bazlı — tüm personel için genel kontrol
+      personeller.push({name:p.name||'—', tel:tn, depo:d.ad||'', rol:p.rol||'personel'});
+    });
+  });
+
+  if(!personeller.length) return '';
+
+  var html = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px">';
+  html += '<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">👥 Personel Vardiya Yönetimi</div>';
+
+  personeller.forEach(function(p){
+    var rolRenk = {mudur:'var(--accent)',sef:'var(--accent2)',amir:'var(--blue)',personel:'var(--text3)'}[p.rol]||'var(--text3)';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+    html += '<div style="flex:1">';
+    html += '<div style="font-size:12px;font-weight:600;color:var(--text)">'+escHtml(p.name)+'</div>';
+    html += '<div style="font-size:10px;color:'+rolRenk+'">'+escHtml(p.depo)+'</div>';
+    html += '</div>';
+    html += '<button onclick="amirPersonelVardiyaBitir(\''+p.tel+'\',\''+escHtml(p.name)+'\')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--red);cursor:pointer;font-family:var(--sans);white-space:nowrap">🏁 Vardiyayı Bitir</button>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function amirPersonelVardiyaBitir(tel, ad){
+  var overlay = document.createElement('div');
+  overlay.id = 'amir-vardiya-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var now = new Date();
+  var saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  overlay.innerHTML =
+    '<div onclick="event.stopPropagation()" style="background:var(--bg2);border:2px solid var(--red);border-radius:var(--r);width:100%;max-width:360px;overflow:hidden">' +
+      '<div style="background:linear-gradient(135deg,#b71c1c,#e53935);padding:16px;text-align:center">' +
+        '<div style="font-size:32px;margin-bottom:6px">🏁</div>' +
+        '<div style="font-size:14px;font-weight:800;color:#fff">Personel Vardiyası Bitir</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:3px">'+escHtml(ad)+'</div>' +
+      '</div>' +
+      '<div style="padding:16px">' +
+        '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text2);text-align:center">' +
+          '⚠️ <strong>'+escHtml(ad)+'</strong> için '+saatStr+' itibarıyla vardiya bitişi kaydedilecek.<br>Sebep: Erken ayrılış / Rahatsızlık' +
+        '</div>' +
+        '<div style="margin-bottom:12px">' +
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:5px">Açıklama (opsiyonel)</div>' +
+          '<input id="amir-vardiya-aciklama" type="text" placeholder="Örn: Rahatsızlık nedeniyle erken ayrılış" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;font-family:var(--sans)">' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<button onclick="document.getElementById(\'amir-vardiya-modal\').remove()" style="padding:11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--sans)">İptal</button>' +
+          '<button onclick="amirVardiyaBitirOnay(\''+tel+'\',\''+escHtml(ad)+'\')" style="padding:11px;background:var(--red);border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--sans)">🏁 Onayla</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function amirVardiyaBitirOnay(tel, ad){
+  var modal = document.getElementById('amir-vardiya-modal');
+  var aciklama = (document.getElementById('amir-vardiya-aciklama')||{}).value||'Erken ayrılış';
+  if(modal) modal.remove();
+
+  var now = new Date();
+  var saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  // Firebase'e erken ayrılış kaydı yaz
+  if(window._fbReady){
+    var kayit = {
+      tel: tel, ad: ad,
+      cikisSaat: saatStr,
+      tarih: todayStr,
+      sebep: aciklama,
+      kaydeden: user?user.ad:'',
+      kaydedenRol: user?user.rol:'',
+      ts: Date.now(),
+      erkenAyrilik: true
+    };
+    fbSet('isbasi_kayitlar', normTel(tel)+'_'+todayStr.replace(/\./g,'-')+'_cikis', kayit).catch(function(){});
+
+    // Çalışma kaydına da ekle
+    var calKey = normTel(tel)+'_'+todayStr.replace(/\./g,'-');
+    fbGet('calisma_kayitlar', calKey).then(function(mevcut){
+      var cal = mevcut || {girisler:[],cikislar:[],toplamDk:0,toplamMolaDk:0};
+      cal.cikislar = cal.cikislar||[];
+      cal.cikislar.push({saat:saatStr, erkenAyrilik:true, sebep:aciklama, kaydeden:user?user.ad:''});
+      cal.tel=tel; cal.ad=ad; cal.tarih=todayStr; cal.ts=Date.now();
+      fbSet('calisma_kayitlar', calKey, cal).catch(function(){});
+    }).catch(function(){
+      // Kayıt yoksa yeni oluştur
+      fbSet('calisma_kayitlar', calKey, {
+        girisler:[], cikislar:[{saat:saatStr,erkenAyrilik:true,sebep:aciklama}],
+        toplamDk:0, tel:tel, ad:ad, tarih:todayStr, ts:Date.now()
+      }).catch(function(){});
+    });
+  }
+
+  toast(ad+' için vardiya bitişi kaydedildi ('+saatStr+')','ok');
+  renderIsbasiEkrani();
 }
 
 function buildDepolerKartiHtml(depolar){
