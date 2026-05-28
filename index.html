@@ -1019,7 +1019,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
           </div>
         </div>
         <div class="manual-row">
-          <input class="m-input" id="mi-a" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="none" autocomplete="off" onkeydown="if(event.key==='Enter')applyManual('a')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
+            <input class="m-input" id="mi-a" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')applyManual('a')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('a')">Ekle</button>
         </div>
         <div class="bc-done" id="done-a">
@@ -1043,7 +1043,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
           </div>
         </div>
         <div class="manual-row">
-          <input class="m-input" id="mi-b" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="none" autocomplete="off" onkeydown="if(event.key==='Enter')applyManual('b')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
+            <input class="m-input" id="mi-b" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')applyManual('b')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('b')">Ekle</button>
         </div>
         <div class="bc-done" id="done-b">
@@ -4806,6 +4806,44 @@ function _lbTouchEnd(e){
 }
 
 // Klavye desteği (ESC / ok tuşları)
+// ─── GLOBAL BARKOD TARAYICI — Sunmi L2 Lazer ─────────────────
+// Lazer tarayıcı çok hızlı karakter gönderir (~50ms), Enter ile biter
+var _bcBuf = '';
+var _bcTimer = null;
+var _bcSon = 0;
+
+document.addEventListener('keypress', function(e){
+  // Sadece kayıt ekranında aktif
+  var kayitScreen = document.getElementById('screen-kayit');
+  if(!kayitScreen || kayitScreen.classList.contains('hidden')) return;
+
+  // Aktif input zaten mi-a veya mi-b ise — normal çalışsın
+  var aktifEl = document.activeElement;
+  if(aktifEl && (aktifEl.id === 'mi-a' || aktifEl.id === 'mi-b')) return;
+
+  var simdi = Date.now();
+  if(simdi - _bcSon > 100) _bcBuf = '';
+  _bcSon = simdi;
+
+  if(e.key === 'Enter'){
+    var kod = _bcBuf.trim();
+    _bcBuf = '';
+    if(kod.length >= 4){
+      var slotA = document.getElementById('mi-a');
+      var slotB = document.getElementById('mi-b');
+      if(slotA && !slots.a.bc){ slotA.value=kod; applyManual('a'); }
+      else if(slotB && !slots.b.bc){ slotB.value=kod; applyManual('b'); }
+    }
+    return;
+  }
+  if(e.key && e.key.length === 1){
+    _bcBuf += e.key;
+    clearTimeout(_bcTimer);
+    _bcTimer = setTimeout(function(){ _bcBuf=''; }, 200);
+  }
+});
+
+// Lightbox klavye kontrolü
 document.addEventListener('keydown', function(e){
   var lb = document.getElementById('foto-lightbox');
   if(!lb || lb.style.display === 'none') return;
