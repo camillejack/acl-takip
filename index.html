@@ -8754,8 +8754,10 @@ function renderIsbasiEkrani(){
     return;
   }
 
-  // İş başı yapılmadıysa
-  const btnAktif = !!yakinDepo;
+  // İş başı yapıldı mı?
+  const isBasiYapildi = !!(bugunKayit && bugunKayit.saat);
+  const bugunCikisVar = bugunCalisma && (bugunCalisma.cikislar||[]).length > 0;
+  const btnAktif = !!yakinDepo && !bugunCikisVar;
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -8763,21 +8765,33 @@ function renderIsbasiEkrani(){
       ${vardiyaBadge}
     </div>
 
-    <div style="background:var(--bg2);border:1px solid ${btnAktif?'var(--green-b)':'var(--border)'};border-radius:var(--r);padding:24px 16px;text-align:center;margin-bottom:10px">
-      <div style="font-size:44px;margin-bottom:12px">${btnAktif?'📍':'🔍'}</div>
-      <div style="font-size:15px;font-weight:700;color:${btnAktif?'var(--green)':'var(--text2)'};margin-bottom:4px">
-        ${btnAktif?'Depo Konumundasınız':'Konum Tespit Ediliyor...'}
+    <div style="background:var(--bg2);border:1px solid ${btnAktif?'var(--green-b)':isBasiYapildi?'var(--blue-b)':'var(--border)'};border-radius:var(--r);padding:24px 16px;text-align:center;margin-bottom:10px">
+      <div style="font-size:44px;margin-bottom:12px">${bugunCikisVar?'✅':btnAktif?'📍':'🔍'}</div>
+      <div style="font-size:15px;font-weight:700;color:${bugunCikisVar?'var(--accent)':btnAktif?'var(--green)':'var(--text2)'};margin-bottom:4px">
+        ${bugunCikisVar?'Vardiya Tamamlandı':btnAktif?'Depo Konumundasınız':'Konum Tespit Ediliyor...'}
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:20px">
-        ${btnAktif?(yakinDepo.ad+' · '+yakinDepo.mesafe+'m mesafe'):'150m yakınına gelince buton aktif olur'}
+        ${bugunCikisVar?'Bugünkü vardiya kaydedildi'
+          :btnAktif?(yakinDepo.ad+' · '+yakinDepo.mesafe+'m mesafe')
+          :'150m yakınına gelince buton aktif olur'}
       </div>
-      <button
-        class="isbasi-btn ${btnAktif?'aktif':'pasif'}"
-        onclick="${btnAktif?'isBasiYap()':''}"
-        ${btnAktif?'':'disabled'}
-        style="width:100%;padding:16px;border:none;border-radius:var(--r-sm);font-family:var(--sans);font-size:15px;font-weight:700;cursor:${btnAktif?'pointer':'not-allowed'};background:${btnAktif?'var(--green)':'var(--bg3)'};color:${btnAktif?'#000':'var(--text3)'};border:2px solid ${btnAktif?'var(--green)':'var(--border)'}">
-        ${btnAktif?'📍 İş Başı Yap':'🔒 Depoya Yaklaşın'}
-      </button>
+
+      ${!bugunCikisVar ? `
+        <button
+          class="isbasi-btn ${isBasiYapildi?'aktif':'pasif'}"
+          onclick="${(isBasiYapildi && !bugunCikisVar)?'isBitimiYap()':(!isBasiYapildi && btnAktif)?'isBasiYap()':''}"
+          ${(btnAktif || (isBasiYapildi && !bugunCikisVar))?'':'disabled'}
+          style="width:100%;padding:16px;border:none;border-radius:var(--r-sm);font-family:var(--sans);font-size:15px;font-weight:700;
+            background:${isBasiYapildi?'var(--red)':btnAktif?'var(--green)':'var(--bg3)'};
+            color:${(isBasiYapildi||btnAktif)?'#000':'var(--text3)'};
+            border:2px solid ${isBasiYapildi?'var(--red)':btnAktif?'var(--green)':'var(--border)'};
+            cursor:${(btnAktif||isBasiYapildi)?'pointer':'not-allowed'}">
+          ${isBasiYapildi?'🏁 Vardiyayı Bitir':btnAktif?'📍 İş Başı Yap':'🔒 Depoya Yaklaşın'}
+        </button>
+        ${isBasiYapildi ? `<div style="font-size:11px;color:var(--green);margin-top:8px">✓ İş başı yapıldı: ${bugunKayit.saat}</div>` : ''}
+      ` : `
+        <button onclick="renderIsbasiEkrani()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--sans)">🔄 Yenile</button>
+      `}
     </div>
 
     <div style="background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
@@ -8847,6 +8861,94 @@ function isBasiYap(){
   } else {
     toast('İş başı kaydedildi: '+saatStr+' ✓','ok');
   }
+  renderIsbasiEkrani();
+}
+
+function isBitimiYap(){
+  // Tam ekran onay modalı
+  var overlay = document.createElement('div');
+  overlay.id = 'vardiya-bitir-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease';
+  
+  var now = new Date();
+  var saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+  var bugunCal = calismaData[todayStr];
+  var girisler = (bugunCal&&bugunCal.girisler)||[];
+  var girisSaati = girisler.length ? girisler[0].saat : '—';
+  var girisDk = girisler.length ? (function(s){var p=s.split(':');return parseInt(p[0])*60+parseInt(p[1]);})(girisler[girisler.length-1].saat||'00:00') : 0;
+  var cikisDk = now.getHours()*60+now.getMinutes();
+  var calDk = Math.max(0, cikisDk - girisDk);
+  var ss = Math.floor(calDk/60); var dd = calDk%60;
+
+  overlay.innerHTML =
+    '<div onclick="event.stopPropagation()" style="background:var(--bg2);border:2px solid var(--red);border-radius:var(--r);width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7)">' +
+      '<div style="background:linear-gradient(135deg,#b71c1c,#e53935);padding:20px;text-align:center">' +
+        '<div style="font-size:40px;margin-bottom:8px">🏁</div>' +
+        '<div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:.02em">VARDİYAYI BİTİR</div>' +
+        '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:4px">Bu işlem geri alınamaz</div>' +
+      '</div>' +
+      '<div style="padding:20px">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">' +
+          '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green)">'+girisSaati+'</div>' +
+            '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Giriş</div>' +
+          '</div>' +
+          '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--red)">'+saatStr+'</div>' +
+            '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Çıkış</div>' +
+          '</div>' +
+          '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
+            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">'+ss+'sa '+dd+'dk</div>' +
+            '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Süre</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:var(--text2);text-align:center">' +
+          '⚠️ Vardiyayı bitirdiğinizde çalışma kaydınız tamamlanır ve sisteme işlenir.' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<button onclick="document.getElementById(\'vardiya-bitir-modal\').remove()" style="padding:13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--sans)">İptal</button>' +
+          '<button onclick="isBitimiOnay()" style="padding:13px;background:var(--red);border:none;border-radius:var(--r-sm);font-size:13px;font-weight:800;color:#fff;cursor:pointer;font-family:var(--sans)">🏁 Evet, Bitir</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+}
+
+function isBitimiOnay(){
+  var modal = document.getElementById('vardiya-bitir-modal');
+  if(modal) modal.remove();
+
+  const now = new Date();
+  const saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  if(!calismaData[todayStr]) calismaData[todayStr] = {girisler:[],cikislar:[],toplamDk:0,toplamMolaDk:0};
+  var bugünCal = calismaData[todayStr];
+  var girisler = bugünCal.girisler || [];
+  var cikislar = bugünCal.cikislar || [];
+  var calisilanDk = 0;
+
+  if(girisler.length > cikislar.length){
+    var sonGiris = girisler[girisler.length-1];
+    var girisDk = (function(s){ var p=s.split(':'); return parseInt(p[0])*60+parseInt(p[1]); })(sonGiris.saat||'00:00');
+    var cikisDk = now.getHours()*60+now.getMinutes();
+    calisilanDk = Math.max(0, cikisDk - girisDk);
+  }
+
+  cikislar.push({saat: saatStr, calisilanDk: calisilanDk, depo: yakinDepo?yakinDepo.ad:''});
+  bugünCal.cikislar = cikislar;
+  bugünCal.toplamDk = (bugünCal.toplamDk||0) + calisilanDk;
+  calismaData[todayStr] = bugünCal;
+  localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+
+  if(window._fbReady){
+    fbSet('calisma_kayitlar', normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'), {
+      ...bugünCal, tel: user.tel, ad: user.ad, tarih: todayStr, ts: Date.now()
+    }).catch(function(){});
+  }
+
+  var ss = Math.floor(calisilanDk/60); var dd = calisilanDk%60;
+  toast('Vardiya tamamlandı ✓ — '+ss+'sa '+dd+'dk çalışıldı','ok');
   renderIsbasiEkrani();
 }
 
