@@ -3190,6 +3190,62 @@ async function _liderHtml(){
     return {toplamDk,calisGunSayisi,totalGun:gunler.length,gorevToplam:periodGorevler.length,gorevTamamlanan:tamamlanan.length,gorevOran,mukemmel,zamanindaOran,saatUyumu,gunUyumu,skor};
   }
 
+  // ── TÜM PERSONEL LİDERLİK TABLOSU ──────────────────────────
+  // Tüm personeli ve onların çalışma+görev verilerini topla
+  var _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
+  var depolar = (_sd&&_sd.depolar)||[];
+  var tumPersonel = [];
+  var gorulenP = {};
+  depolar.forEach(function(d){
+    (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
+      var tn=normTel(p.tel||'');
+      if(tn && !gorulenP[tn]){ gorulenP[tn]=true; tumPersonel.push({name:p.name||'?',tel:tn,rol:p.rol||'personel'}); }
+    });
+  });
+
+  // Tüm çalışma ve görev verisini Firebase'den çek
+  var herkesCalisma = {}; // tel -> {tarih: cal}
+  var herkesGorev = {};   // tel -> [gorevler]
+  try{
+    var tumCalSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
+    tumCalSnap.forEach(function(d){
+      var c=d.data();
+      if(c&&c.tel&&c.tarih){
+        var tn=normTel(c.tel);
+        if(!herkesCalisma[tn]) herkesCalisma[tn]={};
+        herkesCalisma[tn][c.tarih]=c;
+      }
+    });
+  }catch(e){}
+  try{
+    var tumGorevSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'gorevler'));
+    tumGorevSnap.forEach(function(d){
+      var g=d.data();
+      if(!g||g.durum==='silindi') return;
+      var tn=normTel(g.atananTel||'');
+      if(!herkesGorev[tn]) herkesGorev[tn]=[];
+      herkesGorev[tn].push(g);
+    });
+  }catch(e){}
+
+  // Her personel için skor hesapla
+  function skorHesapla(tel, period){
+    var gunler=period==='gunluk'?[bugun]:period==='haftalik'?haftaGunler:ayGunler;
+    var pCal=herkesCalisma[tel]||{};
+    var pGorev=herkesGorev[tel]||[];
+    var calisGunSayisi=0;
+    gunler.forEach(function(t){var c=pCal[t]||{};if(c.toplamDk>0)calisGunSayisi++;});
+    var periodGorevler=pGorev.filter(function(g){var dt=new Date(g.olusturmaTs||0);var t=dt.getDate().toString().padStart(2,'0')+'.'+(dt.getMonth()+1).toString().padStart(2,'0')+'.'+dt.getFullYear();return gunler.indexOf(t)!==-1;});
+    var tamamlanan=periodGorevler.filter(function(g){return g.durum==='tamam';});
+    var zamanindaBit=tamamlanan.filter(function(g){return g.tamamlamaTs&&g.bitisTs&&g.tamamlamaTs<=g.bitisTs;}).length;
+    var ibK=Object.values(isbasiLocal).filter(function(k){return k&&normTel(k.tel||'')===tel&&gunler.indexOf(k.tarih)!==-1;});
+    var saatUyumu=ibK.length?Math.round((ibK.filter(function(k){return (k.gecDk||0)===0;}).length/ibK.length)*100):0;
+    var gunUyumu=period==='gunluk'?(calisGunSayisi>0?100:0):(gunler.length>0?Math.round((calisGunSayisi/gunler.length)*100):0);
+    var gorevOran=periodGorevler.length?Math.round((tamamlanan.length/periodGorevler.length)*100):0;
+    var zamanindaOran=tamamlanan.length?Math.round((zamanindaBit/tamamlanan.length)*100):0;
+    return Math.round((gunUyumu*0.3)+(saatUyumu*0.25)+(gorevOran*0.3)+(zamanindaOran*0.15));
+  }
+
   var tab = _liderAktifTab;
   var m = hesapla(tab);
   var skorRenk=m.skor>=80?'#22d3a0':m.skor>=60?'#f0b429':m.skor>=40?'#fb923c':'#f87171';
@@ -3269,6 +3325,70 @@ async function _liderHtml(){
     h+='</div>';
   });
   h+='</div>';
+
+  // ── LİDERLİK TABLOSU (tüm personel sıralaması) ─────────────
+  var siralama = tumPersonel.map(function(p){
+    return {name:p.name, tel:p.tel, rol:p.rol, skor:skorHesapla(p.tel, tab)};
+  }).sort(function(a,b){ return b.skor - a.skor; });
+
+  if(siralama.length){
+    var benimSira = siralama.findIndex(function(s){ return s.tel===myTel; }) + 1;
+    var lider = siralama[0];
+
+    h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px">';
+    h+='<div style="background:linear-gradient(135deg,var(--accent),#ffd000);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">';
+    h+='<span style="font-size:13px;font-weight:800;color:#000">🏆 '+({gunluk:'GÜNÜN',haftalik:'HAFTANIN',aylik:'AYIN'}[tab])+' SIRALAMASI</span>';
+    h+='<span style="font-size:11px;font-weight:700;color:rgba(0,0,0,.6)">'+siralama.length+' Yarışmacı</span>';
+    h+='</div>';
+
+    // Podyum — ilk 3
+    if(siralama.length >= 3){
+      h+='<div style="display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:20px 16px 16px;background:var(--bg3)">';
+      var podyumSira=[{i:1,h:60,ico:'🥈',renk:'#9b94c4'},{i:0,h:80,ico:'🥇',renk:'#f0b429'},{i:2,h:45,ico:'🥉',renk:'#fb923c'}];
+      podyumSira.forEach(function(po){
+        var kisi=siralama[po.i];
+        var benMi=kisi.tel===myTel;
+        h+='<div style="flex:1;max-width:100px;text-align:center">';
+        h+='<div style="font-size:24px;margin-bottom:4px">'+po.ico+'</div>';
+        h+='<div style="font-size:11px;font-weight:700;color:'+(benMi?'var(--accent)':'var(--text)')+';margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(kisi.name.split(' ')[0])+(benMi?' (SEN)':'')+'</div>';
+        h+='<div style="font-family:var(--mono);font-size:14px;font-weight:800;color:'+po.renk+'">'+kisi.skor+'</div>';
+        h+='<div style="background:linear-gradient(180deg,'+po.renk+',transparent);height:'+po.h+'px;border-radius:6px 6px 0 0;margin-top:6px;border:1px solid '+po.renk+';border-bottom:none;display:flex;align-items:flex-start;justify-content:center;padding-top:6px"><span style="font-size:16px;font-weight:800;color:#000">'+(po.i+1)+'</span></div>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+
+    // Tam sıralama listesi
+    h+='<div style="max-height:320px;overflow-y:auto">';
+    siralama.forEach(function(s,idx){
+      var benMi=s.tel===myTel;
+      var madalya=idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':'';
+      var skorRenk2=s.skor>=80?'#22d3a0':s.skor>=60?'#f0b429':s.skor>=40?'#fb923c':'#f87171';
+      h+='<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);'+(benMi?'background:rgba(240,180,41,.1);border-left:3px solid var(--accent)':'')+'">';
+      h+='<div style="min-width:28px;text-align:center;font-family:var(--mono);font-size:'+(madalya?'16px':'13px')+';font-weight:700;color:'+(benMi?'var(--accent)':'var(--text3)')+'">'+(madalya||(idx+1))+'</div>';
+      h+='<div style="flex:1"><div style="font-size:13px;font-weight:'+(benMi?'800':'600')+';color:'+(benMi?'var(--accent)':'var(--text)')+'">'+escHtml(s.name)+(benMi?' <span style="font-size:10px;background:var(--accent);color:#000;border-radius:4px;padding:1px 6px;margin-left:4px">SEN</span>':'')+'</div></div>';
+      h+='<div style="font-family:var(--mono);font-size:18px;font-weight:800;color:'+skorRenk2+'">'+s.skor+'</div>';
+      h+='</div>';
+    });
+    h+='</div>';
+
+    // Motivasyon mesajı
+    h+='<div style="padding:14px 16px;background:var(--bg3);border-top:1px solid var(--border);text-align:center">';
+    if(benimSira===1){
+      h+='<div style="font-size:13px;font-weight:700;color:var(--accent)">🎉 Zirvedesin! Şampiyonsun, bu tahtı kimseye kaptırma!</div>';
+    } else if(benimSira>0){
+      var ustSkor=siralama[benimSira-2].skor;
+      var benimSkor=siralama[benimSira-1].skor;
+      var fark=ustSkor-benimSkor;
+      h+='<div style="font-size:13px;font-weight:700;color:var(--text)">🔥 '+benimSira+'. sıradasın!</div>';
+      if(fark>0) h+='<div style="font-size:11px;color:var(--text2);margin-top:3px">Bir üst sıraya çıkmak için sadece <strong style="color:var(--accent)">'+fark+' puan</strong> daha!</div>';
+      else h+='<div style="font-size:11px;color:var(--text2);margin-top:3px">Bir sonraki seviye çok yakın, devam et!</div>';
+    } else {
+      h+='<div style="font-size:12px;color:var(--text2)">Sıralamaya girmek için görev tamamla ve zamanında iş başı yap!</div>';
+    }
+    h+='</div>';
+    h+='</div>';
+  }
 
   return h;
 }
