@@ -8677,43 +8677,69 @@ function vardiyaBaslangiciDk(p){
 }
 
 // Konum takibini başlat
+var _konumRetryTimer = null;
+var _konumSonBasari = 0;
+
 function konumTakibiniBaslat(){
-  if(!navigator.geolocation) return;
+  if(!navigator.geolocation){ toast('Cihaz konum desteği yok','err'); return; }
   if(konumWatcher) navigator.geolocation.clearWatch(konumWatcher);
 
-  // PWA'da izin durumunu kontrol et ve gerekirse yeniden iste
+  function _konumAl(){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        sonKonum = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy};
+        _konumSonBasari = Date.now();
+        konumGuncelle();
+      },
+      function(err){
+        // Hata olsa bile eski konumu SİLME — sadece çok eskiyse temizle
+        if(Date.now() - _konumSonBasari > 60000) {
+          sonKonum = null;
+          konumGuncelle();
+        }
+      },
+      {enableHighAccuracy:true, maximumAge:5000, timeout:20000}
+    );
+  }
+
   function _baslatWatch(){
     konumWatcher = navigator.geolocation.watchPosition(
       function(pos){
         sonKonum = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy};
+        _konumSonBasari = Date.now();
         konumGuncelle();
       },
       function(err){
-        sonKonum = null;
-        konumGuncelle();
-        // Hata 1 = izin reddedildi, hata 3 = timeout — timeout olursa tekrar dene
-        if(err.code === 3){
-          setTimeout(_baslatWatch, 5000);
+        // watchPosition hatası — eski konumu koru, izlemeyi yeniden başlat
+        if(err.code === 3 || err.code === 2){ // timeout veya konum yok
+          if(Date.now() - _konumSonBasari > 60000){
+            sonKonum = null;
+            konumGuncelle();
+          }
+        } else if(err.code === 1){ // izin reddedildi
+          sonKonum = null;
+          konumGuncelle();
         }
       },
-      {enableHighAccuracy:true, maximumAge:10000, timeout:15000}
+      {enableHighAccuracy:true, maximumAge:5000, timeout:20000}
     );
   }
 
-  // Önce tek seferlik konum al (PWA'da ilk izni tetikler)
-  navigator.geolocation.getCurrentPosition(
-    function(pos){
-      sonKonum = {lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy};
-      konumGuncelle();
+  // İlk konum al → izlemeyi başlat
+  _konumAl();
+  _baslatWatch();
+
+  // Her 15 saniyede yedek konum alma — watchPosition takılırsa devreye girer
+  if(_konumRetryTimer) clearInterval(_konumRetryTimer);
+  _konumRetryTimer = setInterval(function(){
+    // Son 20 saniyedir konum gelmemişse yeniden dene
+    if(Date.now() - _konumSonBasari > 20000){
+      _konumAl();
+      // watcher'ı da yenile
+      if(konumWatcher) navigator.geolocation.clearWatch(konumWatcher);
       _baslatWatch();
-    },
-    function(err){
-      sonKonum = null;
-      konumGuncelle();
-      _baslatWatch(); // yine de izlemeyi başlat
-    },
-    {enableHighAccuracy:true, maximumAge:0, timeout:10000}
-  );
+    }
+  }, 15000);
 }
 
 var _depoIcindeydim = false; // Önceki konum depo içinde miydi?
@@ -8994,7 +9020,8 @@ function renderIsbasiEkrani(){
 
     <div style="background:var(--bg3);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
       <div style="width:8px;height:8px;border-radius:50%;background:${sonKonum?'var(--green)':'var(--orange)'};flex-shrink:0"></div>
-      <div style="font-size:11px;color:var(--text3)">${sonKonum?'Konum aktif · ±'+Math.round(sonKonum.acc||0)+'m hassasiyet':'Konum alınıyor...'}</div>
+      <div style="font-size:11px;color:var(--text3);flex:1">${sonKonum?'Konum aktif · ±'+Math.round(sonKonum.acc||0)+'m hassasiyet':'Konum alınıyor...'}</div>
+      <button onclick="konumTakibiniBaslat();toast('Konum yenileniyor...','ok')" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--text2);cursor:pointer;font-family:var(--sans);white-space:nowrap">📍 Yenile</button>
     </div>
 
     ${calismaKartHtml}
