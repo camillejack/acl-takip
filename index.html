@@ -19,6 +19,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideUp{from{transform:translate(-50%,100px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 :root{
   --bg:#1a0f2e;--bg2:#231540;--bg3:#2d1a52;--bg4:#3a2266;
   --accent:#ffd600;--accent2:#6a1fc2;
@@ -1761,17 +1762,60 @@ function init(){
   updateStats();
   // Service Worker - tüm eski SW'leri kaldır, cache temizle
   if('serviceWorker' in navigator){
-    // Tüm SW'leri kaldır
-    navigator.serviceWorker.getRegistrations().then(regs=>{
-      regs.forEach(r=>r.unregister());
+    // SW'yi kaydet ve güncelleme kontrolü yap
+    navigator.serviceWorker.register('/sw.js', {updateViaCache:'none'}).then(function(reg){
+      // Her açılışta güncelleme kontrol et
+      reg.update();
+
+      // Yeni sürüm bulundu mu?
+      reg.addEventListener('updatefound', function(){
+        var yeniSW = reg.installing;
+        if(!yeniSW) return;
+        yeniSW.addEventListener('statechange', function(){
+          if(yeniSW.state === 'installed' && navigator.serviceWorker.controller){
+            // Yeni sürüm hazır — kullanıcıya bildir
+            _yeniSurumGoster(yeniSW);
+          }
+        });
+      });
+    }).catch(function(e){ console.warn('SW kayıt hatası:', e); });
+
+    // Periyodik güncelleme kontrolü (her 60 saniye)
+    setInterval(function(){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(reg) reg.update();
+      });
+    }, 60000);
+
+    // Yeni SW aktif olunca sayfayı yenile
+    var _reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(_reloading) return;
+      _reloading = true;
+      window.location.reload();
     });
-    // Tüm cache'leri temizle
-    if('caches' in window){
-      caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
-    }
   }
   // Sesli uyarı sistemini başlat (kullanıcı varsa)
   if(user) { startMolaTimer(); startUyariSistemi(); konumTakibiniBaslat(); }
+}
+
+function _yeniSurumGoster(yeniSW){
+  var eski = document.getElementById('yeni-surum-banner');
+  if(eski) return; // zaten gösteriliyor
+
+  var banner = document.createElement('div');
+  banner.id = 'yeni-surum-banner';
+  banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--accent);color:#000;border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 10px 40px rgba(0,0,0,.5);max-width:90%;animation:slideUp .3s ease';
+  banner.innerHTML =
+    '<div><div style="font-size:13px;font-weight:800">🎉 Yeni Sürüm Hazır!</div>' +
+    '<div style="font-size:11px;opacity:.8">Güncellemek için tıklayın</div></div>' +
+    '<button id="yeni-surum-btn" style="background:#000;color:var(--accent);border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);white-space:nowrap">Güncelle</button>';
+
+  document.body.appendChild(banner);
+  document.getElementById('yeni-surum-btn').onclick = function(){
+    yeniSW.postMessage('SKIP_WAITING');
+    banner.innerHTML = '<div style="font-size:13px;font-weight:700">⟳ Güncelleniyor...</div>';
+  };
 }
 
 async function syncFromCloud(){
