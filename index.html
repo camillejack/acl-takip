@@ -3118,7 +3118,11 @@ async function renderLiderlikEkrani(){
   var el = document.getElementById('liderlik-content');
   if(!el) return;
   el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">⟳ Yükleniyor...</div>';
-  el.innerHTML = await _liderHtml();
+  try{
+    el.innerHTML = await _liderHtml();
+  }catch(e){
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Liderlik verisi yüklenemedi: '+(e.message||e)+'<br><br><button onclick="renderLiderlikEkrani()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text2);cursor:pointer;font-family:var(--sans)">🔄 Tekrar Dene</button></div>';
+  }
 }
 
 function liderTabGec(tab){
@@ -3130,7 +3134,21 @@ async function _liderHtml(){
   var myTel = user ? normTel(user.tel||'') : '';
   var simdi = new Date();
   var bugun = todayStr;
-  var gCal = calismaData[bugun]||{};
+
+  // Firebase'den çalışma verisini çek (localStorage ile birleştir)
+  var calVeri = {};
+  Object.keys(calismaData).forEach(function(k){ calVeri[k]=calismaData[k]; });
+  try{
+    var calSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
+    calSnap.forEach(function(d){
+      var c = d.data();
+      if(c && c.tarih && normTel(c.tel||'')===myTel){
+        calVeri[c.tarih] = c;
+      }
+    });
+  }catch(e){}
+
+  var gCal = calVeri[bugun]||{};
 
   // Hafta günleri
   var pzt = new Date(simdi);
@@ -3140,7 +3158,7 @@ async function _liderHtml(){
 
   // Ay günleri
   var ayGunler=[];
-  Object.keys(calismaData).forEach(function(t){var p=t.split('.');if(p.length===3&&parseInt(p[1])===simdi.getMonth()+1&&parseInt(p[2])===simdi.getFullYear())ayGunler.push(t);});
+  Object.keys(calVeri).forEach(function(t){var p=t.split('.');if(p.length===3&&parseInt(p[1])===simdi.getMonth()+1&&parseInt(p[2])===simdi.getFullYear())ayGunler.push(t);});
 
   // Firebase görev verisi
   var gorevler=[];
@@ -3158,7 +3176,7 @@ async function _liderHtml(){
   function hesapla(period){
     var gunler=period==='gunluk'?[bugun]:period==='haftalik'?haftaGunler:ayGunler;
     var toplamDk=0,molaDk=0,calisGunSayisi=0;
-    gunler.forEach(function(t){var c=calismaData[t]||{};if(c.toplamDk>0){toplamDk+=c.toplamDk;molaDk+=(c.toplamMolaDk||0);calisGunSayisi++;}});
+    gunler.forEach(function(t){var c=calVeri[t]||{};if(c.toplamDk>0){toplamDk+=c.toplamDk;molaDk+=(c.toplamMolaDk||0);calisGunSayisi++;}});
     var periodGorevler=gorevler.filter(function(g){var d=new Date(g.olusturmaTs||0);var t=d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear();return gunler.indexOf(t)!==-1;});
     var tamamlanan=periodGorevler.filter(function(g){return g.durum==='tamam';});
     var mukemmel=periodGorevler.filter(function(g){return g.degerlendirme==='mukemmel';}).length;
