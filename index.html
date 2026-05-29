@@ -4817,29 +4817,45 @@ document.addEventListener('keypress', function(e){
   var kayitScreen = document.getElementById('screen-kayit');
   if(!kayitScreen || kayitScreen.classList.contains('hidden')) return;
 
-  // Aktif input zaten mi-a veya mi-b ise — normal çalışsın
-  var aktifEl = document.activeElement;
-  if(aktifEl && (aktifEl.id === 'mi-a' || aktifEl.id === 'mi-b')) return;
-
   var simdi = Date.now();
+  // 100ms'den uzun aralık → yeni tarama (manuel yazım olabilir, hızlı değilse)
   if(simdi - _bcSon > 100) _bcBuf = '';
   _bcSon = simdi;
 
   if(e.key === 'Enter'){
     var kod = _bcBuf.trim();
     _bcBuf = '';
-    if(kod.length >= 4){
+    if(kod.length >= 3){
+      // Manuel input doluysa onu kullan (kullanıcı elle yazıyorsa)
+      var aktifEl = document.activeElement;
+      if(aktifEl && aktifEl.id === 'mi-a'){ applyManual('a'); return; }
+      if(aktifEl && aktifEl.id === 'mi-b'){ applyManual('b'); return; }
+      // Lazer tarayıcı — boş slota yaz
       var slotA = document.getElementById('mi-a');
       var slotB = document.getElementById('mi-b');
       if(slotA && !slots.a.bc){ slotA.value=kod; applyManual('a'); }
       else if(slotB && !slots.b.bc){ slotB.value=kod; applyManual('b'); }
+      else { toast('İki slot da dolu — önce eşleştirin veya temizleyin','err'); }
     }
     return;
   }
+
+  // Manuel yazımı engelleme — input'a odaklıysa ve yavaş yazıyorsa karışma
+  var aktifEl2 = document.activeElement;
+  var inputaYaziliyor = aktifEl2 && (aktifEl2.id === 'mi-a' || aktifEl2.id === 'mi-b');
+
   if(e.key && e.key.length === 1){
-    _bcBuf += e.key;
-    clearTimeout(_bcTimer);
-    _bcTimer = setTimeout(function(){ _bcBuf=''; }, 200);
+    // Sadece lazer hızında (ardışık <50ms) ise buffer'a al; input'a odaklıysa input kendi halleder
+    if(!inputaYaziliyor){
+      _bcBuf += e.key;
+      clearTimeout(_bcTimer);
+      _bcTimer = setTimeout(function(){ _bcBuf=''; }, 300);
+    } else {
+      // input'a yazılıyorsa yine buffer tut (Enter'da kullanılacak)
+      _bcBuf += e.key;
+      clearTimeout(_bcTimer);
+      _bcTimer = setTimeout(function(){ _bcBuf=''; }, 300);
+    }
   }
 });
 
