@@ -9838,7 +9838,8 @@ async function doLogin(){
   if(!_p){ showLoginHata('Bu telefon sistemde kayitli degil. Yoneticinizden vardiyaya eklenmenizi isteyin.'); return; }
 
   var _dogru = sifreUret(_p);
-  if(sifre !== _dogru && sifre !== (_p.sifre||'')){
+  var _dogru0 = '0' + _dogru; // başında 0'lı versiyon
+  if(sifre !== _dogru && sifre !== _dogru0 && sifre !== (_p.sifre||'')){
     showLoginHata('Sifre hatali. (Format: telefonunuz.soyadiniz0134)');
     return;
   }
