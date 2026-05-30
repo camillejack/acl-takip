@@ -1020,7 +1020,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
           </div>
         </div>
         <div class="manual-row">
-            <input class="m-input" id="mi-a" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')applyManual('a')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
+            <input class="m-input" id="mi-a" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('a')">Ekle</button>
         </div>
         <div class="bc-done" id="done-a">
@@ -1044,7 +1044,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
           </div>
         </div>
         <div class="manual-row">
-            <input class="m-input" id="mi-b" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')applyManual('b')" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
+            <input class="m-input" id="mi-b" placeholder="🔴 Barkodu okut veya manuel gir..." inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onfocus="this.placeholder='Okutmaya hazır...'" onblur="this.placeholder='🔴 Barkodu okut veya manuel gir...'">
           <button class="m-go" onclick="applyManual('b')">Ekle</button>
         </div>
         <div class="bc-done" id="done-b">
@@ -1464,7 +1464,7 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
     appId: "1:1085007217462:web:c2d97b91c51462b392a997"
   };
 
-  const VAPID_KEY = "BFI3alMKxUYANH4PauXc_2yAtoROelgRPioFI4tmIGbJTMEgcaRYu5jQhaAvjMPgNsNg__EP9pfMISfJLimqiJc";
+  const VAPID_KEY = "BPnWy2jzT5KNPzNaUZq10GmFphJIRMPd5N5c1kY_WfW42nEXBiVmynjroYWD9x2wSITDkn-AYC8rjphZg9Q1UFc";
 
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
@@ -4993,53 +4993,60 @@ function _lbTouchEnd(e){
 var _bcBuf = '';
 var _bcTimer = null;
 var _bcSon = 0;
+var _bcKilit = false; // Aynı barkodu iki kez işlemeyi önle
 
-document.addEventListener('keypress', function(e){
+document.addEventListener('keydown', function(e){
   // Sadece kayıt ekranında aktif
   var kayitScreen = document.getElementById('screen-kayit');
   if(!kayitScreen || kayitScreen.classList.contains('hidden')) return;
 
   var simdi = Date.now();
-  // 100ms'den uzun aralık → yeni tarama (manuel yazım olabilir, hızlı değilse)
-  if(simdi - _bcSon > 100) _bcBuf = '';
-  _bcSon = simdi;
 
+  // ENTER → barkod tamamlandı
   if(e.key === 'Enter'){
     var kod = _bcBuf.trim();
     _bcBuf = '';
-    if(kod.length >= 3){
-      // Manuel input doluysa onu kullan (kullanıcı elle yazıyorsa)
-      var aktifEl = document.activeElement;
-      if(aktifEl && aktifEl.id === 'mi-a'){ applyManual('a'); return; }
-      if(aktifEl && aktifEl.id === 'mi-b'){ applyManual('b'); return; }
-      // Lazer tarayıcı — boş slota yaz
-      var slotA = document.getElementById('mi-a');
-      var slotB = document.getElementById('mi-b');
-      if(slotA && !slots.a.bc){ slotA.value=kod; applyManual('a'); }
-      else if(slotB && !slots.b.bc){ slotB.value=kod; applyManual('b'); }
-      else { toast('İki slot da dolu — önce eşleştirin veya temizleyin','err'); }
-    }
+    clearTimeout(_bcTimer);
+
+    if(kod.length < 3) return;
+    if(_bcKilit) return; // çift işlemi engelle
+    _bcKilit = true;
+    setTimeout(function(){ _bcKilit = false; }, 400);
+
+    _barkodIsle(kod);
+    e.preventDefault();
     return;
   }
 
-  // Manuel yazımı engelleme — input'a odaklıysa ve yavaş yazıyorsa karışma
-  var aktifEl2 = document.activeElement;
-  var inputaYaziliyor = aktifEl2 && (aktifEl2.id === 'mi-a' || aktifEl2.id === 'mi-b');
-
+  // Normal karakter — lazer tarayıcı veya klavye
   if(e.key && e.key.length === 1){
-    // Sadece lazer hızında (ardışık <50ms) ise buffer'a al; input'a odaklıysa input kendi halleder
-    if(!inputaYaziliyor){
-      _bcBuf += e.key;
-      clearTimeout(_bcTimer);
-      _bcTimer = setTimeout(function(){ _bcBuf=''; }, 300);
-    } else {
-      // input'a yazılıyorsa yine buffer tut (Enter'da kullanılacak)
-      _bcBuf += e.key;
-      clearTimeout(_bcTimer);
-      _bcTimer = setTimeout(function(){ _bcBuf=''; }, 300);
-    }
+    // 100ms'den uzun aralık → yeni barkod başlıyor, buffer sıfırla
+    if(simdi - _bcSon > 100) _bcBuf = '';
+    _bcSon = simdi;
+    _bcBuf += e.key;
+    clearTimeout(_bcTimer);
+    _bcTimer = setTimeout(function(){ _bcBuf = ''; }, 500);
   }
 });
+
+// Barkodu doğru boş slota işle
+function _barkodIsle(kod){
+  // Aktif input manuel yazım için kullanılıyorsa
+  var aktifEl = document.activeElement;
+  if(aktifEl && aktifEl.id === 'mi-a' && aktifEl.value.trim()){ applyManual('a'); return; }
+  if(aktifEl && aktifEl.id === 'mi-b' && aktifEl.value.trim()){ applyManual('b'); return; }
+
+  // Lazer tarayıcı — boş slota yaz
+  if(!slots.a.bc){
+    var elA = document.getElementById('mi-a');
+    if(elA){ elA.value = kod; applyManual('a'); }
+  } else if(!slots.b.bc){
+    var elB = document.getElementById('mi-b');
+    if(elB){ elB.value = kod; applyManual('b'); }
+  } else {
+    toast('İki barkod da okundu — eşleştirin veya temizleyin','err');
+  }
+}
 
 // Lightbox klavye kontrolü
 document.addEventListener('keydown', function(e){
