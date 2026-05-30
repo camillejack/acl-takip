@@ -2549,15 +2549,23 @@ async function doExport(){
     });
   });
 
-  // Firebase'den güncel çalışma verisini çek
-  var fbCalismaData = {...calismaData}; // localStorage cache ile başla
+  // Firebase'den güncel çalışma verisini çek (PERSONEL+TARİH bazlı, ezilmesin)
+  var fbCalismaList = []; // her kayıt ayrı
   try{
     const calSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
     calSnap.forEach(function(doc){
       const d = doc.data();
-      if(d && d.tarih) fbCalismaData[d.tarih] = d;
+      if(d && d.tarih) fbCalismaList.push(d);
     });
-  }catch(e){ console.warn('Firebase calisma_kayitlar okunamadı, localStorage kullanılıyor'); }
+  }catch(e){ console.warn('Firebase calisma_kayitlar okunamadı'); }
+  // localStorage kendi verini de ekle (Firebase'de yoksa)
+  Object.keys(calismaData).forEach(function(tarih){
+    var c = calismaData[tarih];
+    var myTel = user?normTel(user.tel||''):'';
+    if(c && !fbCalismaList.some(function(x){return x.tarih===tarih && normTel(x.tel||'')===myTel;})){
+      fbCalismaList.push({...c, tarih:tarih, tel:user?user.tel:'', ad:user?user.ad:''});
+    }
+  });
 
   // Firebase'den güncel iş başı verisini çek
   var fbIsbasiData = JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
@@ -2565,7 +2573,7 @@ async function doExport(){
     const ibSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'isbasi_kayitlar'));
     ibSnap.forEach(function(doc){
       const d = doc.data();
-      if(d && d.tarih) fbIsbasiData[d.tel+'_'+d.tarih] = d;
+      if(d && d.tarih) fbIsbasiData[(d.tel||'')+'_'+d.tarih] = d;
     });
   }catch(e){ console.warn('Firebase isbasi_kayitlar okunamadı'); }
 
@@ -2582,28 +2590,26 @@ async function doExport(){
 
   // ── 2) ÇALIŞMA SÜRESİ RAPORU ───────────────────────────────
   rows.push([]); rows.push(['=== ÇALIŞMA SÜRESİ RAPORU ===']);
-  rows.push(['Tarih','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Çalışılan(sa:dk)','Depo','Mesafe(m)','Toplam Mola(dk)']);
-  const calKeys = Object.keys(fbCalismaData).sort().reverse();
-  if(calKeys.length){
-    calKeys.forEach(function(tarih){
-      const g = fbCalismaData[tarih];
+  rows.push(['Tarih','Ad Soyad','Telefon','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Çalışılan(sa:dk)','Depo','Toplam Mola(dk)']);
+  fbCalismaList.sort(function(a,b){ return ((b.tarih||'')<(a.tarih||''))?-1:1; });
+  if(fbCalismaList.length){
+    fbCalismaList.forEach(function(g){
       const girisler = g.girisler||[];
       const cikislar = g.cikislar||[];
       const molaDk = g.toplamMolaDk||0;
       const topDk = g.toplamDk||0;
       const topSa = Math.floor(topDk/60)+':'+(String(topDk%60).padStart(2,'0'));
-      for(var i=0; i<Math.max(girisler.length,1); i++){
-        rows.push([
-          tarih,
-          girisler[i]?girisler[i].saat:'—',
-          cikislar[i]?cikislar[i].saat:'Devam ediyor',
-          i===0?topDk:'',
-          i===0?topSa:'',
-          girisler[i]?girisler[i].depo||'Manuel':'—',
-          girisler[i]?girisler[i].mesafe||'—':'—',
-          i===0?molaDk:''
-        ]);
-      }
+      rows.push([
+        g.tarih,
+        g.ad||'—',
+        g.tel||'—',
+        girisler[0]?girisler[0].saat:'—',
+        cikislar.length?cikislar[cikislar.length-1].saat:'Devam ediyor',
+        topDk,
+        topSa,
+        girisler[0]?(girisler[0].depo||'Manuel'):'—',
+        molaDk
+      ]);
     });
   } else { rows.push(['Kayıt bulunamadı']); }
 
@@ -2731,6 +2737,7 @@ async function _raporGunlukHtml(){
   var simdi = new Date();
   var bugun = todayStr;
   var html  = '';
+  var bugunKey = bugun.replace(/\./g,'-');
 
   // ÖZET BAŞLIK
   html += '<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
@@ -2738,38 +2745,93 @@ async function _raporGunlukHtml(){
   html += '<div style="font-size:12px;color:var(--text3)">'+simdi.toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
   html += '</div>';
 
-  // ÇALIŞMA VERİSİ
-  var gCal = calismaData[bugun]||{};
+  // FIREBASE'DEN TÜM VERİYİ ÇEK
+  var tumIsbasi = [];   // bugünkü tüm iş başı
+  var tumCalisma = {};  // tel -> calisma kaydı
+  var yonetici = isYonetici();
+  var myTel = user ? normTel(user.tel||'') : '';
+
+  try{
+    var ibSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'isbasi_kayitlar'));
+    ibSnap.forEach(function(d){
+      var k=d.data();
+      if(k && k.tarih===bugun){
+        // Yönetici hepsini, personel sadece kendininkini görür
+        if(yonetici || normTel(k.tel||'')===myTel) tumIsbasi.push(k);
+      }
+    });
+  }catch(e){}
+
+  try{
+    var calSnap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
+    calSnap.forEach(function(d){
+      var c=d.data();
+      if(c && c.tarih===bugun){
+        if(yonetici || normTel(c.tel||'')===myTel) tumCalisma[normTel(c.tel||'')]=c;
+      }
+    });
+  }catch(e){}
+
+  // localStorage'daki kendi verini de ekle (Firebase'e henüz yazılmadıysa)
+  var gCalLocal = calismaData[bugun];
+  if(gCalLocal && myTel && !tumCalisma[myTel]){
+    tumCalisma[myTel] = {...gCalLocal, tel:user.tel, ad:user.ad};
+  }
+  var isbasiLocal = JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
+  Object.values(isbasiLocal).forEach(function(k){
+    if(k && k.tarih===bugun && !tumIsbasi.some(function(x){return normTel(x.tel||'')===normTel(k.tel||'');})){
+      tumIsbasi.push(k);
+    }
+  });
+
+  // ÇALIŞMA ÖZETİ (kendi verisi - kişisel)
+  var gCal = tumCalisma[myTel] || calismaData[bugun] || {};
   var toplamDk = gCal.toplamDk||0;
   var molaDk   = gCal.toplamMolaDk||0;
   var girisler = gCal.girisler||[];
   var cikislar = gCal.cikislar||[];
 
-  html += _rBlok('⏱️ Çalışma Özeti',
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-    _rKart(_rFmtSure(toplamDk),'Toplam Çalışma','var(--green)')+
-    _rKart(_rFmtSure(molaDk),'Toplam Mola','var(--orange)')+
-    _rKart(girisler.length>0?girisler[0].saat:'—','Giriş Saati','var(--accent)')+
-    _rKart(cikislar.length>0?cikislar[cikislar.length-1].saat:'Devam','Çıkış','var(--text2)')+
-    '</div>'
-  );
+  if(!yonetici){
+    html += _rBlok('⏱️ Çalışma Özetim',
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      _rKart(_rFmtSure(toplamDk),'Toplam Çalışma','var(--green)')+
+      _rKart(_rFmtSure(molaDk),'Toplam Mola','var(--orange)')+
+      _rKart(girisler.length>0?girisler[0].saat:'—','Giriş Saati','var(--accent)')+
+      _rKart(cikislar.length>0?cikislar[cikislar.length-1].saat:'Devam','Çıkış','var(--text2)')+
+      '</div>'
+    );
+  }
 
-  // İŞ BAŞI DURUMU
-  var isbasiLocal = JSON.parse(localStorage.getItem('acl_isbasi_v1')||'{}');
-  var bugunIsbasi = Object.values(isbasiLocal).filter(function(k){ return k&&k.tarih===bugun; });
-  if(bugunIsbasi.length){
-    var ibHtml = '<div style="display:flex;flex-direction:column;gap:6px">';
-    bugunIsbasi.forEach(function(k){
-      var gec = k.gecDk||0;
+  // İŞ BAŞI KAYITLARI (yönetici tümünü görür)
+  if(tumIsbasi.length){
+    // Geç gelenleri sona sırala
+    tumIsbasi.sort(function(a,b){ return (a.saat||'').localeCompare(b.saat||''); });
+    var gelenSayisi = tumIsbasi.length;
+    var gecSayisi = tumIsbasi.filter(function(k){return (k.gecDk||0)>0;}).length;
+
+    var ibHtml = '';
+    if(yonetici){
+      ibHtml += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">'+
+        _rKart(gelenSayisi,'İş Başı Yapan','var(--green)')+
+        _rKart(gecSayisi,'Geç Gelen','var(--red)')+
+        _rKart(gelenSayisi-gecSayisi,'Zamanında','var(--accent)')+
+      '</div>';
+    }
+    ibHtml += '<div style="display:flex;flex-direction:column;gap:6px">';
+    tumIsbasi.forEach(function(k){
+      var gec=k.gecDk||0;
+      var cal = tumCalisma[normTel(k.tel||'')] || {};
+      var cikisVar = (cal.cikislar||[]).length>0;
+      var calSure = cal.toplamDk||0;
       ibHtml += '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:6px;padding:8px 12px">';
-      ibHtml += '<div><div style="font-size:12px;font-weight:600;color:var(--text)">'+(k.personel||k.ad||'—')+'</div>';
-      ibHtml += '<div style="font-size:10px;color:var(--text3)">'+(k.depoAdi||'Manuel')+'</div></div>';
-      ibHtml += '<div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;color:var(--text)">'+( k.saat||'—')+'</div>';
-      ibHtml += '<div style="font-size:10px;color:'+(gec>0?'var(--red)':'var(--green)')+'">'+( gec>0?gec+'dk GEÇ':'Zamanında')+'</div></div>';
+      ibHtml += '<div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text)">'+(k.personel||k.ad||'—')+'</div>';
+      ibHtml += '<div style="font-size:10px;color:var(--text3)">'+(k.depoAdi||'Manuel')+(cikisVar?' · '+_rFmtSure(calSure)+' çalıştı':' · çalışıyor')+'</div></div>';
+      ibHtml += '<div style="text-align:right"><div style="font-family:var(--mono);font-size:13px;color:var(--text)">'+(k.saat||'—')+(cikisVar?' → '+cal.cikislar[cal.cikislar.length-1].saat:'')+'</div>';
+      ibHtml += '<div style="font-size:10px;color:'+(gec>0?'var(--red)':'var(--green)')+'">'+(gec>0?gec+'dk GEÇ':'Zamanında')+'</div></div>';
       ibHtml += '</div>';
     });
     ibHtml += '</div>';
-    html += _rBlok('📍 İş Başı Kayıtları', ibHtml);
+    html += _rBlok('📍 İş Başı Kayıtları'+(yonetici?' (Tüm Personel)':''), ibHtml);
   }
 
   // MOLA DURUMU
@@ -2780,7 +2842,10 @@ async function _raporGunlukHtml(){
   depolar.forEach(function(d){
     (d.personeller||[]).concat((d.shift&&d.shift.persons)||[]).forEach(function(p){
       var tn=normTel(p.tel||'');
-      if(tn&&!gorulen[tn]){gorulen[tn]=true;molaKisiler.push({...p,depo:d.ad||''});}
+      if(tn&&!gorulen[tn]){
+        // Personel sadece kendini görür
+        if(yonetici || tn===myTel){ gorulen[tn]=true; molaKisiler.push({...p,depo:d.ad||''}); }
+      }
     });
   });
   if(!molaKisiler.length && user) molaKisiler=[{name:user.ad,tel:user.tel}];
@@ -2808,6 +2873,8 @@ async function _raporGunlukHtml(){
     snap.forEach(function(doc){
       var g=doc.data();
       if(!g||g.durum==='silindi') return;
+      // Personel sadece kendi görevini görür
+      if(!yonetici && normTel(g.atananTel||'')!==myTel && normTel(g.atayanTel||'')!==myTel) return;
       var ts=g.olusturmaTs||0;
       var d=new Date(ts);
       var tarih=d.getDate().toString().padStart(2,'0')+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+d.getFullYear();
@@ -2839,12 +2906,33 @@ async function _raporGunlukHtml(){
   return html || '<div style="color:var(--text3);padding:20px;text-align:center">Bu güne ait veri bulunamadı</div>';
 }
 
+// Kendi çalışma verisini Firebase + localStorage birleştir
+async function _kendiCalismaVerisi(){
+  var birlesik = {};
+  Object.keys(calismaData).forEach(function(k){ birlesik[k]=calismaData[k]; });
+  var myTel = user ? normTel(user.tel||'') : '';
+  try{
+    var snap = await window._fb.getDocs(window._fb.collection(window._fb.db,'calisma_kayitlar'));
+    snap.forEach(function(d){
+      var c=d.data();
+      if(c && c.tarih && normTel(c.tel||'')===myTel){
+        // Firebase verisi localStorage'dan daha güncelse veya yoksa al
+        if(!birlesik[c.tarih] || (c.ts||0) >= (birlesik[c.tarih].ts||0)){
+          birlesik[c.tarih]=c;
+        }
+      }
+    });
+  }catch(e){}
+  return birlesik;
+}
+
 // ── HAFTALIK RAPOR ─────────────────────────────────────────
 async function _raporHaftalikHtml(){
   var bugun = new Date();
   var pazartesi = new Date(bugun);
   pazartesi.setDate(bugun.getDate() - (bugun.getDay()===0?6:bugun.getDay()-1));
   var html = '';
+  var _calVeri = await _kendiCalismaVerisi();
 
   // Hafta tarihleri
   var gunler = [];
@@ -2865,7 +2953,7 @@ async function _raporHaftalikHtml(){
   // Haftalık çalışma toplamı
   var toplamHaftaDk=0, calisilnGun=0, toplamMolaDk=0;
   gunler.forEach(function(g){
-    var cal=calismaData[g.tarih]||{};
+    var cal=_calVeri[g.tarih]||{};
     if(cal.toplamDk>0){toplamHaftaDk+=cal.toplamDk;calisilnGun++;}
     toplamMolaDk+=(cal.toplamMolaDk||0);
   });
@@ -2889,7 +2977,7 @@ async function _raporHaftalikHtml(){
   takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Mola</th>';
   takHtml+='</tr>';
   gunler.forEach(function(g,idx){
-    var cal=calismaData[g.tarih]||{};
+    var cal=_calVeri[g.tarih]||{};
     var girisler=cal.girisler||[];
     var cikislar=cal.cikislar||[];
     var dk=cal.toplamDk||0;
@@ -2943,6 +3031,7 @@ async function _raporAylikHtml(){
   var buAyAy=simdi.getMonth()+1;
   var buAyYil=simdi.getFullYear();
   var html='';
+  var _calVeri = await _kendiCalismaVerisi();
 
   html+='<div style="background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;text-align:center">';
   html+='<div style="font-size:22px;font-weight:800;color:var(--accent2);margin-bottom:4px">'+ayAd+'</div>';
@@ -2951,10 +3040,10 @@ async function _raporAylikHtml(){
   // Aylık çalışma toplamı
   var aylikToplam=0,gunSayisi=0,ayMola=0,enUzunDk=0,enKisaDk=Infinity;
   var gunVerileri=[];
-  Object.keys(calismaData).sort().forEach(function(tarih){
+  Object.keys(_calVeri).sort().forEach(function(tarih){
     var parca=tarih.split('.');
     if(parca.length===3&&parseInt(parca[1])===buAyAy&&parseInt(parca[2])===buAyYil){
-      var g=calismaData[tarih];
+      var g=_calVeri[tarih];
       if(g&&g.toplamDk>0){
         aylikToplam+=g.toplamDk; gunSayisi++;
         ayMola+=(g.toplamMolaDk||0);
@@ -9211,7 +9300,24 @@ function isBasiYap(){
   isBasiData[todayStr] = kayit;
   localStorage.setItem(ISBASI_KEY, JSON.stringify(isBasiData));
 
-  // Firebase
+  // Çalışma verisine GİRİŞ ekle (süre hesabı için kritik)
+  if(!calismaData[todayStr]) calismaData[todayStr] = {girisler:[],cikislar:[],toplamDk:0,toplamMolaDk:0};
+  var _bugunCal = calismaData[todayStr];
+  _bugunCal.girisler = _bugunCal.girisler || [];
+  // Aynı gün tekrar iş başı yapılmasın (zaten giriş varsa ekleme)
+  if(_bugunCal.girisler.length <= (_bugunCal.cikislar||[]).length){
+    _bugunCal.girisler.push({saat: saatStr, depo: yakinDepo.ad, gecDk: gecDk});
+    calismaData[todayStr] = _bugunCal;
+    localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+    // Firebase'e de çalışma kaydını yaz (giriş anında)
+    if(window._fbReady){
+      fbSet('calisma_kayitlar', normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'), {
+        ..._bugunCal, tel: user.tel, ad: user.ad, tarih: todayStr, ts: Date.now()
+      }).catch(function(){});
+    }
+  }
+
+  // Firebase iş başı kaydı
   if(window._fbReady){
     fbSet('isbasi_kayitlar', normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'), kayit).catch(()=>{});
   }
