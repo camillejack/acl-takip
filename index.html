@@ -1487,16 +1487,18 @@ select.gorev-form-input option{background:var(--bg3);color:var(--text)}
       var reg = await navigator.serviceWorker.ready;
       var token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
       if(token){
-        await setDoc(doc(db, 'push_tokens', userTel), {
+        var telNorm = (userTel||'').replace(/\D/g,'').replace(/^0/,'').replace(/^90/,'');
+        await setDoc(doc(db, 'push_tokens', telNorm || userTel), {
           fcmToken: token,
           tel: userTel,
+          ad: (window.user && window.user.ad) || '',
           platform: navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') ? 'ios' : 'android_web',
           kayit: new Date().toISOString()
         });
         window._fcmToken = token;
       }
       return token;
-    }catch(e){ return null; }
+    }catch(e){ console.warn('FCM token hatası:', e.message); return null; }
   }
 
   // FCM push gönderimi — Cloudflare Worker üzerinden
