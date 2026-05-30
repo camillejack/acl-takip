@@ -4939,14 +4939,18 @@ function startUyariSistemi(){
   if('Notification' in window && Notification.permission==='default'){
     Notification.requestPermission();
   }
-  uyariInterval = setInterval(molaZamaniKontrol, 10000);
+  // Bugünün uyarı logunu localStorage'dan yükle (sayfa yenilense de tekrar uyarmasın)
+  try{
+    var kayitli = JSON.parse(localStorage.getItem('acl_uyari_log_'+todayStr)||'{}');
+    Object.assign(uyarilogged, kayitli);
+  }catch(e){}
+  uyariInterval = setInterval(molaZamaniKontrol, 5000); // 5 saniyede bir
   molaZamaniKontrol(); // hemen bir kez çalıştır
 }
 
 function molaZamaniKontrol(){
   if(!user) return;
 
-  // Doğru veri yapısından personeli bul
   const _sd = JSON.parse(localStorage.getItem(SKEY)||'null');
   const _depolar = (_sd&&_sd.depolar)||[];
   const myTelNorm = normTel(user.tel||'');
@@ -4961,53 +4965,78 @@ function molaZamaniKontrol(){
   const molalar = kisiMolaSaatleri(p);
   if(!molalar.length) return;
 
-  const simdi = simdiDk();
+  const simdi = simdiDkSaniye(); // saniye hassasiyetinde
   const d = getMolaDurum(user.tel);
 
   molalar.forEach(function(m){
     const mBasDk = saatToDk(m.saat);
-    const mBitDk = mBasDk + (m.sure||30);
-    const fark = mBasDk - simdi;
-    const bitFark = mBitDk - simdi;
+    const mSure = m.sure||30;
+    const mBitDk = mBasDk + mSure;
+    const fark = mBasDk - simdi;     // moların başlamasına kaç dk
+    const bitFark = mBitDk - simdi;  // molanın bitmesine kaç dk
     const keyBase = myTelNorm+'_'+m.saat+'_'+todayStr;
 
-    // 5 DK ÖNCE UYARI
-    if(fark>=4.5 && fark<=5.5 && !uyarilogged[keyBase+'_5dk']){
+    // 5 DK ÖNCE (4-6 dk arası geniş pencere)
+    if(fark>=4 && fark<=6 && !uyarilogged[keyBase+'_5dk']){
       uyarilogged[keyBase+'_5dk'] = true;
+      _uyariKaydet();
       sesliUyari('Beş dakika sonra mola zamanı.', 2, 880);
-      showMolaUyariBanner('5dk', m.saat, m.sure);
+      showMolaUyariBanner('5dk', m.saat, mSure);
     }
 
-    // 3 DK ÖNCE UYARI
-    if(fark>=2.5 && fark<=3.5 && !uyarilogged[keyBase+'_3dk']){
+    // 3 DK ÖNCE (2-4 dk)
+    if(fark>=2 && fark<4 && !uyarilogged[keyBase+'_3dk']){
       uyarilogged[keyBase+'_3dk'] = true;
-      sesliUyari('Mola. Mola. Mola. Üç dakika sonra mola zamanı.', 3, 880);
-      showMolaUyariBanner('3dk', m.saat, m.sure);
+      _uyariKaydet();
+      sesliUyari('Mola. Mola. Üç dakika sonra mola zamanı.', 3, 880);
+      showMolaUyariBanner('3dk', m.saat, mSure);
     }
 
-    // MOLA BAŞLADI
-    if(fark>=-0.5 && fark<=0.5 && !uyarilogged[keyBase+'_basladi']){
+    // 1 DK ÖNCE (0.5-2 dk)
+    if(fark>=0.5 && fark<2 && !uyarilogged[keyBase+'_1dk']){
+      uyarilogged[keyBase+'_1dk'] = true;
+      _uyariKaydet();
+      sesliUyari('Bir dakika sonra mola zamanı, hazırlan.', 2, 950);
+      showMolaUyariBanner('1dk', m.saat, mSure);
+    }
+
+    // MOLA BAŞLADI (-0.5 ile +1 dk arası, henüz başlamadıysa)
+    if(fark>=-1 && fark<0.5 && !uyarilogged[keyBase+'_basladi']){
       uyarilogged[keyBase+'_basladi'] = true;
+      _uyariKaydet();
       sesliUyari('Mola zamanı! Mola zamanı! Şimdi molaya çık.', 4, 1047);
-      showMolaUyariBanner('basladi', m.saat, m.sure);
-      if(!d.aktif) molayaCik(user.tel);
+      showMolaUyariBanner('basladi', m.saat, mSure);
+      if(!d.aktif) molayaCik(user.tel, mSure);
     }
 
-    // 2 DK KALA UYARI
-    if(bitFark>=1.5 && bitFark<=2.5 && d.aktif && !uyarilogged[keyBase+'_2dk']){
+    // 2 DK KALA (molada ve bitişe 1.5-3 dk)
+    if(bitFark>=1.5 && bitFark<=3 && d.aktif && !uyarilogged[keyBase+'_2dk']){
       uyarilogged[keyBase+'_2dk'] = true;
+      _uyariKaydet();
       sesliUyari('İki dakika içinde molan bitiyor, işe dön!', 3, 660);
-      showMolaUyariBanner('2dk', m.saat, m.sure);
+      showMolaUyariBanner('2dk', m.saat, mSure);
     }
 
-    // MOLA BİTTİ
-    if(bitFark>=-0.5 && bitFark<=0.5 && d.aktif && !uyarilogged[keyBase+'_bitti']){
+    // MOLA BİTTİ (-1 ile +0.5 dk)
+    if(bitFark>=-1 && bitFark<=0.5 && d.aktif && !uyarilogged[keyBase+'_bitti']){
       uyarilogged[keyBase+'_bitti'] = true;
+      _uyariKaydet();
       sesliUyari('Mola bitti! Mola bitti! Lütfen işe dön.', 5, 523);
-      showMolaUyariBanner('bitti', m.saat, m.sure);
+      showMolaUyariBanner('bitti', m.saat, mSure);
       molaBit(user.tel);
     }
   });
+}
+
+// Saniye hassasiyetinde şu anki dakika
+function simdiDkSaniye(){
+  const n=new Date();
+  return n.getHours()*60+n.getMinutes()+n.getSeconds()/60;
+}
+
+// uyarilogged'u localStorage'a kaydet (sayfa yenilense de kaybolmasın)
+function _uyariKaydet(){
+  try{ localStorage.setItem('acl_uyari_log_'+todayStr, JSON.stringify(uyarilogged)); }catch(e){}
 }
 
 function showMolaUyariBanner(tip, saat, sure){
@@ -5022,6 +5051,7 @@ function showMolaUyariBanner(tip, saat, sure){
   const mesajlar = {
     '5dk':   {bg:'#1a1a00', color:'#ffd600', border:'rgba(255,214,0,.4)',    txt:'⏰ 5 dakika sonra mola! ('+saat+')'},
     '3dk':   {bg:'#2a1800', color:'#ffb74d', border:'rgba(255,183,77,.4)',   txt:'⏰ 3 dakika sonra mola! ('+saat+')'},
+    '1dk':   {bg:'#2a2200', color:'#ffd54f', border:'rgba(255,213,79,.5)',   txt:'⏰ 1 dakika sonra mola! Hazırlan ('+saat+')'},
     'basladi':{bg:'#1a3a2a', color:'#69f0ae', border:'rgba(105,240,174,.4)', txt:'☕ Mola zamanı! '+saat+' – '+sure+'dk'},
     '2dk':   {bg:'#2a1010', color:'#ff6b6b', border:'rgba(255,107,107,.4)',  txt:'⚠️ Molan 2 dk içinde bitiyor!'},
     'bitti': {bg:'#1a0a0a', color:'#ff6b6b', border:'rgba(255,107,107,.6)',  txt:'🔔 Mola bitti! İşe dön!'},
@@ -5194,16 +5224,17 @@ function getMolaDurum(tel){
   return molaDurumlar[n];
 }
 
-function molayaCik(tel){
+function molayaCik(tel, sureDk){
   const n=normTel(tel);
   const d=getMolaDurum(tel);
   if(d.aktif){toast('Zaten moladasiniz','err');return;}
   d.aktif=true;
   d.baslangic=Date.now();
+  d.buMolaSure = sureDk || 30; // bu molanın planlanan süresi
   molaDurumlar[n]=d;
   molaKaydet(tel);
   startMolaTimer();
-  toast('Mola basliyor!','ok');
+  toast('Mola başlıyor! Süre: '+(sureDk||30)+'dk','ok');
   renderMolaEkrani();
 }
 
@@ -5248,18 +5279,17 @@ function startMolaTimer(){
     Object.entries(molaDurumlar).forEach(([n,d])=>{
       if(d.aktif&&d.baslangic){
         const gecenDk=(Date.now()-d.baslangic)/60000;
-        const sd=JSON.parse(localStorage.getItem(SKEY)||'null');
-  const p = (function(){ var _all=(sd&&sd.depolar?sd.depolar:[]).reduce(function(a,d){return a.concat(d.shift&&d.shift.persons||d.personeller||[]);},[]); return _all.find(function(pp){return normTel(pp.tel||'')===n;}); })();
-        const hakDk=60;
-        const kalanDk=hakDk-d.kullanilanDk;
-        if(gecenDk>=kalanDk+0.1 && gecenDk<kalanDk+0.2){
+        const molaSure=d.buMolaSure||30;
+        // Bu molanın süresi doldu mu? (kendi telefonuysa uyar)
+        if(gecenDk>=molaSure && gecenDk<molaSure+0.15 && n===normTel(user?user.tel:'')){
+          sesliUyari('Mola süreniz doldu! Lütfen işe dönün.', 4, 523);
           if('Notification' in window && Notification.permission==='granted'){
-            new Notification('Mola Suresi Doldu!',{body:'Lutfen molanizi bitirin.'});
+            try{ new Notification('Mola Süresi Doldu!',{body:'Lütfen molanızı bitirin.'}); }catch(e){}
           }
         }
       }
     });
-  },5000);
+  },1000); // her saniye (sayaç akıcı olsun)
 }
 
 function renderMolaEkrani(){
@@ -5337,23 +5367,20 @@ function renderMolaEkrani(){
 
   el.innerHTML=html;
 
-  // Sayaçları güncelle
+  // Sayaçları güncelle — aktif molanın KENDİ süresinden geri say
   persons.forEach(p=>{
     const n=normTel(p.tel);
     const d=getMolaDurum(p.tel);
     if(d.aktif&&d.baslangic){
-      const gecenMs=Date.now()-d.baslangic;
-      const gecenDk=gecenMs/60000;
-      const kalan=Math.max(0,hakDk-d.kullanilanDk-gecenDk);
-      const asiri=gecenDk>(hakDk-d.kullanilanDk);
+      const gecenSn=(Date.now()-d.baslangic)/1000;
+      const molaSureSn=(d.buMolaSure||30)*60; // bu molanın planlanan süresi (saniye)
+      const kalanSn=Math.round(molaSureSn-gecenSn);
+      const asiri=kalanSn<0;
       const sayacEl=document.getElementById('sayac-'+n);
       if(sayacEl){
-        const kalanSn=asiri?
-          Math.round(gecenDk*60-(hakDk-d.kullanilanDk)*60):
-          Math.round(kalan*60);
         const mm=Math.floor(Math.abs(kalanSn)/60), ss=Math.abs(kalanSn)%60;
         sayacEl.textContent=(asiri?'+':'')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
-        sayacEl.className='mola-sayac-sure'+(asiri?' red':kalanSn<300?' warn':'');
+        sayacEl.className='mola-sayac-sure'+(asiri?' red':kalanSn<120?' warn':'');
       }
     }
   });
@@ -5401,13 +5428,13 @@ function buildMolaKart(p,isMe){
   if(isMe){
     let sayacStr='00:00', sayacRenk='var(--orange)', asiriAktif=false;
     if(isAktif&&d.baslangic){
-      const gecenDk=(Date.now()-d.baslangic)/60000;
-      const kalanSayac=Math.max(0,hakDk-kullanilanDk-gecenDk);
-      asiriAktif=gecenDk>(hakDk-kullanilanDk);
-      const kalanSn=asiriAktif?Math.round(gecenDk*60-(hakDk-kullanilanDk)*60):Math.round(kalanSayac*60);
+      const gecenSn=(Date.now()-d.baslangic)/1000;
+      const molaSureSn=(d.buMolaSure||30)*60;
+      const kalanSn=Math.round(molaSureSn-gecenSn);
+      asiriAktif=kalanSn<0;
       const mm=Math.floor(Math.abs(kalanSn)/60), ss=Math.abs(kalanSn)%60;
       sayacStr=(asiriAktif?'+':'')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
-      sayacRenk=asiriAktif||kalanSayac<5?'var(--red)':'var(--orange)';
+      sayacRenk=asiriAktif?'var(--red)':kalanSn<120?'var(--red)':'var(--orange)';
     }
     const molaHakSayisi=4;
     const kullanilanHakSayisi=(d.kayitlar||[]).length+(isAktif?1:0);
@@ -5415,11 +5442,13 @@ function buildMolaKart(p,isMe){
     const kalanKart=Math.round(kalanDk);
     const kalanRenk=kalanKart<10?'var(--red)':kalanKart<20?'var(--orange)':'var(--accent)';
 
+    const _planliMola = bugunMolalar.length ? bugunMolalar[0] : null;
+    const _manuelSure = _planliMola ? (_planliMola.sure||30) : 30;
     const btnHtml=isAktif
       ?`<button onclick="molaBit('${p.tel}')" style="width:100%;padding:14px;background:var(--green);color:#000;border:none;border-radius:var(--r-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans)">☕ Molayı Bitir</button>`
-      :`<button onclick="molayaCik('${p.tel}')" ${kalanDk<=0||kalanHakSayisi<=0?'disabled':''}
+      :`<button onclick="molayaCik('${p.tel}',${_manuelSure})" ${kalanDk<=0||kalanHakSayisi<=0?'disabled':''}
           style="width:100%;padding:14px;background:${kalanDk<=0||kalanHakSayisi<=0?'var(--bg3)':'var(--green)'};color:${kalanDk<=0||kalanHakSayisi<=0?'var(--text3)':'#000'};border:2px solid ${kalanDk<=0||kalanHakSayisi<=0?'var(--border)':'var(--green)'};border-radius:var(--r-sm);font-size:15px;font-weight:700;cursor:${kalanDk<=0||kalanHakSayisi<=0?'not-allowed':'pointer'};font-family:var(--sans)">
-          ☕ ${kalanDk<=0||kalanHakSayisi<=0?'Mola Hakkı Bitti':'Molaya Çık'}
+          ☕ ${kalanDk<=0||kalanHakSayisi<=0?'Mola Hakkı Bitti':'Molaya Çık ('+_manuelSure+'dk)'}
         </button>`;
 
     return `<div style="background:var(--bg2);border:1px solid ${isAktif?'rgba(255,150,50,.4)':'var(--border)'};border-radius:var(--r);padding:16px;margin-bottom:10px">
@@ -5430,12 +5459,12 @@ function buildMolaKart(p,isMe){
 
       ${isAktif?`<div style="background:var(--bg3);border-radius:var(--r-sm);padding:18px;text-align:center;margin-bottom:12px">
         <div class="mola-sayac-sure" id="sayac-${n}" style="font-size:40px;font-family:var(--mono);font-weight:700;color:${sayacRenk};line-height:1">${sayacStr}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px">Mola sayacı (dk:sn)</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">${asiriAktif?'⚠️ Mola süresi aşıldı!':(d.buMolaSure||30)+' dakikalık moladasınız'}</div>
         <div style="height:3px;background:var(--bg4,#252540);border-radius:2px;margin-top:10px;overflow:hidden">
           <div style="height:100%;width:${pct}%;background:${progColor};border-radius:2px;transition:width .3s"></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:5px">
-          <span>Kullanılan: ${Math.round(kullanilanDk)}dk</span><span>Hak: ${hakDk}dk</span>
+          <span>Kullanılan: ${Math.round(kullanilanDk)}dk</span><span>Günlük hak: ${hakDk}dk</span>
         </div>
       </div>`:`<div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:12px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${progColor};border-radius:2px"></div>
