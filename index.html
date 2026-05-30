@@ -2982,16 +2982,29 @@ async function _raporHaftalikHtml(){
     var cikislar=cal.cikislar||[];
     var dk=cal.toplamDk||0;
     var bugundemu=g.tarih===todayStr;
+    var devamEdiyor=false;
+    // Giriş var ama çıkış yoksa → anlık süre hesapla
+    if(girisler.length && cikislar.length < girisler.length){
+      var gp=(girisler[girisler.length-1].saat||'00:00').split(':');
+      var girisDkV=parseInt(gp[0])*60+parseInt(gp[1]);
+      if(bugundemu){
+        var simdiV=new Date();
+        var simdiDkV=simdiV.getHours()*60+simdiV.getMinutes();
+        var anlikDk=Math.max(0, simdiDkV-girisDkV);
+        if(anlikDk>0){ dk = (cal.toplamDk||0) + anlikDk; devamEdiyor=true; }
+      }
+    }
     var renk=dk===0?'var(--text3)':dk>480?'var(--green)':dk>240?'var(--accent2)':'var(--text)';
     takHtml+='<tr style="background:'+(bugundemu?'rgba(124,109,240,.06)':'')+';">';
     takHtml+='<td style="padding:8px;border-bottom:1px solid var(--border);color:var(--text);font-weight:'+(bugundemu?'700':'400')+'">'+g.gunAdi+'<span style="font-size:9px;color:var(--text3);margin-left:4px">'+g.tarih.slice(0,5)+'</span></td>';
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">'+(girisler[0]?girisler[0].saat:'—')+'</td>';
-    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">'+(cikislar.length?cikislar[cikislar.length-1].saat:(girisler.length?'Devam':'—'))+'</td>';
-    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+renk+'">'+( dk?_rFmtSure(dk):'—')+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+(devamEdiyor?'var(--green)':'var(--text2)')+'">'+(cikislar.length?cikislar[cikislar.length-1].saat:(girisler.length?'🟢 Devam':'—'))+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+renk+'">'+( dk?_rFmtSure(dk)+(devamEdiyor?'*':''):'—')+'</td>';
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">'+(cal.toplamMolaDk?(cal.toplamMolaDk+'dk'):'—')+'</td>';
     takHtml+='</tr>';
   });
   takHtml+='</table></div>';
+  takHtml+='<div style="font-size:9px;color:var(--text3);margin-top:6px">🟢 Devam = vardiya sürüyor · * = anlık süre (çıkış yapılınca kesinleşir)</div>';
   html += _rBlok('📅 Günlük Çalışma Takvimi', takHtml);
 
   // Haftalık görev özeti
