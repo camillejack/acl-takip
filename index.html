@@ -4955,15 +4955,21 @@ function molaZamaniKontrol(){
   const _depolar = (_sd&&_sd.depolar)||[];
   const myTelNorm = normTel(user.tel||'');
   let p = null;
+  // Önce MOLASI OLAN kaydı bul (aynı kişi iki listede olabilir, biri molasız)
   for(const dep of _depolar){
     const all = (dep.personeller||[]).concat((dep.shift&&dep.shift.persons)||[]);
-    p = all.find(pp=>normTel(pp.tel||'')===myTelNorm);
-    if(p) break;
+    const eslesenler = all.filter(pp=>normTel(pp.tel||'')===myTelNorm);
+    const molali = eslesenler.find(pp=>pp.molalar&&pp.molalar.length);
+    if(molali){ p = molali; break; }
+    if(eslesenler.length && !p) p = eslesenler[0];
   }
   if(!p) return;
 
   const molalar = kisiMolaSaatleri(p);
   if(!molalar.length) return;
+
+  // Ses bağlamını canlı tut (Android'de askıya alınmasın)
+  if(sesCtx && sesCtx.state==='suspended'){ try{ sesCtx.resume(); }catch(e){} }
 
   const simdi = simdiDkSaniye(); // saniye hassasiyetinde
   const d = getMolaDurum(user.tel);
@@ -5007,6 +5013,20 @@ function molaZamaniKontrol(){
       sesliUyari('Mola zamanı! Mola zamanı! Şimdi molaya çık.', 4, 1047);
       showMolaUyariBanner('basladi', m.saat, mSure);
       if(!d.aktif) molayaCik(user.tel, mSure);
+    }
+
+    // KAÇIRILAN MOLA — başlangıçtan sonra ama bitmeden, henüz başlamadıysa otomatik başlat
+    // (örn. uygulama kapalıyken mola saati geçti, sonra açıldı)
+    if(fark<-1 && bitFark>2 && !d.aktif && !uyarilogged[keyBase+'_basladi'] && !uyarilogged[keyBase+'_kacirilan']){
+      uyarilogged[keyBase+'_basladi'] = true;
+      uyarilogged[keyBase+'_kacirilan'] = true;
+      _uyariKaydet();
+      var gecenSure = Math.round(-fark);
+      sesliUyari('Mola zamanınız başlamış. Hemen molaya çıkın.', 3, 1047);
+      showMolaUyariBanner('basladi', m.saat, mSure);
+      // Kalan süreyle başlat (geçen süreyi düş)
+      var kalanMolaSure = Math.max(1, mSure - gecenSure);
+      if(!d.aktif) molayaCik(user.tel, kalanMolaSure);
     }
 
     // 2 DK KALA (molada ve bitişe 1.5-3 dk)
@@ -5400,11 +5420,17 @@ function buildMolaKart(p,isMe){
   const ci=(p.name.charCodeAt(0)||0)%colors.length;
   const progColor=asiriKullanim?'var(--red)':kalanDk<15?'#ffb74d':'var(--green)';
 
-  // Planlanan molalar
+  // Planlanan molalar — MOLASI OLAN kaydı tercih et
   const _dd2=JSON.parse(localStorage.getItem(SKEY)||'null');
   const _depolar2=(_dd2&&_dd2.depolar)||[];
   let pData=null;
-  for(const _d2 of _depolar2){ pData=(_d2.shift&&_d2.shift.persons||_d2.personeller||[]).find(pp=>normTel(pp.tel)===n); if(pData) break; }
+  for(const _d2 of _depolar2){
+    const _all2=(_d2.shift&&_d2.shift.persons||[]).concat(_d2.personeller||[]);
+    const _esl=_all2.filter(pp=>normTel(pp.tel)===n);
+    const _molali=_esl.find(pp=>pp.molalar&&pp.molalar.length);
+    if(_molali){ pData=_molali; break; }
+    if(_esl.length && !pData) pData=_esl[0];
+  }
   const bugunMolalar=pData?kisiMolaSaatleri(pData):[];
   let planlananHtml='';
   if(bugunMolalar.length){
