@@ -2590,7 +2590,7 @@ async function doExport(){
 
   // ── 2) ÇALIŞMA SÜRESİ RAPORU ───────────────────────────────
   rows.push([]); rows.push(['=== ÇALIŞMA SÜRESİ RAPORU ===']);
-  rows.push(['Tarih','Ad Soyad','Telefon','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Çalışılan(sa:dk)','Depo','Toplam Mola(dk)']);
+  rows.push(['Tarih','Ad Soyad','Telefon','Giriş Saati','Çıkış Saati','Çalışılan(dk)','Çalışılan(sa:dk)','Fazla Mesai(dk)','Depo','Toplam Mola(dk)']);
   fbCalismaList.sort(function(a,b){ return ((b.tarih||'')<(a.tarih||''))?-1:1; });
   if(fbCalismaList.length){
     fbCalismaList.forEach(function(g){
@@ -2607,6 +2607,7 @@ async function doExport(){
         cikislar.length?cikislar[cikislar.length-1].saat:'Devam ediyor',
         topDk,
         topSa,
+        g.fazlaMesaiDk||0,
         girisler[0]?(girisler[0].depo||'Manuel'):'—',
         molaDk
       ]);
@@ -2974,6 +2975,7 @@ async function _raporHaftalikHtml(){
   takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Giriş</th>';
   takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Çıkış</th>';
   takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Süre</th>';
+  takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Fazla Mesai</th>';
   takHtml+='<th style="padding:6px 8px;text-align:center;color:var(--text3);border-bottom:1px solid var(--border)">Mola</th>';
   takHtml+='</tr>';
   gunler.forEach(function(g,idx){
@@ -3000,6 +3002,7 @@ async function _raporHaftalikHtml(){
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)">'+(girisler[0]?girisler[0].saat:'—')+'</td>';
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+(devamEdiyor?'var(--green)':'var(--text2)')+'">'+(cikislar.length?cikislar[cikislar.length-1].saat:(girisler.length?'🟢 Devam':'—'))+'</td>';
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+renk+'">'+( dk?_rFmtSure(dk)+(devamEdiyor?'*':''):'—')+'</td>';
+    takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:'+((cal.fazlaMesaiDk||0)>0?'var(--orange)':'var(--text3)')+'">'+((cal.fazlaMesaiDk||0)>0?'+'+_rFmtSure(cal.fazlaMesaiDk):'—')+'</td>';
     takHtml+='<td style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--orange)">'+(cal.toplamMolaDk?(cal.toplamMolaDk+'dk'):'—')+'</td>';
     takHtml+='</tr>';
   });
@@ -8792,6 +8795,17 @@ function vardiyaBaslangiciDk(p){
   return parsed ? parsed.sMin : null;
 }
 
+function vardiyaBitisiDk(p){
+  if(!p||!p.days) return null;
+  const bugunIdx = today.getDay()===0?6:today.getDay()-1;
+  const vardiya = p.days[bugunIdx];
+  if(!vardiya||vardiya.toUpperCase().indexOf('ZIN')>=0) return null;
+  const parsed = parseSaat(vardiya);
+  if(!parsed || parsed.eMin===undefined) return null;
+  // eMin gece yarısı geçtiyse 1440+ olur; 24 saat moduna indir
+  return parsed.eMin % 1440;
+}
+
 // Konum takibini başlat
 var _konumRetryTimer = null;
 var _konumSonBasari = 0;
@@ -9097,6 +9111,7 @@ function renderIsbasiEkrani(){
   // İş başı yapıldı mı?
   const isBasiYapildi = !!(bugunKayit && bugunKayit.saat);
   const bugunCikisVar = bugunCalisma && (bugunCalisma.cikislar||[]).length > 0;
+  const mesaiUzatildi = bugunCalisma && bugunCalisma.mesaiUzatildi;
   const btnAktif = !!yakinDepo && !bugunCikisVar;
 
   el.innerHTML = `
@@ -9106,12 +9121,13 @@ function renderIsbasiEkrani(){
     </div>
 
     <div style="background:var(--bg2);border:1px solid ${btnAktif?'var(--green-b)':isBasiYapildi?'var(--blue-b)':'var(--border)'};border-radius:var(--r);padding:24px 16px;text-align:center;margin-bottom:10px">
-      <div style="font-size:44px;margin-bottom:12px">${bugunCikisVar?'✅':btnAktif?'📍':'🔍'}</div>
-      <div style="font-size:15px;font-weight:700;color:${bugunCikisVar?'var(--accent)':btnAktif?'var(--green)':'var(--text2)'};margin-bottom:4px">
-        ${bugunCikisVar?'Vardiya Tamamlandı':btnAktif?'Depo Konumundasınız':'Konum Tespit Ediliyor...'}
+      <div style="font-size:44px;margin-bottom:12px">${bugunCikisVar?'✅':mesaiUzatildi?'⏰':btnAktif?'📍':'🔍'}</div>
+      <div style="font-size:15px;font-weight:700;color:${bugunCikisVar?'var(--accent)':mesaiUzatildi?'var(--orange)':btnAktif?'var(--green)':'var(--text2)'};margin-bottom:4px">
+        ${bugunCikisVar?'Vardiya Tamamlandı':mesaiUzatildi?'Mesai Devam Ediyor':btnAktif?'Depo Konumundasınız':'Konum Tespit Ediliyor...'}
       </div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:20px">
         ${bugunCikisVar?'Bugünkü vardiya kaydedildi'
+          :mesaiUzatildi?('Fazla mesai sürüyor · İş bitince bitirin')
           :btnAktif?(yakinDepo.ad+' · '+yakinDepo.mesafe+'m mesafe')
           :'150m yakınına gelince buton aktif olur'}
       </div>
@@ -9122,13 +9138,13 @@ function renderIsbasiEkrani(){
           onclick="${(isBasiYapildi && !bugunCikisVar)?'isBitimiYap()':(!isBasiYapildi && btnAktif)?'isBasiYap()':''}"
           ${(btnAktif || (isBasiYapildi && !bugunCikisVar))?'':'disabled'}
           style="width:100%;padding:16px;border:none;border-radius:var(--r-sm);font-family:var(--sans);font-size:15px;font-weight:700;
-            background:${isBasiYapildi?'var(--red)':btnAktif?'var(--green)':'var(--bg3)'};
+            background:${isBasiYapildi?(mesaiUzatildi?'var(--orange)':'var(--red)'):btnAktif?'var(--green)':'var(--bg3)'};
             color:${(isBasiYapildi||btnAktif)?'#000':'var(--text3)'};
-            border:2px solid ${isBasiYapildi?'var(--red)':btnAktif?'var(--green)':'var(--border)'};
+            border:2px solid ${isBasiYapildi?(mesaiUzatildi?'var(--orange)':'var(--red)'):btnAktif?'var(--green)':'var(--border)'};
             cursor:${(btnAktif||isBasiYapildi)?'pointer':'not-allowed'}">
-          ${isBasiYapildi?'🏁 Vardiyayı Bitir':btnAktif?'📍 İş Başı Yap':'🔒 Depoya Yaklaşın'}
+          ${isBasiYapildi?(mesaiUzatildi?'⏰ Mesaiyi Bitir':'🏁 Vardiyayı Bitir'):btnAktif?'📍 İş Başı Yap':'🔒 Depoya Yaklaşın'}
         </button>
-        ${isBasiYapildi ? `<div style="font-size:11px;color:var(--green);margin-top:8px">✓ İş başı yapıldı: ${bugunKayit.saat}</div>` : ''}
+        ${isBasiYapildi ? `<div style="font-size:11px;color:var(--green);margin-top:8px">✓ İş başı yapıldı: ${bugunKayit.saat}${mesaiUzatildi&&bugunCalisma.uzatmaSaati?' · Mesai uzatma: '+bugunCalisma.uzatmaSaati:''}</div>` : ''}
       ` : `
         <button onclick="renderIsbasiEkrani()" style="padding:10px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--sans)">🔄 Yenile</button>
       `}
@@ -9344,11 +9360,10 @@ function isBasiYap(){
 }
 
 function isBitimiYap(){
-  // Tam ekran onay modalı
   var overlay = document.createElement('div');
   overlay.id = 'vardiya-bitir-modal';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease';
-  
+
   var now = new Date();
   var saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
   var bugunCal = calismaData[todayStr];
@@ -9359,39 +9374,78 @@ function isBitimiYap(){
   var calDk = Math.max(0, cikisDk - girisDk);
   var ss = Math.floor(calDk/60); var dd = calDk%60;
 
+  // Vardiya bitiş saatini kontrol et — mesai uzadı mı?
+  var myP = (function(){ var _allP=(depoData&&depoData.depolar||[]).reduce(function(a,d){return a.concat(d.shift&&d.shift.persons||d.personeller||[]);},[]); return _allP.find(function(p){return normTel(p.tel)===normTel(user.tel);}); })();
+  var vardiyaBitDk = myP ? vardiyaBitisiDk(myP) : null;
+  var mesaiUzadiMi = vardiyaBitDk!==null && cikisDk > vardiyaBitDk + 5; // 5dk tolerans
+  var uzayanDk = mesaiUzadiMi ? (cikisDk - vardiyaBitDk) : 0;
+
   overlay.innerHTML =
-    '<div onclick="event.stopPropagation()" style="background:var(--bg2);border:2px solid var(--red);border-radius:var(--r);width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7)">' +
-      '<div style="background:linear-gradient(135deg,#b71c1c,#e53935);padding:20px;text-align:center">' +
+    '<div onclick="event.stopPropagation()" style="background:var(--bg2);border:2px solid var(--accent);border-radius:var(--r);width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7)">' +
+      '<div style="background:linear-gradient(135deg,#0d7a52,#22d3a0);padding:20px;text-align:center">' +
         '<div style="font-size:40px;margin-bottom:8px">🏁</div>' +
-        '<div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:.02em">VARDİYAYI BİTİR</div>' +
-        '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:4px">Bu işlem geri alınamaz</div>' +
+        '<div style="font-size:16px;font-weight:800;color:#06140e;letter-spacing:.02em">VARDİYA BİTİŞİ</div>' +
+        '<div style="font-size:12px;color:rgba(6,20,14,.7);margin-top:4px">Durumunuzu seçin</div>' +
       '</div>' +
       '<div style="padding:20px">' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">' +
           '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
-            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green)">'+girisSaati+'</div>' +
+            '<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--green)">'+girisSaati+'</div>' +
             '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Giriş</div>' +
           '</div>' +
           '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
-            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--red)">'+saatStr+'</div>' +
-            '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Çıkış</div>' +
+            '<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--red)">'+saatStr+'</div>' +
+            '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Şu an</div>' +
           '</div>' +
           '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">' +
-            '<div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">'+ss+'sa '+dd+'dk</div>' +
+            '<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent)">'+ss+'sa '+dd+'dk</div>' +
             '<div style="font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase">Süre</div>' +
           '</div>' +
         '</div>' +
-        '<div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:var(--text2);text-align:center">' +
-          '⚠️ Vardiyayı bitirdiğinizde çalışma kaydınız tamamlanır ve sisteme işlenir.' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-          '<button onclick="document.getElementById(\'vardiya-bitir-modal\').remove()" style="padding:13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:var(--sans)">İptal</button>' +
-          '<button onclick="isBitimiOnay()" style="padding:13px;background:var(--red);border:none;border-radius:var(--r-sm);font-size:13px;font-weight:800;color:#fff;cursor:pointer;font-family:var(--sans)">🏁 Evet, Bitir</button>' +
+        (mesaiUzadiMi ?
+          '<div style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--orange);text-align:center">' +
+          '⏰ Vardiya bitişiniz geçti — <strong>'+Math.floor(uzayanDk/60)+'sa '+(uzayanDk%60)+'dk</strong> fazla mesai yaptınız.' +
+          '</div>'
+          :
+          '<div style="background:rgba(34,211,160,.08);border:1px solid rgba(34,211,160,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text2);text-align:center">' +
+          '✓ Vardiya saatiniz içindesiniz.' +
+          '</div>'
+        ) +
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-align:center">Ne yapmak istiyorsunuz?</div>' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' +
+          '<button onclick="isBitimiOnay(false)" style="padding:14px;background:var(--red);border:none;border-radius:var(--r-sm);font-size:14px;font-weight:800;color:#fff;cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:8px">🏁 PAYDOS — İş Bitti</button>' +
+          '<button onclick="mesaiUzatOnay()" style="padding:14px;background:rgba(251,146,60,.15);border:1px solid var(--orange);border-radius:var(--r-sm);font-size:14px;font-weight:700;color:var(--orange);cursor:pointer;font-family:var(--sans);display:flex;align-items:center;justify-content:center;gap:8px">⏰ Mesai Uzadı — Devam Ediyorum</button>' +
+          '<button onclick="document.getElementById(\'vardiya-bitir-modal\').remove()" style="padding:11px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px;color:var(--text3);cursor:pointer;font-family:var(--sans)">Vazgeç</button>' +
         '</div>' +
       '</div>' +
     '</div>';
 
   document.body.appendChild(overlay);
+}
+
+// Mesai uzadı — devam et, çıkış yapma ama durumu kaydet
+function mesaiUzatOnay(){
+  var modal = document.getElementById('vardiya-bitir-modal');
+  if(modal) modal.remove();
+
+  var now = new Date();
+  var saatStr = now.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  if(!calismaData[todayStr]) calismaData[todayStr] = {girisler:[],cikislar:[],toplamDk:0,toplamMolaDk:0};
+  var bugünCal = calismaData[todayStr];
+  bugünCal.mesaiUzatildi = true;
+  bugünCal.uzatmaSaati = saatStr;
+  calismaData[todayStr] = bugünCal;
+  localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
+
+  if(window._fbReady){
+    fbSet('calisma_kayitlar', normTel(user.tel)+'_'+todayStr.replace(/\./g,'-'), {
+      ...bugünCal, tel: user.tel, ad: user.ad, tarih: todayStr, ts: Date.now()
+    }).catch(function(){});
+  }
+
+  toast('Mesai devam ediyor ⏰ — İş bitince tekrar "Vardiyayı Bitir" deyin','ok');
+  renderIsbasiEkrani();
 }
 
 function isBitimiOnay(){
@@ -9406,17 +9460,35 @@ function isBitimiOnay(){
   var girisler = bugünCal.girisler || [];
   var cikislar = bugünCal.cikislar || [];
   var calisilanDk = 0;
+  var cikisDkVal = now.getHours()*60+now.getMinutes();
 
   if(girisler.length > cikislar.length){
     var sonGiris = girisler[girisler.length-1];
     var girisDk = (function(s){ var p=s.split(':'); return parseInt(p[0])*60+parseInt(p[1]); })(sonGiris.saat||'00:00');
-    var cikisDk = now.getHours()*60+now.getMinutes();
-    calisilanDk = Math.max(0, cikisDk - girisDk);
+    calisilanDk = Math.max(0, cikisDkVal - girisDk);
   }
 
-  cikislar.push({saat: saatStr, calisilanDk: calisilanDk, depo: yakinDepo?yakinDepo.ad:''});
+  // Fazla mesai hesabı
+  var myP = (function(){ var _allP=(depoData&&depoData.depolar||[]).reduce(function(a,d){return a.concat(d.shift&&d.shift.persons||d.personeller||[]);},[]); return _allP.find(function(p){return normTel(p.tel)===normTel(user.tel);}); })();
+  var vardiyaBitDk = myP ? vardiyaBitisiDk(myP) : null;
+  var fazlaMesaiDk = 0;
+  if(vardiyaBitDk!==null){
+    var cdk = cikisDkVal;
+    // gece vardiyası: çıkış sabaha sarktıysa
+    if(cdk < vardiyaBitDk) cdk += 1440;
+    var vbit = vardiyaBitDk;
+    if(girisler.length){
+      var gdk=(function(s){var p=s.split(':');return parseInt(p[0])*60+parseInt(p[1]);})(girisler[0].saat||'00:00');
+      if(vbit < gdk) vbit += 1440;
+    }
+    fazlaMesaiDk = Math.max(0, cdk - vbit);
+  }
+
+  cikislar.push({saat: saatStr, calisilanDk: calisilanDk, depo: yakinDepo?yakinDepo.ad:'', fazlaMesaiDk: fazlaMesaiDk});
   bugünCal.cikislar = cikislar;
   bugünCal.toplamDk = (bugünCal.toplamDk||0) + calisilanDk;
+  bugünCal.fazlaMesaiDk = (bugünCal.fazlaMesaiDk||0) + fazlaMesaiDk;
+  bugünCal.mesaiUzatildi = false; // bitti
   calismaData[todayStr] = bugünCal;
   localStorage.setItem(CALISMA_KEY, JSON.stringify(calismaData));
 
@@ -9427,7 +9499,11 @@ function isBitimiOnay(){
   }
 
   var ss = Math.floor(calisilanDk/60); var dd = calisilanDk%60;
-  toast('Vardiya tamamlandı ✓ — '+ss+'sa '+dd+'dk çalışıldı','ok');
+  var msg = 'Vardiya tamamlandı ✓ — '+ss+'sa '+dd+'dk çalışıldı';
+  if(fazlaMesaiDk > 0){
+    msg += ' (+'+Math.floor(fazlaMesaiDk/60)+'sa '+(fazlaMesaiDk%60)+'dk fazla mesai)';
+  }
+  toast(msg,'ok');
   renderIsbasiEkrani();
 }
 
