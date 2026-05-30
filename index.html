@@ -9772,7 +9772,7 @@ function veriYukle(){
   }
 }
 
-function doLogin(){
+async function doLogin(){
   var tel   = (document.getElementById('l-tel').value||'').trim();
   var sifre = (document.getElementById('l-sifre').value||'').trim();
   document.getElementById('l-hata').style.display='none';
@@ -9798,7 +9798,7 @@ function doLogin(){
     return;
   }
 
-  // Personel girisi
+  // Personel girisi — önce localStorage'dan dene
   var _dd = JSON.parse(localStorage.getItem(SKEY)||'null');
   var _depolar = (_dd && _dd.depolar) ? _dd.depolar : [];
   var _tumP = [];
@@ -9812,11 +9812,34 @@ function doLogin(){
   });
 
   var _p = _tumP.find(function(_pp){ return normTel(_pp.tel||'')=== telNorm; });
-  if(!_p){ showLoginHata('Bu telefon sistemde kayitli degil.'); return; }
+
+  // localStorage'da yoksa Firebase'den çek
+  if(!_p){
+    showLoginHata('Kontrol ediliyor...');
+    try{
+      var snap = await window._fb.getDoc(window._fb.doc(window._fb.db,'ayarlar','depolar'));
+      if(snap.exists()){
+        var data = snap.data();
+        var fbDepolar = (data && data.depolar) || [];
+        // localStorage'a da kaydet (sonraki girişler hızlı olsun)
+        localStorage.setItem(SKEY, JSON.stringify({depolar:fbDepolar}));
+        fbDepolar.forEach(function(_d){
+          (_d.personeller||[]).concat((_d.shift&&_d.shift.persons)||[]).forEach(function(_pp){
+            if(!_tumP.some(function(_x){ return normTel(_x.tel||'')===normTel(_pp.tel||''); })){
+              _tumP.push(_pp);
+            }
+          });
+        });
+        _p = _tumP.find(function(_pp){ return normTel(_pp.tel||'')=== telNorm; });
+      }
+    }catch(e){ console.warn('Firebase personel cekme hatasi:', e); }
+  }
+
+  if(!_p){ showLoginHata('Bu telefon sistemde kayitli degil. Yoneticinizden vardiyaya eklenmenizi isteyin.'); return; }
 
   var _dogru = sifreUret(_p);
   if(sifre !== _dogru && sifre !== (_p.sifre||'')){
-    showLoginHata('Sifre hatali.');
+    showLoginHata('Sifre hatali. (Format: telefonunuz.soyadiniz0134)');
     return;
   }
 
