@@ -4133,7 +4133,12 @@ const DAYS      = ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'];
 const DAYS_FULL = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 
 // Telefon numarasını normalize et (sadece rakamlar)
-function normTel(t){ return (t||'').replace(/\D/g,''); }
+function normTel(t){
+  var n = (t||'').replace(/\D/g,'');
+  // Ülke kodu 90 veya baştaki 0'ı temizle → son 10 hane kalsın
+  if(n.length > 10){ n = n.slice(-10); }
+  return n;
+}
 
 function unlockMgr(){
   const pwd = document.getElementById('mgr-pwd-input').value;
