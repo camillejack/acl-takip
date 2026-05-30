@@ -1,5 +1,5 @@
 // Service Worker - ACL Depo Yönetim Sistemi
-const CACHE = 'acl-takip-v103';
+const CACHE = 'acl-takip-v104';
 
 // install: kritik olmayan cache hatası SW'yi çökertmesin
 self.addEventListener('install', function(e) {
